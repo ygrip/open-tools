@@ -85,3 +85,25 @@ The hero dot field currently morphs between:
 - `/static/icons/time.svg`
 
 These are temporary defaults. Replace or extend the `images` passed to `DotField` when the final Open Tools icon/logo is available. The renderer samples transparent SVG/image artwork into the ambient dot field, following the same local image-to-dot approach used by the Raksara hero.
+
+
+## Reusable UI components
+
+The shell now keeps common UI primitives in `src/lib/components`:
+
+- `SearchOverlay.svelte` — keyboard-driven tool search overlay
+- `ThemeToggle.svelte` — persisted light/dark theme switch
+- `SurfaceCard.svelte` — reusable glass/bento card
+- `DataTable.svelte` — horizontally scrollable mobile-safe table
+- `Carousel.svelte` — snap-scrolling responsive carousel
+- `DotField.svelte` — image-driven animated dot mesh with morph transitions
+
+The components use shared CSS variables from `src/routes/app.css` so light/dark themes and future accent changes stay consistent.
+
+## Search
+
+Press `/` or `Cmd/Ctrl + K` anywhere outside a text input to open the search overlay. On mobile, the search action remains a 44px+ touch target in the header.
+
+## Theme
+
+Theme preference is stored in `localStorage` under `open-tools-theme`. When no preference exists, the shell follows `prefers-color-scheme`. Theme initialization runs in `app.html` before Svelte mounts to avoid a light/dark flash.
