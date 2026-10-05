@@ -1369,3 +1369,88 @@ footer,
 [data-theme="light"] .empty-state code {
   background: rgba(217, 119, 6, 0.07);
 }
+
+
+/* ── Search entry cleanup + light control contrast ───── */
+.nav-search {
+  display: none !important;
+}
+
+[data-theme="light"] button,
+[data-theme="light"] .github-link,
+[data-theme="light"] .theme-toggle,
+[data-theme="light"] .empty-action,
+[data-theme="light"] .error-actions a,
+[data-theme="light"] .ui-carousel-actions button,
+[data-theme="light"] .search-kbd,
+[data-theme="light"] .chips button {
+  color: var(--text);
+  border-color: rgba(76, 56, 31, 0.20);
+}
+
+[data-theme="light"] .github-link,
+[data-theme="light"] .theme-toggle,
+[data-theme="light"] .empty-action,
+[data-theme="light"] .error-actions a,
+[data-theme="light"] .ui-carousel-actions button,
+[data-theme="light"] .search-kbd,
+[data-theme="light"] .chips button:not(.active) {
+  background: rgba(255, 255, 255, 0.70);
+}
+
+[data-theme="light"] .chips button:not(.active):hover,
+[data-theme="light"] .theme-toggle:hover,
+[data-theme="light"] .github-link:hover,
+[data-theme="light"] .empty-action:hover,
+[data-theme="light"] .error-actions a:hover,
+[data-theme="light"] .ui-carousel-actions button:hover,
+[data-theme="light"] .search-kbd:hover {
+  color: var(--text);
+  background: rgba(217, 119, 6, 0.12);
+  border-color: rgba(217, 119, 6, 0.38);
+}
+
+[data-theme="light"] .chips button.active,
+[data-theme="light"] .error-actions .primary-action {
+  color: var(--on-accent);
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+[data-theme="light"] .tool-status {
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.56);
+  border-color: rgba(76, 56, 31, 0.15);
+}
+
+[data-theme="light"] .topnav > a:not(.github-link),
+[data-theme="light"] .footer-links a,
+[data-theme="light"] .legal-back {
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .topnav > a:not(.github-link):hover,
+[data-theme="light"] .footer-links a:hover,
+[data-theme="light"] .legal-back:hover {
+  color: var(--text);
+}
+
+[data-theme="light"] .hero-search-trigger {
+  color: var(--text);
+  border-color: rgba(217, 119, 6, 0.30);
+  background: rgba(255, 253, 248, 0.98);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,0.9),
+    0 16px 42px rgba(89, 58, 20, 0.08);
+}
+
+[data-theme="light"] .hero-search-trigger:hover {
+  border-color: rgba(217, 119, 6, 0.56);
+  background: #fffaf2;
+}
+
+[data-theme="light"] .hero-search-trigger kbd {
+  color: var(--text-secondary);
+  border: 1px solid rgba(76, 56, 31, 0.18);
+  background: rgba(255,255,255,0.76);
+}
