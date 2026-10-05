@@ -12,16 +12,18 @@ The guiding rule is **auto-discovery, not auto-trust**.
 
 - SvelteKit 5
 - static adapter friendly
-- manifest-driven catalog
+- automatically generated tool catalog
 - responsive bento-style UI
 - search and category filtering
+- dedicated 404/error state
+- empty registry and empty search states
 - dark/amber visual system inspired by the Raksara design language
-- no runtime backend required for the shell
 
 ## Development
 
 ```bash
 npm install
+npm run registry:sync
 npm run dev
 ```
 
@@ -32,9 +34,21 @@ npm run check
 npm run build
 ```
 
-## Tool manifest
+## Automatic registration
 
-Each registered utility is described by a constrained manifest:
+A repository is discovered automatically when all of these are true:
+
+1. its owner appears in `config/registry.json -> trustedOwners`
+2. the repository has the configured GitHub topic, currently `open-tools`
+3. the repository contains `tool.manifest.json` at its root
+4. the manifest passes validation
+5. its ID and path do not collide with another registered tool
+
+The registry refresh workflow runs daily and can also be triggered manually. Invalid manifests are skipped rather than taking down the catalog.
+
+The discovery boundary is deliberately narrow: adding a topic to an arbitrary repository is not enough unless its owner is trusted.
+
+## Tool manifest
 
 ```json
 {
@@ -53,9 +67,9 @@ Current validation enforces:
 
 - lowercase `[a-z0-9-]` IDs
 - path must exactly match `/<id>`
-- HTTPS GitHub repository URL
+- repository URL must match the repository being discovered
+- trusted repository owner
 - typed category and status values
-
-The initial registry is intentionally empty. CI-based trusted repository discovery and generated routing should be added as a separate step instead of mixing deployment privileges into the first UI scaffold.
+- unique IDs and paths
 
 See `examples/tool.manifest.json` for the contract shape.
