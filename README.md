@@ -14,7 +14,9 @@ The guiding rule is **auto-discovery, not auto-trust**.
 - static adapter friendly
 - automatically generated tool catalog
 - responsive bento-style UI
-- search and category filtering
+- hero search with `/` keyboard shortcut and category filtering
+- Raksara-style dot-field hero seeded from configurable SVG/logo assets
+- Terms, Privacy, and Tool Policy pages
 - dedicated 404/error state
 - empty registry and empty search states
 - dark/amber visual system inspired by the Raksara design language
@@ -73,3 +75,13 @@ Current validation enforces:
 - unique IDs and paths
 
 See `examples/tool.manifest.json` for the contract shape.
+
+
+## Hero artwork
+
+The hero dot field currently morphs between:
+
+- `/static/icons/tool.svg`
+- `/static/icons/time.svg`
+
+These are temporary defaults. Replace or extend the `images` passed to `DotField` when the final Open Tools icon/logo is available. The renderer samples transparent SVG/image artwork into the ambient dot field, following the same local image-to-dot approach used by the Raksara hero.
