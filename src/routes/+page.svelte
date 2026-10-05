@@ -53,11 +53,6 @@
     </a>
 
     <nav class="topnav" aria-label="Primary navigation">
-      <button class="nav-search" type="button" onclick={() => (searchOpen = true)}>
-        <span aria-hidden="true">⌕</span>
-        <span>Search</span>
-        <kbd>⌘K</kbd>
-      </button>
       <a href="#tools">Tools</a>
       <a href="/policy">Policy</a>
       <ThemeToggle />
