@@ -1,42 +1,29 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import DotField from '$lib/components/DotField.svelte';
+  import SearchOverlay from '$lib/components/SearchOverlay.svelte';
+  import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import { categories, tools } from '$lib/registry/tools';
 
-  let query = $state('');
   let selectedCategory = $state('all');
   let heroVisual: HTMLDivElement | null = $state(null);
-  let searchInput: HTMLInputElement | null = $state(null);
+  let searchOpen = $state(false);
 
   const filteredTools = $derived(
-    tools.filter((tool) => {
-      const haystack = [
-        tool.name,
-        tool.description,
-        tool.category,
-        ...(tool.capabilities ?? [])
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      const matchesQuery = haystack.includes(query.trim().toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || tool.category === selectedCategory;
-      return matchesQuery && matchesCategory;
-    })
+    selectedCategory === 'all' ? tools : tools.filter((tool) => tool.category === selectedCategory)
   );
-
-  function clearFilters() {
-    query = '';
-    selectedCategory = 'all';
-  }
 
   onMount(() => {
     const handleShortcut = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      const typing = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
-      if (event.key === '/' && !typing) {
+      const typing =
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.isContentEditable;
+
+      if ((event.key === '/' || ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k')) && !typing) {
         event.preventDefault();
-        searchInput?.focus();
+        searchOpen = true;
       }
     };
 
@@ -53,6 +40,8 @@
   />
 </svelte:head>
 
+<SearchOverlay bind:open={searchOpen} {tools} />
+
 <main class="page-shell">
   <header class="topbar surface">
     <a class="brand" href="/" aria-label="Open Tools home">
@@ -64,8 +53,14 @@
     </a>
 
     <nav class="topnav" aria-label="Primary navigation">
+      <button class="nav-search" type="button" onclick={() => (searchOpen = true)}>
+        <span aria-hidden="true">⌕</span>
+        <span>Search</span>
+        <kbd>⌘K</kbd>
+      </button>
       <a href="#tools">Tools</a>
       <a href="/policy">Policy</a>
+      <ThemeToggle />
       <a
         class="github-link"
         href="https://github.com/ygrip/open-tools"
@@ -78,7 +73,11 @@
   </header>
 
   <section class="hero surface">
-    <DotField images={['/icons/tool.svg', '/icons/time.svg']} anchor={heroVisual} className="hero-dot-field" />
+    <DotField
+      images={['/icons/tool.svg', '/icons/time.svg']}
+      anchor={heroVisual}
+      className="hero-dot-field"
+    />
 
     <div class="hero-copy">
       <p class="eyebrow"><span class="status-dot"></span> Open source utility hub</p>
@@ -88,22 +87,11 @@
         repository while Open Tools handles discovery and presentation.
       </p>
 
-      <label class="hero-search">
+      <button class="hero-search-trigger" type="button" onclick={() => (searchOpen = true)}>
         <span class="hero-search-icon" aria-hidden="true">⌕</span>
-        <input
-          bind:this={searchInput}
-          bind:value={query}
-          placeholder="Search tools, formats, or capabilities"
-          aria-label="Search tools"
-        />
+        <span class="hero-search-placeholder">Search tools, formats, or capabilities</span>
         <kbd>/</kbd>
-      </label>
-
-      {#if query.trim()}
-        <p class="search-summary">
-          {filteredTools.length} {filteredTools.length === 1 ? 'tool' : 'tools'} match “{query.trim()}”
-        </p>
-      {/if}
+      </button>
     </div>
 
     <div class="hero-visual" bind:this={heroVisual} aria-hidden="true"></div>
@@ -171,12 +159,10 @@
       <div class="empty-state surface empty-filter">
         <div class="empty-glyph" aria-hidden="true">⌕</div>
         <div>
-          <h3>No tools match that search.</h3>
-          <p>
-            Try a broader term or clear the category filter. Apparently even utilities can be difficult to locate.
-          </p>
+          <h3>No tools in this category.</h3>
+          <p>Try another category. Taxonomy remains humanity's favorite way to misplace things.</p>
         </div>
-        <button class="empty-action" onclick={clearFilters}>Clear search</button>
+        <button class="empty-action" onclick={() => (selectedCategory = 'all')}>Show all</button>
       </div>
     {/if}
   </section>
