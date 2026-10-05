@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "registry:sync": "node scripts/sync-tools.mjs",
     "prepare": "svelte-kit sync || echo ''"
   },
   "devDependencies": {
