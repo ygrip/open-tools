@@ -4,6 +4,8 @@
   let query = $state('');
   let selectedCategory = $state('all');
 
+  const hasFilters = $derived(query.trim().length > 0 || selectedCategory !== 'all');
+
   const filteredTools = $derived(
     tools.filter((tool) => {
       const haystack = [
@@ -20,6 +22,11 @@
       return matchesQuery && matchesCategory;
     })
   );
+
+  function clearFilters() {
+    query = '';
+    selectedCategory = 'all';
+  }
 </script>
 
 <main class="page-shell">
@@ -87,7 +94,7 @@
         <p class="eyebrow">Catalog</p>
         <h2>Tools</h2>
       </div>
-      <span>{filteredTools.length} registered</span>
+      <span>{filteredTools.length} shown · {tools.length} registered</span>
     </div>
 
     {#if filteredTools.length > 0}
@@ -109,19 +116,30 @@
           </a>
         {/each}
       </div>
-    {:else}
+    {:else if tools.length === 0}
       <div class="empty-state surface">
         <div class="empty-glyph" aria-hidden="true">+</div>
         <div>
-          <h3>No tools registered yet.</h3>
+          <h3>No tools have opted in yet.</h3>
           <p>
-            Add a trusted manifest to the registry. The catalog and filters populate from metadata,
-            so the shell does not need hand-edited cards for every new utility.
+            Repositories owned by a trusted owner are discovered automatically when they add the
+            <code>open-tools</code> topic and a valid <code>tool.manifest.json</code> at the repo root.
           </p>
         </div>
-        <a href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer">
-          View registry contract ↗
+        <a href="https://github.com/ygrip/open-tools#automatic-registration" target="_blank" rel="noreferrer">
+          Registration guide ↗
         </a>
+      </div>
+    {:else}
+      <div class="empty-state surface empty-filter">
+        <div class="empty-glyph" aria-hidden="true">⌕</div>
+        <div>
+          <h3>No tools match that filter.</h3>
+          <p>
+            Nothing in the current registry matches your search or category. The tools are innocent this time.
+          </p>
+        </div>
+        <button class="empty-action" onclick={clearFilters}>Clear filters</button>
       </div>
     {/if}
   </section>
