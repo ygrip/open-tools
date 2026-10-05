@@ -22,6 +22,7 @@
     let disposed = false;
     let resizeObserver: ResizeObserver | null = null;
     let loaded: HTMLImageElement[] = [];
+    let tones: Float32Array[] = [];
     let current = 0;
     let nextSwap = performance.now() + 4200;
 
@@ -86,7 +87,7 @@
       const subjectRows = 34;
 
       const image = loaded[current];
-      const tone = image ? sample(image, subjectCols, subjectRows) : new Float32Array(subjectCols * subjectRows);
+      const tone = tones[current] ?? new Float32Array(subjectCols * subjectRows);
 
       const cx = slot ? slot.left - rect.left + slot.width / 2 : rect.width * 0.74;
       const cy = slot ? slot.top - rect.top + slot.height / 2 : rect.height * 0.5;
@@ -153,6 +154,7 @@
       .then((result) => {
         if (disposed) return;
         loaded = result;
+        tones = result.map((image) => sample(image, 34, 34));
         resize();
         draw(performance.now());
       })
