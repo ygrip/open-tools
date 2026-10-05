@@ -1,0 +1,5 @@
+{
+  "trustedOwners": ["ygrip"],
+  "topic": "open-tools",
+  "manifestPath": "tool.manifest.json"
+}
