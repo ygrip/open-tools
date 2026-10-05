@@ -1,10 +1,12 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import DotField from '$lib/components/DotField.svelte';
   import { categories, tools } from '$lib/registry/tools';
 
   let query = $state('');
   let selectedCategory = $state('all');
-
-  const hasFilters = $derived(query.trim().length > 0 || selectedCategory !== 'all');
+  let heroVisual: HTMLDivElement | null = $state(null);
+  let searchInput: HTMLInputElement | null = $state(null);
 
   const filteredTools = $derived(
     tools.filter((tool) => {
@@ -27,7 +29,29 @@
     query = '';
     selectedCategory = 'all';
   }
+
+  onMount(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
+      if (event.key === '/' && !typing) {
+        event.preventDefault();
+        searchInput?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  });
 </script>
+
+<svelte:head>
+  <title>Open Tools · Small utilities, one place</title>
+  <meta
+    name="description"
+    content="Discover small, focused open-source web utilities from one manifest-driven catalog."
+  />
+</svelte:head>
 
 <main class="page-shell">
   <header class="topbar surface">
@@ -39,40 +63,53 @@
       </span>
     </a>
 
-    <a
-      class="github-link"
-      href="https://github.com/ygrip/open-tools"
-      target="_blank"
-      rel="noreferrer"
-    >
-      GitHub
-      <span aria-hidden="true">↗</span>
-    </a>
+    <nav class="topnav" aria-label="Primary navigation">
+      <a href="#tools">Tools</a>
+      <a href="/policy">Policy</a>
+      <a
+        class="github-link"
+        href="https://github.com/ygrip/open-tools"
+        target="_blank"
+        rel="noreferrer"
+      >
+        GitHub <span aria-hidden="true">↗</span>
+      </a>
+    </nav>
   </header>
 
   <section class="hero surface">
+    <DotField images={['/icons/tool.svg', '/icons/time.svg']} anchor={heroVisual} className="hero-dot-field" />
+
     <div class="hero-copy">
       <p class="eyebrow"><span class="status-dot"></span> Open source utility hub</p>
-      <h1>Useful tools without the clutter.</h1>
+      <h1>Find the tool. Do the thing. Move on.</h1>
       <p class="lede">
-        Small, focused web utilities registered through a safe manifest contract.
-        Each tool can live in its own repository and release on its own schedule.
+        Small, focused utilities in one searchable catalog. Each tool can live in its own
+        repository while Open Tools handles discovery and presentation.
       </p>
+
+      <label class="hero-search">
+        <span class="hero-search-icon" aria-hidden="true">⌕</span>
+        <input
+          bind:this={searchInput}
+          bind:value={query}
+          placeholder="Search tools, formats, or capabilities"
+          aria-label="Search tools"
+        />
+        <kbd>/</kbd>
+      </label>
+
+      {#if query.trim()}
+        <p class="search-summary">
+          {filteredTools.length} {filteredTools.length === 1 ? 'tool' : 'tools'} match “{query.trim()}”
+        </p>
+      {/if}
     </div>
 
-    <div class="hero-orbit" aria-hidden="true">
-      <div class="orbit orbit-one"></div>
-      <div class="orbit orbit-two"></div>
-      <div class="orbit-core">+</div>
-    </div>
+    <div class="hero-visual" bind:this={heroVisual} aria-hidden="true"></div>
   </section>
 
   <section class="controls surface" aria-label="Tool filters">
-    <label class="search">
-      <span aria-hidden="true">⌕</span>
-      <input bind:value={query} placeholder="Search tools or capabilities" aria-label="Search tools" />
-    </label>
-
     <div class="chips" aria-label="Categories">
       <button class:active={selectedCategory === 'all'} onclick={() => (selectedCategory = 'all')}>
         All
@@ -88,7 +125,7 @@
     </div>
   </section>
 
-  <section class="catalog">
+  <section class="catalog" id="tools">
     <div class="section-heading">
       <div>
         <p class="eyebrow">Catalog</p>
@@ -134,18 +171,23 @@
       <div class="empty-state surface empty-filter">
         <div class="empty-glyph" aria-hidden="true">⌕</div>
         <div>
-          <h3>No tools match that filter.</h3>
+          <h3>No tools match that search.</h3>
           <p>
-            Nothing in the current registry matches your search or category. The tools are innocent this time.
+            Try a broader term or clear the category filter. Apparently even utilities can be difficult to locate.
           </p>
         </div>
-        <button class="empty-action" onclick={clearFilters}>Clear filters</button>
+        <button class="empty-action" onclick={clearFilters}>Clear search</button>
       </div>
     {/if}
   </section>
 
   <footer>
     <span>Open Tools</span>
-    <span>Manifest-driven · static-friendly · no account required</span>
+    <nav class="footer-links" aria-label="Legal">
+      <a href="/terms">Terms</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/policy">Tool policy</a>
+      <a href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer">GitHub ↗</a>
+    </nav>
   </footer>
 </main>
