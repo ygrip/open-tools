@@ -1,0 +1,10 @@
+{
+  "id": "gerak",
+  "name": "Gerak",
+  "description": "Convert motion assets between browser-friendly formats.",
+  "path": "/gerak",
+  "category": "media",
+  "repository": "https://github.com/example/gerak",
+  "capabilities": ["gif", "lottie", "webp"],
+  "status": "experimental"
+}
