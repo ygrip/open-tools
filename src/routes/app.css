@@ -8,9 +8,14 @@
   --surface: rgba(25, 24, 22, 0.76);
   --surface-strong: rgba(31, 29, 25, 0.92);
   --line: rgba(255, 255, 255, 0.09);
-  --muted: #9c978d;
+  --muted: #a9a298;
+  --text-secondary: #c9c2b7;
+  --text-tertiary: #8e887f;
   --text: #f5f1e8;
+  --placeholder: #807a72;
   --amber: #f59e0b;
+  --amber-text: #ffc45a;
+  --on-accent: #211708;
   --amber-soft: rgba(245, 158, 11, 0.16);
   --radius: 22px;
 }
@@ -84,7 +89,7 @@ a {
   display: grid;
   place-items: center;
   background: var(--amber-soft);
-  color: #ffc45a;
+  color: var(--amber-text);
   border: 1px solid rgba(245, 158, 11, 0.28);
 }
 
@@ -155,7 +160,7 @@ a {
 
 .eyebrow {
   margin: 0 0 14px;
-  color: #b9b3a8;
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -266,7 +271,7 @@ h1 {
 }
 
 .search input::placeholder {
-  color: #736f68;
+  color: var(--placeholder);
 }
 
 .chips {
@@ -288,7 +293,7 @@ h1 {
 }
 
 .chips button.active {
-  color: #211708;
+  color: var(--on-accent);
   border-color: var(--amber);
   background: var(--amber);
 }
@@ -392,7 +397,7 @@ h1 {
   display: grid;
   place-items: center;
   border-radius: 19px;
-  color: #221708;
+  color: var(--on-accent);
   background: var(--amber);
   font-size: 34px;
 }
@@ -512,7 +517,7 @@ footer {
 }
 
 .empty-filter .empty-glyph {
-  color: #ffc45a;
+  color: var(--amber-text);
   background: var(--amber-soft);
   border: 1px solid rgba(245, 158, 11, 0.28);
 }
@@ -521,7 +526,7 @@ footer {
   padding: 0.12rem 0.35rem;
   border: 1px solid var(--line);
   border-radius: 6px;
-  color: #ffc45a;
+  color: var(--amber-text);
   background: rgba(0, 0, 0, 0.2);
 }
 
@@ -556,7 +561,7 @@ footer {
 
 .error-code {
   margin: 0 0 28px;
-  color: #ffc45a;
+  color: var(--amber-text);
   font-size: clamp(4rem, 14vw, 9rem);
   font-weight: 800;
   line-height: 0.8;
@@ -577,7 +582,7 @@ footer {
 }
 
 .error-actions .primary-action {
-  color: #211708;
+  color: var(--on-accent);
   border-color: var(--amber);
   background: var(--amber);
 }
@@ -684,11 +689,11 @@ footer {
 }
 
 .hero-search input::placeholder {
-  color: #7f7a71;
+  color: var(--placeholder);
 }
 
 .hero-search-icon {
-  color: #d7ad63;
+  color: var(--amber-text);
   font-size: 18px;
 }
 
@@ -796,9 +801,14 @@ footer {
   --surface: rgba(255, 252, 245, 0.78);
   --surface-strong: rgba(255, 253, 248, 0.94);
   --line: rgba(56, 43, 23, 0.12);
-  --muted: #746d62;
+  --muted: #6f675d;
+  --text-secondary: #4f483f;
+  --text-tertiary: #81786e;
   --text: #221d16;
+  --placeholder: #8a8177;
   --amber: #d97706;
+  --amber-text: #a85400;
+  --on-accent: #fffaf2;
   --amber-soft: rgba(217, 119, 6, 0.11);
   background: #f4f0e7;
 }
@@ -833,7 +843,7 @@ footer {
 
 [data-theme="light"] .tool-icon,
 [data-theme="light"] .brand-mark {
-  color: #b96000;
+  color: var(--amber-text);
 }
 
 /* ── Search overlay ───────────────────────────────────── */
@@ -1266,4 +1276,96 @@ a.ui-card:hover {
     gap: 12px;
     flex-direction: column;
   }
+}
+
+
+/* ── Text contrast normalization ─────────────────────── */
+body,
+button,
+input,
+textarea,
+select {
+  color: var(--text);
+}
+
+.eyebrow,
+.brand small,
+.lede,
+.section-heading > span,
+.tool-status,
+.tool-meta,
+footer,
+.topnav > a:not(.github-link),
+.footer-links a,
+.legal-back,
+.legal-card p,
+.search-result-copy small,
+.search-result-meta,
+.search-empty,
+.ui-card-eyebrow,
+.ui-card-meta,
+.ui-card p,
+.ui-table caption,
+.ui-table th {
+  color: var(--muted);
+}
+
+.tool-card h3,
+.empty-state h3,
+.legal-card h1,
+.legal-card h2,
+.search-result-copy strong,
+.ui-card h3,
+.ui-table td {
+  color: var(--text);
+}
+
+.hero-search-placeholder,
+.search-panel-header input::placeholder,
+.search input::placeholder,
+.hero-search input::placeholder {
+  color: var(--placeholder);
+  opacity: 1;
+}
+
+.brand-mark,
+.tool-icon,
+.empty-filter .empty-glyph,
+.error-code,
+.hero-search-icon,
+.search-result-icon,
+.empty-state code {
+  color: var(--amber-text);
+}
+
+.chips button.active,
+.empty-glyph,
+.error-actions .primary-action {
+  color: var(--on-accent);
+}
+
+[data-theme="light"] .topnav > a:not(.github-link):hover,
+[data-theme="light"] .footer-links a:hover,
+[data-theme="light"] .legal-back:hover {
+  background: rgba(65, 45, 20, 0.055);
+}
+
+[data-theme="light"] .chips button {
+  background: rgba(80, 55, 20, 0.025);
+}
+
+[data-theme="light"] .search-kbd {
+  background: rgba(80, 55, 20, 0.045);
+}
+
+[data-theme="light"] .hero-search-trigger {
+  color: var(--text);
+}
+
+[data-theme="light"] .search-result:hover {
+  color: var(--text);
+}
+
+[data-theme="light"] .empty-state code {
+  background: rgba(217, 119, 6, 0.07);
 }
