@@ -2,6 +2,9 @@
   import { onMount } from 'svelte';
   import { base } from '$app/paths';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+  import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
+  import { localizedPath } from '$lib/i18n';
+  import { m } from '$lib/paraglide/messages.js';
   import { sandboxDocument, themeMessageType } from '$lib/registry/sandbox';
   import { documentTheme } from '$lib/theme';
   import type { PageData } from './$types';
@@ -39,17 +42,17 @@
     failure = '';
     const timeout = setTimeout(() => {
       controller.abort();
-      failure = 'Bundle request timed out. Try again.';
+      failure = m.bundle_timeout();
     }, 30_000);
     async function loadBundle() {
       try {
         const response = await fetch(`${base}/bundles/${tool.id}/${tool.bundle.sha256}.json`, { signal: controller.signal });
         if (!response.ok) throw new Error(`Bundle request failed (${response.status})`);
         const bundle = await response.json();
-        if (typeof bundle.html !== 'string') throw new Error('Invalid bundle response');
+        if (typeof bundle.html !== 'string') throw new Error(m.bundle_invalid());
         if (!controller.signal.aborted) frameDocument = sandboxDocument(bundle.html, documentTheme(window.document));
       } catch (error) {
-        if (!controller.signal.aborted) failure = error instanceof Error ? error.message : 'Bundle unavailable';
+        if (!controller.signal.aborted) failure = error instanceof Error ? error.message : m.bundle_unavailable();
       } finally {
         clearTimeout(timeout);
       }
@@ -69,19 +72,20 @@
 
 <main id="main-content" class="page-shell tool-shell">
   <header class="surface tool-header">
-    <a class="tool-back" href={`${base}/`}>
+    <a class="tool-back" href={localizedPath('/')}>
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6-6 6 6 6M4 12h16"/></svg>
-      <span>Back to your toolbox</span>
+      <span>{m.tool_back()}</span>
     </a>
     <div class="tool-header-actions">
-      <span class="workspace-label">A little less busywork.</span>
+      <span class="workspace-label">{m.tool_tagline()}</span>
+      <LanguageSwitcher />
       <ThemeToggle />
     </div>
   </header>
 
   <section class="tool-intro">
     <div class="intro-copy">
-      <p class="eyebrow">Your {data.tool.category} sidekick</p>
+      <p class="eyebrow">{m.tool_category_prefix()} {data.tool.category} {m.tool_category_suffix()}</p>
       <h1>{data.tool.name}</h1>
       <p>{data.tool.description}</p>
     </div>
@@ -89,14 +93,14 @@
       <span class="note-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg>
       </span>
-      <div><strong>Make yourself at home.</strong><span>Runs in your browser. Matches your theme.</span></div>
+      <div><strong>{m.tool_welcome()}</strong><span>{m.tool_browser()}</span></div>
     </div>
   </section>
 
-  <section class="workspace surface" aria-label={`${data.tool.name} workspace`}>
+  <section class="workspace surface" aria-label={`${data.tool.name} ${m.tool_workspace()}`}>
     <div class="workspace-topline">
       <span class="workspace-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span>Small task. Sorted.</span>
+      <span>{m.tool_sorted()}</span>
       <span class="workspace-version">v{data.tool.version}</span>
     </div>
     {#if failure}
@@ -104,9 +108,9 @@
         <span class="state-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5m0 4h.01M10.3 4.9 2.8 18a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 4.9a2 2 0 0 0-3.4 0Z"/></svg>
         </span>
-        <h2>This tool needs another moment.</h2>
+        <h2>{m.tool_retry_title()}</h2>
         <p>{failure}</p>
-        <button class="clay-button" type="button" onclick={() => retry++}>Retry loading</button>
+        <button class="clay-button" type="button" onclick={() => retry++}>{m.tool_retry()}</button>
       </div>
     {:else if frameDocument}
       <iframe bind:this={frame} title={data.tool.name} srcdoc={frameDocument} sandbox="allow-scripts" referrerpolicy="no-referrer" onload={syncFrameTheme}></iframe>
@@ -115,17 +119,17 @@
         <span class="state-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="4"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18m-11 0v3h4v-3"/></svg>
         </span>
-        <h2>Getting your workspace ready.</h2>
-        <p>Loading {data.tool.name}…</p>
+        <h2>{m.tool_getting_ready()}</h2>
+        <p>{m.tool_loading()} {data.tool.name}…</p>
       </div>
     {/if}
   </section>
 
   <footer class="workspace-footer">
-    <p>One focused tool, in its own isolated workspace.</p>
-    <a href={`${base}/policy`}>How tools work here <span aria-hidden="true">↗</span></a>
+    <p>{m.tool_isolated()}</p>
+    <a href={localizedPath('/policy/')}>How tools work here <span aria-hidden="true">↗</span></a>
   </footer>
-  <noscript>This tool needs JavaScript to process your input in the browser.</noscript>
+  <noscript>{m.tool_noscript()}</noscript>
 </main>
 
 <style>

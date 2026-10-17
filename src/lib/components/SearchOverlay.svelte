@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { base } from '$app/paths';
+  import { m } from '$lib/paraglide/messages.js';
+  import { localizedPath } from '$lib/i18n';
   import Icon from './Icon.svelte';
   import type { ToolManifest } from '$lib/registry/types';
 
@@ -37,18 +38,18 @@
   function close() { open = false; }
 </script>
 
-<dialog bind:this={dialog} class="search-dialog surface t-modal {phase}" aria-label="Search tools" onkeydown={(event) => { if (event.key === 'Escape') { event.preventDefault(); close(); } }} oncancel={(event) => { event.preventDefault(); close(); }} onclick={(event) => { if (event.target === dialog) close(); }} onclose={close}>
+<dialog bind:this={dialog} class="search-dialog surface t-modal {phase}" aria-label={m.search_label()} onkeydown={(event) => { if (event.key === 'Escape') { event.preventDefault(); close(); } }} oncancel={(event) => { event.preventDefault(); close(); }} onclick={(event) => { if (event.target === dialog) close(); }} onclose={close}>
   <div class="search-panel-header">
     <Icon name="search" />
-    <input bind:this={input} bind:value={query} type="search" placeholder="What would make today a little easier?" autocomplete="off" aria-label="Search tools" />
-    <button type="button" class="icon-button" aria-label="Close search" onclick={close}><Icon name="x" size={18} /></button>
+    <input bind:this={input} bind:value={query} type="search" placeholder={m.overlay_placeholder()} autocomplete="off" aria-label="Search tools" />
+    <button type="button" class="icon-button" aria-label={m.overlay_close()} onclick={close}><Icon name="x" size={18} /></button>
   </div>
   <div class="search-results">
     {#each results as tool}
-      <a class="search-result" href={`${base}${tool.path}/`} onclick={close}><span class="clay-icon peach"><Icon name="braces" size={24} /></span><span class="search-result-copy"><strong>{tool.name}</strong><small>{tool.description}</small></span><Icon name="arrow-right" size={20} /></a>
+      <a class="search-result" href={localizedPath(`${tool.path}/`)} onclick={close}><span class="clay-icon peach"><Icon name="braces" size={24} /></span><span class="search-result-copy"><strong>{tool.name}</strong><small>{tool.description}</small></span><Icon name="arrow-right" size={20} /></a>
     {:else}
-      <div class="search-empty"><strong>No helpers for “{query}” just yet.</strong><p>Try a format like JSON or XML, or a shorter word.</p></div>
+      <div class="search-empty"><strong>{m.overlay_empty_prefix()} “{query}” {m.overlay_empty_suffix()}</strong><p>{m.overlay_empty_tip()}</p></div>
     {/each}
   </div>
-  <p class="search-tip">Your next little shortcut is a click away. Press Escape to close.</p>
+  <p class="search-tip">{m.overlay_tip()}</p>
 </dialog>
