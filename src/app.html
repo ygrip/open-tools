@@ -1,21 +1,22 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f59e0b" />
+    <meta name="theme-color" content="#f6f1e9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#211f25" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="%sveltekit.assets%/brand/favicon.svg" type="image/svg+xml" />
     <meta name="description" content="An independent utility hub for small, focused browser tools." />
     <meta http-equiv="Content-Security-Policy" content="frame-src 'self'" />
     <script>
       (() => {
-        try {
-          const saved = localStorage.getItem('open-tools-theme');
-          const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          document.documentElement.dataset.theme =
-            saved === 'light' || saved === 'dark' ? saved : systemDark ? 'dark' : 'light';
-        } catch {
-          document.documentElement.dataset.theme = 'dark';
-        }
+        let saved;
+        try { saved = localStorage.getItem('open-tools-theme'); }
+        catch { /* Storage is optional; follow the system for this visit. */ }
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = saved === 'light' || saved === 'dark' ? saved : systemDark ? 'dark' : 'light';
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
       })();
     </script>
     %sveltekit.head%

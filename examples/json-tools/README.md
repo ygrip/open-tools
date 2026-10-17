@@ -29,9 +29,15 @@ JSON and XML do not have identical data models. Conversion is structural rather 
 
 Use **Load example** for operation-specific input, **Run** to process it, and **Select output** followed by the browser copy shortcut. Selection works without clipboard permission in the aggregator's opaque-origin iframe.
 
+## Light and dark themes
+
+The clay-style workspace uses semantic CSS color tokens: `--ot-bg`, `--ot-surface`, `--ot-text`, `--ot-muted`, `--ot-border`, `--ot-accent`, `--ot-on-accent`, `--ot-shadow`, and `--ot-highlight`. Shadow and highlight tokens are colors, not complete CSS shadow declarations. The host sets `html[data-theme="light"]` or `html[data-theme="dark"]` before displaying the bundle and updates the theme without reloading it, so changing the host theme does not clear your input or output.
+
+When opened standalone without a host-selected theme, the document follows `prefers-color-scheme`. Internal mint/lavender accents, editor surfaces, error colors, and native controls also adapt to the selected mode. All motion is short, interaction-driven, and disabled for `prefers-reduced-motion: reduce`. The workspace keeps its dependencies inline and adds no fonts, runtime network requests, timers, or animation library.
+
 ## Distribution contract
 
-`tool.manifest.json` declares schema version 1, identity, catalog metadata, version, and `bundle: { format: "html", file: "dist/index.html", sha256: "…" }`. The SHA-256 covers the exact UTF-8 output bytes. Rebuild after any source, dependency or HTML change, and release the HTML and manifest in the same Git commit.
+`tool.manifest.json` declares schema version 2, host theme protocol v1, identity, catalog metadata, version, and `bundle: { format: "html", file: "dist/index.html", sha256: "…" }`. The SHA-256 covers the exact UTF-8 output bytes. Rebuild after any source, dependency or HTML change, and release the HTML and manifest in the same Git commit.
 
 The host must verify the checksum before publication and load the approved HTML in an iframe with `sandbox="allow-scripts"` (never add `allow-same-origin`). The host owns its frame CSP; this package needs inline scripts/styles but no network, forms, popups, downloads or parent-window access.
 

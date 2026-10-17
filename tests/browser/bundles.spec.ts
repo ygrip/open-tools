@@ -3,22 +3,22 @@ import { expect, test } from '@playwright/test';
 test('catalog opens the bundle and runs all four operations', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('link', { name: /JSON Tools/ }).click();
-  await expect(page).toHaveURL(/\/json-tools$/);
+  await expect(page).toHaveURL(/\/json-tools\/?$/);
   const tool = page.frameLocator('iframe');
-  const input = tool.getByLabel('Input', { exact: true });
-  const output = tool.getByLabel('Output', { exact: true });
+  const input = tool.getByRole('textbox', { name: 'Input', exact: true });
+  const output = tool.getByRole('textbox', { name: 'Output', exact: true });
   await input.fill('{"items":[{"name":"Notebook"},{"name":"Pen"}]}');
   await tool.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(output).toHaveValue(JSON.stringify({ items: [{ name: 'Notebook' }, { name: 'Pen' }] }, null, 2));
-  await tool.getByLabel('Operation').selectOption('query');
+  await tool.getByRole('combobox', { name: 'Operation', exact: true }).selectOption('query');
   await tool.getByLabel('JSONPath expression').fill('$.items[*].name');
   await tool.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(output).toHaveValue('[\n  "Notebook",\n  "Pen"\n]');
-  await tool.getByLabel('Operation').selectOption('json-to-xml');
+  await tool.getByRole('combobox', { name: 'Operation', exact: true }).selectOption('json-to-xml');
   await input.fill('{"name":"A & B"}');
   await tool.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(output).toHaveValue(/<root>\s*<name>A &amp; B<\/name>\s*<\/root>/);
-  await tool.getByLabel('Operation').selectOption('xml-to-json');
+  await tool.getByRole('combobox', { name: 'Operation', exact: true }).selectOption('xml-to-json');
   await input.fill('<root><name>A &amp; B</name></root>');
   await tool.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(output).toHaveValue(JSON.stringify({ root: { name: 'A & B' } }, null, 2));
@@ -85,7 +85,7 @@ test('stalled bundle requests time out and expose retry', async ({ page }) => {
 test('mobile tool layout stays within the viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/json-tools');
-  await expect(page.frameLocator('iframe').getByLabel('Input', { exact: true })).toBeVisible();
+  await expect(page.frameLocator('iframe').getByRole('textbox', { name: 'Input', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
   expect(await frame.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

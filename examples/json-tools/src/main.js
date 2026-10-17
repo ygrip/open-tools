@@ -18,22 +18,24 @@ operation.addEventListener('change', () => {
   get('query-help').hidden = !isQuery;
   input.placeholder = operation.value === 'xml-to-json' ? 'Paste XML here' : 'Paste JSON here';
   output.value = '';
-  message('Operation changed. Run to update the output.');
+  message('New task selected. Press Run when you are ready.');
 });
 
 run.addEventListener('click', async () => {
   run.disabled = true;
+  run.setAttribute('aria-busy', 'true');
   output.value = '';
   message('Processing…');
   // Yield one paint so processing feedback appears before the synchronous parser runs.
   await new Promise((resolve) => setTimeout(resolve, 0));
   try {
     output.value = transform(input.value, operation.value, get('query').value);
-    message(`Done. ${output.value.length.toLocaleString()} output characters.`);
+    message(`All set. ${output.value.length.toLocaleString()} characters, ready to use.`);
   } catch (error) {
     message(error instanceof Error ? error.message : 'Processing failed.', true);
   } finally {
     run.disabled = false;
+    run.removeAttribute('aria-busy');
   }
 });
 
@@ -42,20 +44,20 @@ get('example').addEventListener('click', () => {
     ? '<catalog><item id="1"><name>Notebook</name><price>12.5</price></item><item id="2"><name>Pen</name><price>2</price></item></catalog>'
     : JSON.stringify({ items: [{ name: 'Notebook', price: 12.5 }, { name: 'Pen', price: 2 }], available: true });
   output.value = '';
-  message('Example loaded. Press Run.');
+  message('Example loaded. Press Run to try it out.');
   input.focus();
 });
 
 get('clear').addEventListener('click', () => {
   input.value = '';
   output.value = '';
-  message('Input and output cleared.');
+  message('Fresh start. Paste something new when you are ready.');
   input.focus();
 });
 
 get('select-output').addEventListener('click', () => {
   if (!output.value) {
-    message('Run an operation before selecting output.');
+    message('First, run a task so there is something to copy.');
     return;
   }
   output.focus();

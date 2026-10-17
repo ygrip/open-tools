@@ -1,5 +1,5 @@
 <svelte:head><title>Terms · Open Tools</title><meta name="description" content="Terms of use for Open Tools." /></svelte:head>
-<main class="page-shell legal-shell">
+<main id="main-content" class="page-shell legal-shell">
   <a class="legal-back" href="/">← Open Tools</a>
   <article class="legal-card surface">
     <p class="eyebrow">Legal</p>

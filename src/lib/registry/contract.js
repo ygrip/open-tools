@@ -1,4 +1,4 @@
-export const reservedIds = new Set(['policy', 'privacy', 'terms', 'bundles', 'icons', '_app']);
+export const reservedIds = new Set(['policy', 'privacy', 'terms', 'bundles', 'icons', 'brand', 'illustrations', 'index', '404', '500', '503', '_app']);
 
 /** Validate untrusted metadata; return only public, contract-defined fields.
  * @param {any} manifest
@@ -6,7 +6,8 @@ export const reservedIds = new Set(['policy', 'privacy', 'terms', 'bundles', 'ic
  */
 export function validateManifest(manifest) {
   if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) throw new Error('manifest must be an object');
-  if (manifest.schemaVersion !== 1) throw new Error('unsupported schemaVersion');
+  if (manifest.schemaVersion !== 2) throw new Error('unsupported schemaVersion: host theme contract v2 is required');
+  if (manifest.appearance?.theme !== 'host' || manifest.appearance?.protocolVersion !== 1) throw new Error('bundle must declare host theme protocol v1');
   if (typeof manifest.id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(manifest.id) || manifest.id.length > 64 || reservedIds.has(manifest.id)) throw new Error('invalid or reserved id');
   if (manifest.path !== `/${manifest.id}`) throw new Error('path must exactly match /<id>');
   /** @type {[string, number][]} */
@@ -23,7 +24,7 @@ export function validateManifest(manifest) {
   if (!bundle || bundle.format !== 'html' || typeof bundle.file !== 'string' || !/^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.html$/.test(bundle.file)) throw new Error('bundle must be a relative, self-contained HTML file');
   if (typeof bundle.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(bundle.sha256)) throw new Error('invalid bundle sha256');
   return {
-    schemaVersion: 1, id: manifest.id, name: manifest.name.trim(), description: manifest.description.trim(),
+    schemaVersion: 2, appearance: { theme: 'host', protocolVersion: 1 }, id: manifest.id, name: manifest.name.trim(), description: manifest.description.trim(),
     path: manifest.path, category: manifest.category, repository: manifest.repository,
     version: manifest.version, status: manifest.status, capabilities: [...manifest.capabilities],
     bundle: { format: 'html', file: bundle.file, sha256: bundle.sha256 }

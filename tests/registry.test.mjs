@@ -11,7 +11,7 @@ import { createGithubClient, loadSource, verifyBundle, MAX_BUNDLE_BYTES } from '
 
 const html = Buffer.from('<!doctype html><html><body>Private tool</body></html>');
 const manifest = {
-  schemaVersion: 1, id: 'json-tools', path: '/json-tools', name: 'JSON Tools',
+  schemaVersion: 2, appearance: { theme: 'host', protocolVersion: 1 }, id: 'json-tools', path: '/json-tools', name: 'JSON Tools',
   description: 'Local JSON utilities', category: 'data', status: 'experimental',
   version: '0.1.0', repository: 'https://github.com/ygrip/json-tools', capabilities: ['json'],
   bundle: { format: 'html', file: 'dist/index.html', sha256: createHash('sha256').update(html).digest('hex') }
@@ -26,7 +26,9 @@ function remoteFile(bytes) {
 test('contract strips private/unknown metadata and validates every published field', () => {
   assert.deepEqual(validateManifest({ ...manifest, secret: 'not public' }), manifest);
   for (const patch of [
-    { schemaVersion: 2 }, { id: '../oops' }, { id: 'policy', path: '/policy' },
+    { schemaVersion: 1 }, { schemaVersion: 3 }, { appearance: undefined },
+    { appearance: { theme: 'independent', protocolVersion: 1 } },
+    { appearance: { theme: 'host', protocolVersion: 2 } }, { id: '../oops' }, { id: 'policy', path: '/policy' },
     { path: '/privacy' }, { category: 'unknown' }, { status: 'unknown' }, { version: 'latest' },
     { name: ' ' }, { name: [] }, { description: '' }, { capabilities: [1] },
     { repository: 'https://evil.example/tool' },
@@ -34,6 +36,12 @@ test('contract strips private/unknown metadata and validates every published fie
     { bundle: { ...manifest.bundle, file: '/index.html' } },
     { bundle: { ...manifest.bundle, sha256: 'wrong' } }
   ]) assert.throws(() => validateManifest({ ...manifest, ...patch }), JSON.stringify(patch));
+});
+
+test('tool routes cannot shadow static namespaces or prerender filenames', () => {
+  for (const id of ['brand', 'illustrations', 'index', '404', '500', '503', 'bundles', 'icons']) {
+    assert.throws(() => validateManifest({ ...manifest, id, path: `/${id}` }), /reserved id/);
+  }
 });
 
 test('integrity, byte limit, HTML and UTF-8 are checked before publication', () => {

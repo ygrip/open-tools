@@ -1,5 +1,5 @@
 <svelte:head><title>Privacy · Open Tools</title><meta name="description" content="Privacy policy for Open Tools." /></svelte:head>
-<main class="page-shell legal-shell">
+<main id="main-content" class="page-shell legal-shell">
   <a class="legal-back" href="/">← Open Tools</a>
   <article class="legal-card surface">
     <p class="eyebrow">Legal</p>

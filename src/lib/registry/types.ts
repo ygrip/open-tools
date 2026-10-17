@@ -1,7 +1,8 @@
 export type ToolCategory = 'media' | 'developer' | 'data' | 'productivity' | 'other';
 
 export type ToolManifest = {
-  schemaVersion: 1;
+  schemaVersion: 2;
+  appearance: { theme: 'host'; protocolVersion: 1 };
   id: string;
   name: string;
   description: string;

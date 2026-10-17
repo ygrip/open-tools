@@ -37,6 +37,7 @@ jobs:
           TOOLS_GITHUB_TOKEN: ${{ secrets.TOOLS_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build
+      - run: npm run performance:check
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
