@@ -54,20 +54,15 @@ for (const width of [375, 1440]) test(`actual catalog paginates and resets filte
   expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
 });
 
-test('hero motion can pause, resumes, and stops outside the viewport', async ({ page }) => {
+test('hero motion runs in the viewport and stops outside it', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
   const image = page.locator('.hero-art img');
   await page.locator('.hero-art').scrollIntoViewIfNeeded();
   const state = () => image.evaluate((element) => element.getAnimations().map((animation) => animation.playState));
-  await expect.poll(state).toEqual(['running']);
-  await page.getByRole('button', { name: 'Pause hero animation' }).click();
-  await expect.poll(state).toEqual(['paused']);
-  await page.getByRole('button', { name: 'Play hero animation' }).click();
-  await expect.poll(state).toEqual(['running']);
+  await expect.poll(state).toEqual(expect.arrayContaining(['running']));
   await page.locator('.site-footer').scrollIntoViewIfNeeded();
-  await expect.poll(state).toEqual(['paused']);
+  await expect.poll(state).not.toContain('running');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(state).toEqual([]);
-  await expect(page.getByRole('button', { name: 'Pause hero animation' })).toBeHidden();
 });

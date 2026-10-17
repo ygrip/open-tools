@@ -1,7 +1,6 @@
-<script lang="ts">
-  export type IconName = 'arrow-left' | 'arrow-right' | 'search' | 'sun' | 'moon' | 'shield' | 'braces' | 'grid' | 'sparkles' | 'github' | 'check' | 'x' | 'toolbox' | 'external' | 'bolt' | 'heart' | 'filter' | 'lock' | 'play' | 'pause';
-  let { name, size = 22, class: className = '' }: { name: IconName; size?: number; class?: string } = $props();
-  const paths: Record<IconName, string> = {
+<script lang="ts" module>
+  export type IconName = 'arrow-left' | 'arrow-right' | 'search' | 'sun' | 'moon' | 'shield' | 'braces' | 'grid' | 'sparkles' | 'github' | 'check' | 'x' | 'toolbox' | 'external' | 'bolt' | 'heart' | 'filter' | 'lock' | 'play' | 'pause' | 'share' | 'link' | 'download';
+  export const iconPaths: Record<IconName, string> = {
     'arrow-left': 'M19 12H5m7-7-7 7 7 7',
     'arrow-right': 'M5 12h14m-7-7 7 7-7 7',
     search: 'M21 21l-4.5-4.5M19 10.5a8.5 8.5 0 1 1-17 0 8.5 8.5 0 0 1 17 0',
@@ -21,8 +20,15 @@
     filter: 'M4 7h16M7 12h10m-7 5h4',
     lock: 'M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5V10Zm7 4v3',
     play: 'm8 4 12 8-12 8V4Z',
-    pause: 'M8 5v14M16 5v14'
+    pause: 'M8 5v14M16 5v14',
+    share: 'M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7',
+    link: 'M10 13a5 5 0 0 0 7.1 0l3-3a5 5 0 0 0-7.1-7.1l-1.7 1.7M14 11a5 5 0 0 0-7.1 0l-3 3A5 5 0 0 0 11 21.1l1.7-1.7',
+    download: 'M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2'
   };
 </script>
 
+<script lang="ts">
+  let { name, size = 22, class: className = '' }: { name: IconName; size?: number; class?: string } = $props();
+  const paths = iconPaths;
+</script>
 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class={className}><path d={paths[name]} /></svg>

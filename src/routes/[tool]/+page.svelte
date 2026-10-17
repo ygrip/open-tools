@@ -1,4 +1,6 @@
 <script lang="ts">
+  import SiteFooter from '$lib/components/SiteFooter.svelte';
+  import ShareButton from '$lib/components/ShareButton.svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
   import ToolRuntime from '$lib/components/ToolRuntime.svelte';
@@ -19,7 +21,7 @@
 <main id="main-content" class="page-shell tool-shell">
   <header class="surface tool-header">
     <a class="tool-back" href={localizedPath('/')}><Icon name="arrow-left" size={20} /><span>{m.tool_back()}</span></a>
-    <div class="tool-header-actions"><LanguageSwitcher /><ThemeToggle /></div>
+    <div class="tool-header-actions"><LanguageSwitcher /><ThemeToggle /><ShareButton {tool} /></div>
   </header>
   <section class="tool-intro" aria-labelledby="tool-name">
     <span class="clay-icon peach"><Icon name={tool.icon} size={30} /></span>
@@ -28,6 +30,7 @@
   <ToolRuntime {tool} locale={getLocale()} />
   <footer class="workspace-footer"><p>{m.tool_isolated()}</p><a href={localizedPath('/policy/')}>{m.tool_policy_link()} <Icon name="external" size={16} /></a></footer>
   <noscript>{m.tool_noscript()}</noscript>
+  <SiteFooter {tool} />
 </main>
 
 <style>

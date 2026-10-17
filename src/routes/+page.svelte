@@ -4,10 +4,10 @@
   import { getLocale } from '$lib/paraglide/runtime.js';
   import { localizedTool } from '$lib/registry/presentation';
   import { localizedPath } from '$lib/i18n';
-  import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
+  import SiteHeader from '$lib/components/SiteHeader.svelte';
+  import SiteFooter from '$lib/components/SiteFooter.svelte';
   import { base } from '$app/paths';
   import Icon from '$lib/components/Icon.svelte';
-  import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import HeroArt from '$lib/components/HeroArt.svelte';
   import Seo from '$lib/components/Seo.svelte';
   import Pagination from '$lib/components/Pagination.svelte';
@@ -77,23 +77,7 @@
 {#if SearchOverlay}<SearchOverlay bind:open={searchOpen} tools={catalog} />{/if}
 
 <div class="page-shell">
-  <header class="topbar">
-    <a class="brand" href={localizedPath('/')} aria-label={m.brand_home()}>
-      <img src={`${base}/brand/logo.svg`} width="46" height="46" alt="" />
-      <span><strong>trick<span class="brand-accent">-it</span></strong><small>{m.brand_tagline()}</small></span>
-    </a>
-    <nav class="topnav" aria-label={m.nav_primary()}>
-      <a class="nav-link" href="#tools"><Icon name="grid" size={17} /> {m.nav_toolbox()}</a>
-      <a class="nav-link about-link" href="#how-it-works">{m.nav_how()}</a>
-      <a class="nav-link mobile-github" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer"><Icon name="github" size={17} /> GitHub</a>
-    </nav>
-    <div class="header-actions">
-      <button class="icon-button search-nav" type="button" onclick={openSearch} aria-label={m.search_label()}><Icon name="search" /></button>
-      <LanguageSwitcher />
-      <ThemeToggle />
-      <a class="clay-button small github-link" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer"><Icon name="github" size={19} /><span>GitHub</span><Icon name="external" size={15} /></a>
-    </div>
-  </header>
+  <SiteHeader onsearch={openSearch} catalog={catalog} />
 
   <main id="main-content">
     <section class="hero-bento" aria-labelledby="hero-title">
@@ -148,5 +132,5 @@
     </section>
   </main>
 
-  <footer class="site-footer"><a class="brand footer-brand" href={localizedPath('/')}><img src={`${base}/brand/logo.svg`} alt="" width="36" height="36" /><strong>trick-it</strong></a><span>{m.footer_tagline()}</span><nav aria-label={m.nav_legal()}><a href={localizedPath('/privacy/')}>{m.footer_privacy()}</a><a href={localizedPath('/terms/')}>{m.footer_terms()}</a><a href={localizedPath('/policy/')}>{m.footer_policy()}</a><a href="https://github.com/ygrip/open-tools" aria-label={m.brand_github()} target="_blank" rel="noreferrer"><Icon name="github" size={20} /></a></nav></footer>
+  <SiteFooter catalog={catalog} />
 </div>
