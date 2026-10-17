@@ -1,12 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { base } from '$app/paths';
+  import { updated } from '$app/state';
   import { dev, version } from '$app/environment';
   import { m } from '$lib/paraglide/messages.js';
   type InstallEvent = Event & { prompt(): Promise<void>; userChoice: Promise<{ outcome: string }> };
   let prompt = $state<InstallEvent | null>(null);
   let waiting = $state<ServiceWorker | null>(null);
   let refresh = $state(false);
+  let spaUpdate = $state(false);
   let installed = $state(false);
   let mobile = $state(false);
   let iosSafari = $state(false);
@@ -17,11 +19,29 @@
   // Only offer install where it helps: a phone/tablet browser tab that can actually install (native prompt, or iOS Add to Home Screen).
   // Chromium may offer native installation on desktop; iOS needs manual guidance.
   const showInstall = $derived(!installed && !installDismissed && (prompt !== null || (mobile && iosSafari)));
-  const hasUpdate = $derived(waiting !== null || refresh);
+  const hasUpdate = $derived(waiting !== null || refresh || spaUpdate || updated.current);
+  const readyToReload = $derived(refresh || (!waiting && (spaUpdate || updated.current)));
 
   onMount(() => {
     let disposed = false;
     const cleanup: (() => void)[] = [];
+    // SvelteKit version polling covers SPA-only releases; the worker owns offline-shell updates.
+    let lastVersionCheck = Date.now();
+    const checkSpaVersion = () => {
+      if (disposed || dev || !navigator.onLine || document.visibilityState !== 'visible' || Date.now() - lastVersionCheck < 60_000) return;
+      lastVersionCheck = Date.now();
+      void updated.check().then((isNew) => {
+        if (!disposed && isNew) { spaUpdate = true; updateDismissed = false; }
+      }).catch(() => { /* Offline version checks must not interrupt a tool. */ });
+    };
+    window.addEventListener('focus', checkSpaVersion);
+    document.addEventListener('visibilitychange', checkSpaVersion);
+    const versionTimer = window.setInterval(checkSpaVersion, 5 * 60_000);
+    cleanup.push(() => {
+      window.removeEventListener('focus', checkSpaVersion);
+      document.removeEventListener('visibilitychange', checkSpaVersion);
+      clearInterval(versionTimer);
+    });
     const standalone = matchMedia('(display-mode: standalone)');
     const touch = matchMedia('(hover: none) and (pointer: coarse)');
     const syncInstalled = () => { installed = standalone.matches || (navigator as Navigator & { standalone?: boolean }).standalone === true; if (installed) { prompt = null; manualInstructions = false; } };
@@ -106,12 +126,12 @@
   <aside class="pwa-card pwa-update" role="region" aria-label={m.pwa_update()}>
     <div class="pwa-icon" aria-hidden="true">✦</div>
     <div class="pwa-copy">
-      <strong>{refresh ? m.pwa_ready_title() : m.pwa_update()}</strong>
-      <p>{refresh ? m.pwa_ready() : m.pwa_update_description()}</p>
+      <strong>{readyToReload ? m.pwa_ready_title() : m.pwa_update()}</strong>
+      <p>{readyToReload ? m.pwa_ready() : m.pwa_update_description()}</p>
       <div class="pwa-actions">
         {#if waiting}
           <button class="clay-button primary small" type="button" onclick={() => waiting?.postMessage({ type: 'trick-it:activate', version: 1 })}>{m.pwa_activate()}</button>
-        {:else if refresh}
+        {:else if readyToReload}
           <button class="clay-button primary small" type="button" onclick={() => location.reload()}>{m.pwa_reload()}</button>
         {/if}
         <button class="pwa-quiet" type="button" onclick={() => updateDismissed = true}>{m.pwa_later()}</button>
@@ -120,7 +140,7 @@
     <button class="pwa-close" type="button" aria-label={m.pwa_later()} onclick={() => updateDismissed = true}>×</button>
   </aside>
 {:else if hasUpdate}
-  <button type="button" class="pwa-mini" onclick={() => updateDismissed = false}>✦ {refresh ? m.pwa_ready_title() : m.pwa_update()}</button>
+  <button type="button" class="pwa-mini" onclick={() => updateDismissed = false}>✦ {readyToReload ? m.pwa_ready_title() : m.pwa_update()}</button>
 {:else if showInstall}
   <aside class="pwa-card pwa-install" aria-label={m.pwa_title()}>
     <div class="pwa-copy">
