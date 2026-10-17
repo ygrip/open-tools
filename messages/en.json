@@ -220,5 +220,11 @@
   "support_thanks": "Every bit keeps the lights on. Thank you!",
   "support_maker": "More from the maker at readynaz.com",
   "footer_support": "Support the developer",
-  "footer_maker": "Made by readynaz"
+  "footer_maker": "Made by readynaz",
+  "pwa_ready_title": "Update ready",
+  "pwa_update_description": "A newer trick-it is available. Prepare it without interrupting your current tool.",
+  "pwa_install_title": "Keep your toolbox handy",
+  "pwa_install_description": "Add trick-it to your device for quick access and offline-ready tools.",
+  "pwa_later": "Not now",
+  "pwa_close": "Got it"
 }
