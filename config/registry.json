@@ -10,6 +10,10 @@
       "local": "examples/json-tools"
     },
     {
+      "repository": "ygrip/text-manipulation",
+      "ref": "8859877db549168a39bd40a29ceff5ccd6fa949f"
+    },
+    {
       "repository": "ygrip/id-generator",
       "local": "examples/id-generator"
     }
