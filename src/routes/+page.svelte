@@ -6,6 +6,7 @@
   import { localizedPath } from '$lib/i18n';
   import SiteHeader from '$lib/components/SiteHeader.svelte';
   import SiteFooter from '$lib/components/SiteFooter.svelte';
+  import SupportSection from '$lib/components/SupportSection.svelte';
   import { base } from '$app/paths';
   import Icon from '$lib/components/Icon.svelte';
   import HeroArt from '$lib/components/HeroArt.svelte';
@@ -130,6 +131,8 @@
       <div class="how-heading"><span class="eyebrow">{m.how_eyebrow()}</span><h2 id="how-title">{m.how_title_1()}<br />{m.how_title_2()}</h2><p>{m.how_intro()}</p></div>
       <ol class="how-steps"><li><span class="step-number peach">01</span><div><h3>{m.step_find()}</h3><p>{m.step_find_desc()}</p></div></li><li><span class="step-number mint">02</span><div><h3>{m.step_use()}</h3><p>{m.step_use_desc()}</p></div></li><li><span class="step-number lavender">03</span><div><h3>{m.step_done()}</h3><p>{m.step_done_desc()}</p></div></li></ol>
     </section>
+
+    <SupportSection />
   </main>
 
   <SiteFooter />
