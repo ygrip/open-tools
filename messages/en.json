@@ -207,5 +207,18 @@
   "footer_explore": "Explore",
   "footer_legal": "Good to know",
   "footer_open_source": "Open source on GitHub",
-  "quick_options": "Options"
+  "quick_options": "Options",
+  "support_eyebrow": "Made with care, by one person",
+  "support_title": "Keep the toolbox open",
+  "support_body": "trick-it is an independent project: free to use, no account needed. If it saved you a few minutes, you can help fund hosting, new tools and the occasional late-night coffee.",
+  "support_trakteer": "Trakteer a Coffee",
+  "support_trakteer_note": "Trakteer · from Indonesia",
+  "support_kofi": "Fuel the Toolbox",
+  "support_kofi_note": "Ko-fi · from anywhere",
+  "support_patreon": "Become a Supporter",
+  "support_patreon_note": "Patreon · monthly",
+  "support_thanks": "Every bit keeps the lights on. Thank you!",
+  "support_maker": "More from the maker at readynaz.com",
+  "footer_support": "Support the developer",
+  "footer_maker": "Made by readynaz"
 }

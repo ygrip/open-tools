@@ -35,10 +35,11 @@
     return () => clearTimeout(timer);
   });
 
+  // A stale native `close` event can arrive after the dialog was re-opened (e.g. fast Escape then `/`); ignore it while open.
   function close() { open = false; }
 </script>
 
-<dialog bind:this={dialog} class="search-dialog surface t-modal {phase}" aria-label={m.search_label()} onkeydown={(event) => { if (event.key === 'Escape') { event.preventDefault(); close(); } }} oncancel={(event) => { event.preventDefault(); close(); }} onclick={(event) => { if (event.target === dialog) close(); }} onclose={close}>
+<dialog bind:this={dialog} class="search-dialog surface t-modal {phase}" aria-label={m.search_label()} onkeydown={(event) => { if (event.key === 'Escape') { event.preventDefault(); close(); } }} oncancel={(event) => { event.preventDefault(); close(); }} onclick={(event) => { if (event.target === dialog) close(); }} onclose={() => { if (!dialog?.open) close(); }}>
   <div class="search-panel-header">
     <Icon name="search" />
     <input bind:this={input} bind:value={query} type="search" placeholder={m.overlay_placeholder()} autocomplete="off" aria-label="Search tools" />
