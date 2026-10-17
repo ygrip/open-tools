@@ -333,3 +333,15 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
 
 /* Legal language selection, shared across translated static pages. */
 .legal-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+
+@media (max-width: 760px) {
+  .topbar > .brand { min-width: 0; }
+  .topbar .header-actions { gap: 5px; }
+  .topbar .header-actions .language-switcher { padding: 2px; }
+  .topbar .header-actions .language-switcher a { min-width: 30px; min-height: 38px; font-size: 10px; }
+}
+@media (max-width: 380px) {
+  .topbar .brand img { width: 32px; height: 32px; }
+  .topbar .brand strong { font-size: 19px; }
+  .topbar .header-actions .icon-button, .topbar .header-actions .theme-toggle { width: 40px; height: 40px; }
+}

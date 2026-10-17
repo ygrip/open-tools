@@ -22,7 +22,7 @@
   }
 </script>
 
-<button class="theme-toggle clay-button" type="button" onclick={toggle} aria-label="{m.theme_switch()} {theme === 'dark' ? m.theme_light() : m.theme_dark()} {m.theme_theme()}" title="{m.theme_switch()} {theme === 'dark' ? m.theme_light() : m.theme_dark()} {m.theme_theme()}">
+<button class="theme-toggle clay-button" type="button" onclick={toggle} aria-label={theme === 'dark' ? m.theme_to_light() : m.theme_to_dark()} title={theme === 'dark' ? m.theme_to_light() : m.theme_to_dark()}>
   <span class="t-icon-swap" data-state={theme === 'dark' ? 'a' : 'b'} aria-hidden="true">
     <span class="t-icon" data-icon="a">
       <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>

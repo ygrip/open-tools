@@ -77,7 +77,7 @@
   <header class="topbar">
     <a class="brand" href={localizedPath('/')} aria-label={m.brand_home()}>
       <img src={`${base}/brand/logo.svg`} width="46" height="46" alt="" />
-      <span><strong>open<span class="brand-accent">tools</span></strong><small>little tools. lovely results.</small></span>
+      <span><strong>open<span class="brand-accent">tools</span></strong><small>{m.brand_tagline()}</small></span>
     </a>
     <nav class="topnav" aria-label={m.nav_primary()}>
       <a class="nav-link" href="#tools"><Icon name="grid" size={17} /> {m.nav_toolbox()}</a>
@@ -95,11 +95,11 @@
   <main id="main-content">
     <section class="hero-bento" aria-labelledby="hero-title">
       <div class="hero-copy surface">
-        <span class="eyebrow friendly-pill"><Icon name="sparkles" size={16} /> A little less busywork</span>
+        <span class="eyebrow friendly-pill"><Icon name="sparkles" size={16} /> {m.hero_eyebrow()}</span>
         <h1 id="hero-title">{m.hero_small()}<br />{m.hero_big()} <span class="headline-highlight">{m.hero_wins()}</span></h1>
         <p class="hero-description">{m.hero_description()}</p>
         <div class="hero-actions">
-          <a class="clay-button primary" href="#tools">Explore the toolbox <Icon name="arrow-right" size={20} /></a>
+          <a class="clay-button primary" href="#tools">{m.hero_explore()} <Icon name="arrow-right" size={20} /></a>
           <span class="no-account"><Icon name="check" size={16} /> {m.hero_no_account()}</span>
         </div>
         <div class="hero-proof"><span class="tiny-clay-icon"><Icon name="shield" size={17} /></span><span>{m.hero_proof()}</span></div>
@@ -115,7 +115,7 @@
       <div class="catalog-controls surface">
         <div class="search-input-wrap"><Icon name="search" size={21} /><label class="sr-only" for="tool-search">{m.search_toolbox()}</label><input id="tool-search" type="search" bind:value={query} oninput={() => currentPage = 1} placeholder={m.search_placeholder()} /><kbd>/</kbd></div>
         <div class="chips" aria-label={m.nav_categories()}>
-          <button type="button" class:active={selectedCategory === 'all'} aria-pressed={selectedCategory === 'all'} onclick={() => selectCategory('all')}><Icon name="grid" size={16} /> All tools</button>
+          <button type="button" class:active={selectedCategory === 'all'} aria-pressed={selectedCategory === 'all'} onclick={() => selectCategory('all')}><Icon name="grid" size={16} /> {m.category_all()}</button>
           {#each categories as category}<button type="button" class:active={selectedCategory === category} aria-pressed={selectedCategory === category} onclick={() => selectCategory(category)}>{categoryNames[category]}</button>{/each}
         </div>
       </div>
@@ -124,16 +124,16 @@
       <div class="tool-grid" class:single-result={filteredTools.length === 1}>
         {#each pagedTools as tool (tool.id)}
           <a class="tool-card surface" href={localizedPath(`${tool.path}/`)}>
-            <div class="tool-card-top"><span class="clay-icon peach"><Icon name={tool.category === 'data' || tool.category === 'developer' ? 'braces' : 'toolbox'} size={30} /></span><span class="tool-status"><span class="status-dot"></span> Ready to help</span></div>
+            <div class="tool-card-top"><span class="clay-icon peach"><Icon name={tool.category === 'data' || tool.category === 'developer' ? 'braces' : 'toolbox'} size={30} /></span><span class="tool-status"><span class="status-dot"></span> {m.tool_ready()}</span></div>
             <div class="tool-card-copy"><span class="eyebrow">{categoryNames[tool.category]}</span><h3>{tool.name}</h3><p>{tool.id === 'json-tools' ? m.json_intro() : tool.description}</p></div>
             <div class="tool-capabilities">{#each tool.capabilities.slice(0, 3) as capability}<span>{capability.replaceAll('-', ' ')}</span>{/each}</div>
             <div class="tool-card-bottom"><span>{m.open_tool()} {tool.name}</span><span class="round-arrow"><Icon name="arrow-right" size={21} /></span></div>
           </a>
         {:else}
-          <div class="empty-state surface"><span class="clay-icon lavender"><Icon name="search" size={30} /></span><h3>{tools.length ? m.empty_title() : m.empty_title_no_tools()}</h3><p>{tools.length ? m.empty_desc() : m.empty_desc_no_tools()}</p>{#if tools.length}<button class="clay-button" type="button" onclick={() => { query = ''; selectCategory('all'); }}>Show all tools <Icon name="arrow-right" size={18} /></button>{/if}</div>
+          <div class="empty-state surface"><span class="clay-icon lavender"><Icon name="search" size={30} /></span><h3>{tools.length ? m.empty_title() : m.empty_title_no_tools()}</h3><p>{tools.length ? m.empty_desc() : m.empty_desc_no_tools()}</p>{#if tools.length}<button class="clay-button" type="button" onclick={() => { query = ''; selectCategory('all'); }}>{m.empty_show_all()} <Icon name="arrow-right" size={18} /></button>{/if}</div>
         {/each}
         {#if filteredTools.length <= 1 && !query && selectedCategory === 'all'}
-          <aside class="collection-card surface lavender"><div class="mini-tool-scene" aria-hidden="true"><span class="mini-block one"><Icon name="toolbox" size={38} /></span><span class="mini-block two"><Icon name="sparkles" size={30} /></span><span class="mini-block three"><Icon name="braces" size={26} /></span></div><span class="eyebrow">{m.collection_eyebrow()}</span><h3>{m.collection_title_1()}<br />{m.collection_title_2()}</h3><p>{m.collection_desc()}</p><a class="text-link" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer">Have a tool in mind? <Icon name="arrow-right" size={18} /></a></aside>
+          <aside class="collection-card surface lavender"><div class="mini-tool-scene" aria-hidden="true"><span class="mini-block one"><Icon name="toolbox" size={38} /></span><span class="mini-block two"><Icon name="sparkles" size={30} /></span><span class="mini-block three"><Icon name="braces" size={26} /></span></div><span class="eyebrow">{m.collection_eyebrow()}</span><h3>{m.collection_title_1()}<br />{m.collection_title_2()}</h3><p>{m.collection_desc()}</p><a class="text-link" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer">{m.collection_feedback()} <Icon name="arrow-right" size={18} /></a></aside>
         {/if}
       </div>
       <Pagination totalItems={filteredTools.length} {pageSize} {currentPage} onPageChange={changePage} />
