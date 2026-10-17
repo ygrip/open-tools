@@ -1,7 +1,8 @@
 <script lang="ts">
   import './app.css';
   import { page } from '$app/state';
-  import { locales, localizeHref } from '$lib/paraglide/runtime.js';
+  import { locales } from '$lib/paraglide/runtime.js';
+  import { localizedPath } from '$lib/i18n';
   import { m } from '$lib/paraglide/messages.js';
   import fontUrl from '@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2?url';
 
@@ -11,7 +12,7 @@
 <svelte:head>
   <title>Open Tools</title>
   {#each locales as locale}
-    <link rel="alternate" hreflang={locale} href={new URL(localizeHref(page.url.pathname, { locale }), page.url.origin).href} />
+    <link rel="alternate" hreflang={locale} href={localizedPath(page.url.pathname, locale)} />
   {/each}
   <link rel="preload" href={fontUrl} as="font" type="font/woff2" crossorigin="anonymous" />
 </svelte:head>
