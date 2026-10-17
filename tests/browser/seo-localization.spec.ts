@@ -56,7 +56,7 @@ test('localized controls preserve data on SDK locale events and links preserve q
   await page.locator('iframe').evaluate((element) => (element as HTMLIFrameElement).contentWindow!.postMessage({ type: 'trick-it:locale', version: 1, locale: 'en' }, '*'));
   await expect(frame.getByRole('textbox', { name: 'Input', exact: true })).toHaveValue('{"pesan":"halo"}');
   await expect(frame.getByRole('textbox', { name: 'Output', exact: true })).toHaveValue('{\n  "pesan": "halo"\n}');
-  const english = page.getByRole('link', { name: 'English', exact: true });
+  const english = page.getByRole('link', { name: 'EN English', exact: true });
   await expect(english).toHaveAttribute('href', '/json-tools/?keep=1#guide');
   await english.click();
   await expect(page).toHaveURL(/\/json-tools\/\?keep=1#guide$/);

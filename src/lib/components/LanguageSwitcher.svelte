@@ -12,12 +12,11 @@
   {#each locales as locale}
     <a
       href={`${localizedPath(page.url.pathname, locale)}${browser ? page.url.search + page.url.hash : ''}`}
-      aria-label={labels[locale]}
       aria-current={getLocale() === locale ? 'page' : undefined}
       hreflang={locale}
       lang={locale}
       data-sveltekit-reload
-    >{locale.toUpperCase()}</a>
+    >{locale.toUpperCase()}<span class="sr-only"> {labels[locale]}</span></a>
   {/each}
 </nav>
 
@@ -26,4 +25,6 @@
   .language-switcher a { min-width: 36px; min-height: 36px; display: grid; place-items: center; border-radius: 10px; font-size: 11px; font-weight: 850; color: var(--muted); text-decoration: none; }
   .language-switcher a[aria-current='page'] { background: var(--peach); color: var(--text); }
   .language-switcher a:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 1px; }
+  /* Accessible name starts with the visible code (WCAG 2.5.3 label-in-name) and adds the full language name. */
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 </style>

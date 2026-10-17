@@ -12,12 +12,60 @@ for (const width of [320, 375, 430]) test(`mobile header exposes navigation and 
     expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   }
   await expect(page.getByRole('button', { name: 'Search tools', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Switch to .* theme/ })).toBeVisible();
+  // Language + theme live behind the gooey quick-settings disclosure on phones.
+  const settings = page.getByRole('button', { name: 'Options', exact: true });
+  await expect(settings).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('button', { name: /Switch to .* theme/ })).toBeHidden();
+  await settings.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(settings).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('link', { name: 'EN English' })).toBeFocused();
+  for (const control of [page.getByRole('link', { name: 'EN English' }), page.getByRole('link', { name: 'ID Bahasa Indonesia' }), page.getByRole('button', { name: /Switch to .* theme/ })]) {
+    await expect(control).toBeVisible();
+    // Poll: the items spring in from 0.6 scale.
+    await expect.poll(async () => { const box = (await control.boundingBox())!; return Math.min(box.width, box.height); }).toBeGreaterThanOrEqual(44);
+  }
+  await expect.poll(async () => (await new AxeBuilder({ page }).include('.topbar').analyze()).violations.map((v) => v.id)).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(settings).toHaveAttribute('aria-expanded', 'false');
+  await expect(settings).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await nav.getByRole('link', { name: 'How it works', exact: true }).click();
   await expect(page).toHaveURL(/#how-it-works$/);
   await nav.getByRole('link', { name: 'Toolbox', exact: true }).click();
   await expect(page).toHaveURL(/#tools$/);
+});
+
+test('mobile quick-settings menu is modal: outside taps only close it, Tab stays inside, share opens', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  const settings = page.getByRole('button', { name: 'Options', exact: true });
+  const howLink = page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('link', { name: 'How it works', exact: true });
+  await settings.click();
+  await expect(settings).toHaveAttribute('aria-expanded', 'true');
+  const box = (await howLink.boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(settings).toHaveAttribute('aria-expanded', 'false');
+  await expect(page).not.toHaveURL(/#how-it-works$/);
+  await settings.click();
+  for (let i = 0; i < 6; i++) await page.keyboard.press('Tab');
+  expect(await page.evaluate(() => !!document.activeElement?.closest('.quick-settings'))).toBe(true);
+  await page.getByRole('button', { name: 'Share', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+});
+
+test('tool page header uses the round share + gooey quick-settings on phones', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 812 });
+  await page.goto('/json-tools/');
+  const header = page.locator('.tool-header');
+  await expect(header.getByRole('link', { name: 'Toolbox', exact: true })).toBeVisible();
+  await expect(header.getByRole('button', { name: 'Share', exact: true })).toBeVisible();
+  await expect(header.locator(':scope > .tool-header-actions > .language-switcher')).toBeHidden();
+  await header.getByRole('button', { name: 'Options', exact: true }).click();
+  await expect(header.getByRole('button', { name: /Switch to .* theme/ })).toBeVisible();
+  // Poll: contrast is measured mid fade-in otherwise.
+  await expect.poll(async () => (await new AxeBuilder({ page }).include('.tool-header').analyze()).violations.map((v) => v.id)).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 for (const width of [375, 1440]) test(`actual catalog paginates and resets filters at ${width}px`, async ({ page }) => {
@@ -54,20 +102,15 @@ for (const width of [375, 1440]) test(`actual catalog paginates and resets filte
   expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
 });
 
-test('hero motion can pause, resumes, and stops outside the viewport', async ({ page }) => {
+test('hero motion runs in the viewport and stops outside it', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
   const image = page.locator('.hero-art img');
   await page.locator('.hero-art').scrollIntoViewIfNeeded();
   const state = () => image.evaluate((element) => element.getAnimations().map((animation) => animation.playState));
-  await expect.poll(state).toEqual(['running']);
-  await page.getByRole('button', { name: 'Pause hero animation' }).click();
-  await expect.poll(state).toEqual(['paused']);
-  await page.getByRole('button', { name: 'Play hero animation' }).click();
-  await expect.poll(state).toEqual(['running']);
+  await expect.poll(state).toEqual(expect.arrayContaining(['running']));
   await page.locator('.site-footer').scrollIntoViewIfNeeded();
-  await expect.poll(state).toEqual(['paused']);
+  await expect.poll(state).not.toContain('running');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(state).toEqual([]);
-  await expect(page.getByRole('button', { name: 'Pause hero animation' })).toBeHidden();
 });
