@@ -3,6 +3,7 @@
   "topic": "open-tools",
   "discovery": false,
   "sources": [
-    { "repository": "ygrip/json-tools", "local": "examples/json-tools" }
+    { "repository": "ygrip/json-tools", "local": "examples/json-tools" },
+    { "repository": "ygrip/text-manipulation", "ref": "8859877db549168a39bd40a29ceff5ccd6fa949f" }
   ]
 }

@@ -1,6 +1,6 @@
 # trick-it
 
-A localized, installable SvelteKit platform for independent browser tools. Each tool has a **versioned HTML entry bundle plus a validated manifest**, not imported source code. Optional deferred assets are fetched by the host only after consent and integrity checks. Source repositories may be private; shipped code and metadata are public. The GitHub repository remains `ygrip/open-tools`; the product name is now **trick-it**.
+A localized, installable SvelteKit platform for independent browser tools. Each tool has a **versioned HTML entry bundle plus a validated manifest**, not imported source code. Optional deferred assets are fetched by the host only after consent and integrity checks. Source repositories may be private; shipped code and metadata are public. The GitHub repository is [`ygrip/trick-it`](https://github.com/ygrip/trick-it) (formerly `ygrip/open-tools`).
 
 English and Indonesian pages are prerendered and support SPA navigation, per-tool guides/SEO, explicit capabilities, verified model/WASM downloads, and PWA offline access. Start with [localization](docs/i18n.md), [v3 metadata](docs/tool-contract-v3.md), [permissions/runtime](docs/tool-runtime.md), [PWA](docs/pwa.md), or [SEO deployment](docs/seo.md).
 
@@ -41,6 +41,8 @@ npm run dev
 ```
 
 Open `/json-tools` for JSON formatting, JSONPath queries, JSON → XML and XML → JSON. The checked-in first bundle works offline without GitHub credentials. Its independently buildable source is mirrored in `examples/json-tools`. The local v0.3.0 mirror adds the v3 contract and English/Indonesian controls. The standalone published v0.2.0 remains pinned to `73ccc3751785eb3203934535a223de89b788c31a` in the remote example and remains supported through v2 compatibility; publishing v0.3.0 there is a separate release step.
+
+`/text-manipulation/` is the second tool, offering case conversions, line deduplication and sorting, whitespace cleanup, literal find/replace, Unicode-friendly slugs, and text statistics. It is pinned to an immutable commit in the private [`ygrip/text-manipulation`](https://github.com/ygrip/text-manipulation) repository. **Local and CI builds must supply `TOOLS_GITHUB_TOKEN` with read-only access to that repository.** The existing JSON Tools local mirror remains available without authentication, but registry sync intentionally fails rather than silently omitting a private tool when its credentials are missing.
 
 ```sh
 npm test
