@@ -37,6 +37,31 @@ jobs:
           TOOLS_GITHUB_TOKEN: ${{ secrets.TOOLS_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build
+      - name: Debug failed localized prerender
+        if: failure()
+        run: |
+          find .svelte-kit/output/prerendered -maxdepth 5 -type f 2>/dev/null | head -35 || true
+          node --input-type=module <<'JS'
+          import { readdir, readFile } from 'node:fs/promises';
+          import { join } from 'node:path';
+          async function inspect(dir) {
+            let names;
+            try { names = await readdir(dir, { withFileTypes: true }); } catch { return; }
+            for (const entry of names) {
+              const p = join(dir, entry.name);
+              if (entry.isDirectory()) await inspect(p);
+              else if (entry.name.endsWith('.html') && /(?:id|index)/.test(p)) {
+                const html = await readFile(p, 'utf8');
+                console.log('HTML FILE:', p);
+                for (const hit of html.matchAll(/(?:href|src)=["']([^"']+)["']/g)) {
+                  const value = hit[1];
+                  if (/\/d\/|\/id\/|sveltekit-prerender|\.\.http/.test(value)) console.log('LINK', value);
+                }
+              }
+            }
+          }
+          await inspect('.svelte-kit/output/prerendered');
+          JS
       - run: npm run performance:check
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
