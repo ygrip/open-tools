@@ -89,11 +89,14 @@
 
   async function install() {
     if (!prompt) { manualInstructions = true; return; }
+    // Keep the one-shot event locally: appinstalled may clear shared state while it resolves.
+    const offer = prompt;
+    prompt = null;
     try {
-      await prompt.prompt();
-      installed = (await prompt.userChoice).outcome === 'accepted';
-      prompt = null;
-      if (!installed) installDismissed = true;
+      await offer.prompt();
+      const choice = await offer.userChoice;
+      if (choice.outcome === 'accepted') installed = true;
+      else installDismissed = true;
     } catch { manualInstructions = true; }
   }
 </script>
