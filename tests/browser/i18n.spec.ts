@@ -35,6 +35,7 @@ test('language switching preserves tool route and isolated bundle', async ({ pag
 test('mobile language selector remains reachable without horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 812 });
   await page.goto('/id/');
+  await page.getByRole('button', { name: 'Opsi', exact: true }).click();
   await expect(page.getByRole('link', { name: 'English' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Bahasa Indonesia' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

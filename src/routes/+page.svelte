@@ -132,5 +132,5 @@
     </section>
   </main>
 
-  <SiteFooter catalog={catalog} />
+  <SiteFooter />
 </div>

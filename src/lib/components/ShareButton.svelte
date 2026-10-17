@@ -4,7 +4,7 @@
   import { generateShareImage, nativeShare, copyLink, downloadBlob, type SharePayload } from '$lib/share';
   import type { ToolManifest } from '$lib/registry/types';
 
-  let { tool = null, catalog = [], variant = 'button' }: { tool?: ToolManifest | null; catalog?: ToolManifest[]; variant?: 'button' | 'link' } = $props();
+  let { tool = null, catalog = [], variant = 'button' }: { tool?: ToolManifest | null; catalog?: ToolManifest[]; variant?: 'button' | 'link' | 'none' } = $props();
 
   let dialog = $state<HTMLDialogElement | null>(null);
   let open = $state(false);
@@ -47,7 +47,8 @@
     };
   }
 
-  async function openDialog() {
+  // Exported so a host (e.g. the mobile quick-settings menu) can open the dialog with variant="none".
+  export async function openDialog() {
     returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
     status = '';
@@ -101,7 +102,7 @@
 
 {#if variant === 'link'}
   <button class="share-link" type="button" onclick={openDialog}><Icon name="share" size={18} /> {m.share_label()}</button>
-{:else}
+{:else if variant === 'button'}
   <button class="clay-button small share-button" type="button" onclick={openDialog} aria-haspopup="dialog" aria-label={m.share_label()}><Icon name="share" size={18} /><span>{m.share_label()}</span></button>
 {/if}
 

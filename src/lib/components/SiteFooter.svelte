@@ -3,10 +3,6 @@
   import { m } from '$lib/paraglide/messages.js';
   import { localizedPath } from '$lib/i18n';
   import Icon from './Icon.svelte';
-  import ShareButton from './ShareButton.svelte';
-  import type { ToolManifest } from '$lib/registry/types';
-
-  let { catalog = [], tool = null }: { catalog?: ToolManifest[]; tool?: ToolManifest | null } = $props();
 </script>
 
 <footer class="site-footer surface">
@@ -15,7 +11,6 @@
     <div class="footer-about">
       <a class="brand footer-brand" href={localizedPath('/')}><img src={`${base}/brand/logo.svg`} alt="" width="40" height="40" /><strong>trick<span class="brand-accent">-it</span></strong></a>
       <p>{m.footer_tagline()}</p>
-      <ShareButton {catalog} {tool} />
     </div>
     <nav class="footer-col" aria-label={m.footer_explore()}>
       <h2>{m.footer_explore()}</h2>

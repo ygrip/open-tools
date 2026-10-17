@@ -354,11 +354,19 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
 
 @media (max-width: 760px) {
   .topbar > .brand { min-width: 0; }
-  .topbar .header-actions { gap: 5px; }
-  .topbar .header-actions .language-switcher { padding: 2px; }
-  .topbar .header-actions .language-switcher a { min-width: 30px; min-height: 44px; font-size: 10px; }
+  .topbar { row-gap: 12px; padding: 12px 12px 12px 16px; }
+  .topbar .brand img { width: 44px; height: 44px; }
+  .topbar .brand strong { font-size: 24px; }
+  .topbar .header-actions { gap: 10px; }
+  .topbar .header-actions .search-nav { width: 48px; height: 48px; border-radius: 999px; }
+  .topbar .topnav { gap: 6px; padding: 6px; }
+  .topbar .topnav .nav-link { font-size: 14px; min-height: 48px; padding: 8px 10px; gap: 8px; }
 }
 @media (max-width: 380px) {
-  .topbar .brand img { width: 32px; height: 32px; }
-  .topbar .brand strong { font-size: 19px; }
+  .topbar .brand { gap: 8px; }
+  .topbar .brand img { width: 36px; height: 36px; }
+  .topbar .brand strong { font-size: 21px; }
+  .topbar .header-actions { gap: 8px; }
+  .topbar .topnav .nav-link { font-size: 13px; padding: 8px 6px; }
+  .topbar .topnav .nav-link svg { display: none; }
 }

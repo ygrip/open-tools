@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  export type IconName = 'arrow-left' | 'arrow-right' | 'search' | 'sun' | 'moon' | 'shield' | 'braces' | 'grid' | 'sparkles' | 'github' | 'check' | 'x' | 'toolbox' | 'external' | 'bolt' | 'heart' | 'filter' | 'lock' | 'play' | 'pause' | 'share' | 'link' | 'download';
+  export type IconName = 'arrow-left' | 'arrow-right' | 'search' | 'sun' | 'moon' | 'shield' | 'braces' | 'grid' | 'sparkles' | 'github' | 'check' | 'x' | 'toolbox' | 'external' | 'bolt' | 'heart' | 'filter' | 'lock' | 'play' | 'pause' | 'share' | 'link' | 'download' | 'sliders';
   export const iconPaths: Record<IconName, string> = {
     'arrow-left': 'M19 12H5m7-7-7 7 7 7',
     'arrow-right': 'M5 12h14m-7-7 7 7-7 7',
@@ -23,7 +23,8 @@
     pause: 'M8 5v14M16 5v14',
     share: 'M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7',
     link: 'M10 13a5 5 0 0 0 7.1 0l3-3a5 5 0 0 0-7.1-7.1l-1.7 1.7M14 11a5 5 0 0 0-7.1 0l-3 3A5 5 0 0 0 11 21.1l1.7-1.7',
-    download: 'M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2'
+    download: 'M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2',
+    sliders: 'M4 7h9m4 0h3M4 17h3m4 0h9M15 4.5v5M9 14.5v5'
   };
 </script>
 

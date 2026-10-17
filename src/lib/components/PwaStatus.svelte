@@ -8,12 +8,25 @@
   let waiting = $state<ServiceWorker | null>(null);
   let refresh = $state(false);
   let installed = $state(false);
+  let mobile = $state(false);
+  let iosSafari = $state(false);
   let message = $state('');
+  // Only offer install where it helps: a phone/tablet browser tab that can actually install (native prompt, or iOS Add to Home Screen).
+  const showInstall = $derived(!installed && mobile && (prompt !== null || iosSafari));
 
   onMount(() => {
     let disposed = false;
     const cleanup: (() => void)[] = [];
-    installed = matchMedia('(display-mode: standalone)').matches;
+    const standalone = matchMedia('(display-mode: standalone)');
+    const touch = matchMedia('(hover: none) and (pointer: coarse)');
+    const syncInstalled = () => { installed = standalone.matches || (navigator as Navigator & { standalone?: boolean }).standalone === true; };
+    const syncMobile = () => { mobile = touch.matches; };
+    syncInstalled();
+    syncMobile();
+    iosSafari = /iP(hone|ad|od)/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+    standalone.addEventListener('change', syncInstalled);
+    touch.addEventListener('change', syncMobile);
+    cleanup.push(() => { standalone.removeEventListener('change', syncInstalled); touch.removeEventListener('change', syncMobile); });
     const install = (event: Event) => { event.preventDefault(); prompt = event as InstallEvent; };
     const appInstalled = () => { installed = true; prompt = null; };
     const offline = () => { message = navigator.onLine ? '' : m.pwa_offline(); };
@@ -79,7 +92,7 @@
 </script>
 
 <aside class="pwa-status" aria-label={m.pwa_title()}>
-  {#if !installed}<button class="clay-button small" type="button" onclick={install}>{m.pwa_install()}</button>{/if}
+  {#if showInstall}<button class="clay-button small" type="button" onclick={install}>{m.pwa_install()}</button>{/if}
   {#if waiting}<span>{m.pwa_update()}</span><button class="clay-button small" type="button" onclick={() => waiting?.postMessage({ type: 'trick-it:activate', version: 1 })}>{m.pwa_activate()}</button>{/if}
   {#if refresh}<button class="clay-button small" type="button" onclick={() => location.reload()}>{m.pwa_reload()}</button>{/if}
   {#if message}<p role="status">{message}</p>{/if}
