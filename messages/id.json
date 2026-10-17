@@ -220,5 +220,11 @@
   "support_thanks": "Sekecil apa pun, lampunya tetap menyala. Terima kasih!",
   "support_maker": "Karya lainnya dari pembuatnya di readynaz.com",
   "footer_support": "Dukung pengembang",
-  "footer_maker": "Dibuat oleh readynaz"
+  "footer_maker": "Dibuat oleh readynaz",
+  "pwa_ready_title": "Pembaruan siap",
+  "pwa_update_description": "trick-it versi baru tersedia. Siapkan tanpa mengganggu alat yang sedang dipakai.",
+  "pwa_install_title": "Simpan kotak alatmu",
+  "pwa_install_description": "Pasang trick-it untuk akses cepat dan memakai alat yang sudah tersimpan saat luring.",
+  "pwa_later": "Nanti saja",
+  "pwa_close": "Mengerti"
 }
