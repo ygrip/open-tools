@@ -36,7 +36,7 @@
   <title>Open Tools · Small utilities, one place</title>
   <meta
     name="description"
-    content="Discover small, focused open-source web utilities from one manifest-driven catalog."
+    content="Discover focused browser utilities from one contract-driven catalog, backed by public or private repositories."
   />
 </svelte:head>
 
@@ -75,11 +75,11 @@
     />
 
     <div class="hero-copy">
-      <p class="eyebrow"><span class="status-dot"></span> Open source utility hub</p>
+      <p class="eyebrow"><span class="status-dot"></span> Independent utility hub</p>
       <h1>Find the tool. Do the thing. Move on.</h1>
       <p class="lede">
         Small, focused utilities in one searchable catalog. Each tool can live in its own
-        repository while Open Tools handles discovery and presentation.
+        public or private repository while Open Tools verifies and loads its released bundle.
       </p>
 
       <button class="hero-search-trigger" type="button" onclick={() => (searchOpen = true)}>
@@ -122,7 +122,7 @@
         {#each filteredTools as tool}
           <a class="tool-card surface" href={tool.path}>
             <div class="tool-card-top">
-              <div class="tool-icon">{tool.icon ?? tool.name.slice(0, 2).toUpperCase()}</div>
+              <div class="tool-icon">{tool.name.slice(0, 2).toUpperCase()}</div>
               <span class="tool-status">{tool.status ?? 'stable'}</span>
             </div>
             <div>
@@ -142,11 +142,11 @@
         <div>
           <h3>No tools have opted in yet.</h3>
           <p>
-            Repositories owned by a trusted owner are discovered automatically when they add the
-            <code>open-tools</code> topic and a valid <code>tool.manifest.json</code> at the repo root.
+            Register a trusted repository in <code>config/registry.json</code> with a valid
+            <code>tool.manifest.json</code> and a verified, self-contained HTML bundle.
           </p>
         </div>
-        <a href="https://github.com/ygrip/open-tools#automatic-registration" target="_blank" rel="noreferrer">
+        <a href="https://github.com/ygrip/open-tools#register-a-private-repository" target="_blank" rel="noreferrer">
           Registration guide ↗
         </a>
       </div>

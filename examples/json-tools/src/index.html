@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JSON Tools</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #f5f1e8; background: #0c0c0d; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; }
+    main { max-width: 1240px; margin: auto; }
+    h1 { font-size: 24px; margin: 0 0 8px; letter-spacing: -.04em; }
+    p { color: #c9c2b7; line-height: 1.6; margin: 0 0 22px; }
+    label { display: block; font-weight: 600; margin-bottom: 8px; }
+    button, select, input, textarea { font: inherit; border: 1px solid #514b41; border-radius: 8px; color: inherit; background: #191816; }
+    button, select, input { min-height: 44px; padding: 10px 14px; }
+    button { cursor: pointer; }
+    button:hover { border-color: #ffc45a; }
+    button:disabled { cursor: wait; opacity: .65; }
+    :focus-visible { outline: 3px solid #ffc45a; outline-offset: 3px; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-bottom: 20px; }
+    .query { flex: 1; min-width: min(100%, 260px); }
+    input { width: 100%; font-family: ui-monospace, monospace; }
+    .primary { background: #ffc45a; color: #211708; border-color: #ffc45a; font-weight: 700; }
+    .editors { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .editor { min-width: 0; }
+    .editor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; min-height: 44px; }
+    .editor-header label { margin: 0; }
+    textarea { width: 100%; min-height: 340px; height: 48vh; resize: vertical; padding: 16px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; line-height: 1.6; font-size: 14px; tab-size: 2; white-space: pre; }
+    textarea::placeholder { color: #aaa399; }
+    .note { font-size: 14px; margin-top: 14px; }
+    #status { min-height: 26px; margin: 12px 0; color: #ffc45a; overflow-wrap: anywhere; }
+    #status.error { color: #ffb4a8; }
+    [hidden] { display: none !important; }
+    @media (max-width: 680px) { body { padding: 16px; } .editors { grid-template-columns: 1fr; } textarea { min-height: 240px; height: 34vh; } .toolbar > .operation { width: 100%; } select { width: 100%; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>JSON Tools</h1>
+  <p>Format JSON, select values with JSONPath, or convert between JSON and XML.</p>
+  <div id="tool-form">
+    <div class="toolbar">
+      <div class="operation">
+        <label for="operation">Operation</label>
+        <select id="operation" name="operation">
+          <option value="pretty">Pretty-print JSON</option>
+          <option value="query">JSONPath query</option>
+          <option value="json-to-xml">JSON to XML</option>
+          <option value="xml-to-json">XML to JSON</option>
+        </select>
+      </div>
+      <div class="query" id="query-field" hidden>
+        <label for="query">JSONPath expression</label>
+        <input id="query" value="$.items[*].name" spellcheck="false" autocomplete="off" aria-describedby="query-help">
+      </div>
+      <button type="button" id="run" class="primary">Run</button>
+      <button type="button" id="example">Load example</button>
+      <button type="button" id="clear">Clear</button>
+    </div>
+    <p class="note" id="query-help" hidden>Property, index, slice, wildcard and recursive selectors are supported. Script and filter evaluation is disabled.</p>
+    <div class="editors">
+      <div class="editor">
+        <div class="editor-header"><label for="input">Input</label></div>
+        <textarea id="input" spellcheck="false" placeholder="Paste JSON here" aria-describedby="limits" maxlength="1000000"></textarea>
+      </div>
+      <div class="editor">
+        <div class="editor-header"><label for="output">Output</label><button id="select-output" type="button">Select output</button></div>
+        <textarea id="output" spellcheck="false" readonly placeholder="Run an operation to see the result"></textarea>
+      </div>
+    </div>
+  </div>
+  <p id="status" role="status" aria-live="polite"></p>
+  <p class="note" id="limits">Processing stays in this frame. Input is limited to 1,000,000 characters. JSON to XML adds a &lt;root&gt; element; XML text and attribute values remain strings. Numbers use JavaScript floating-point precision; unsafe integers are rejected. Encode exact decimals and large integers as strings.</p>
+</main>
+<script>/* BUNDLE_SCRIPT */</script>
+</body>
+</html>

@@ -1,1 +1,25 @@
-[]
+[
+  {
+    "schemaVersion": 1,
+    "id": "json-tools",
+    "name": "JSON Tools",
+    "description": "Pretty-print JSON, query with JSONPath, and convert JSON to XML or XML to JSON in your browser.",
+    "path": "/json-tools",
+    "category": "data",
+    "repository": "https://github.com/ygrip/json-tools",
+    "version": "0.1.0",
+    "status": "experimental",
+    "capabilities": [
+      "json",
+      "pretty-print",
+      "jsonpath",
+      "xml",
+      "conversion"
+    ],
+    "bundle": {
+      "format": "html",
+      "file": "dist/index.html",
+      "sha256": "79cb4a8ef602cc2466d45b7ee5280388c1f510d5cf2e291485a98eaa47f3c2a1"
+    }
+  }
+]

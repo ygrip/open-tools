@@ -1,101 +1,52 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm, rename, mkdtemp } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+import { createGithubClient, loadSource } from './lib/bundles.mjs';
 
-const config = JSON.parse(await readFile(new URL('../config/registry.json', import.meta.url), 'utf8'));
-const outputUrl = new URL('../src/lib/registry/generated.json', import.meta.url);
-const token = process.env.GITHUB_TOKEN;
+const root = fileURLToPath(new URL('../', import.meta.url));
+const configPath = process.env.TOOLS_REGISTRY_CONFIG || 'config/registry.json';
+const config = JSON.parse(await readFile(resolve(root, configPath), 'utf8'));
+const github = createGithubClient(process.env.TOOLS_GITHUB_TOKEN || process.env.GITHUB_TOKEN);
+const sources = [...(config.sources ?? [])];
 
-const headers = {
-  Accept: 'application/vnd.github+json',
-  'User-Agent': 'open-tools-registry'
-};
-
-if (token) headers.Authorization = `Bearer ${token}`;
-
-async function github(path) {
-  const response = await fetch(`https://api.github.com${path}`, { headers });
-  if (!response.ok) {
-    throw new Error(`GitHub ${response.status}: ${path}`);
-  }
-  return response.json();
-}
-
-function validateManifest(manifest, repository, seenIds, seenPaths) {
-  const allowedCategories = new Set(['media', 'developer', 'data', 'productivity', 'other']);
-  const allowedStatuses = new Set(['stable', 'beta', 'experimental']);
-
-  if (!manifest || typeof manifest !== 'object') throw new Error('manifest must be an object');
-  if (!/^[a-z0-9-]+$/.test(manifest.id ?? '')) throw new Error('invalid id');
-  if (manifest.path !== `/${manifest.id}`) throw new Error('path must exactly match /<id>');
-  if (!manifest.name || typeof manifest.name !== 'string') throw new Error('name is required');
-  if (!manifest.description || typeof manifest.description !== 'string') throw new Error('description is required');
-  if (!allowedCategories.has(manifest.category)) throw new Error('invalid category');
-  if (manifest.status && !allowedStatuses.has(manifest.status)) throw new Error('invalid status');
-
-  const expectedRepository = `https://github.com/${repository.full_name}`;
-  if ((manifest.repository ?? '').replace(/\/$/, '') !== expectedRepository) {
-    throw new Error(`repository must be ${expectedRepository}`);
-  }
-
-  if (!config.trustedOwners.includes(repository.owner.login)) throw new Error('repository owner is not trusted');
-  if (seenIds.has(manifest.id)) throw new Error(`duplicate id: ${manifest.id}`);
-  if (seenPaths.has(manifest.path)) throw new Error(`duplicate path: ${manifest.path}`);
-
-  seenIds.add(manifest.id);
-  seenPaths.add(manifest.path);
-
-  return {
-    id: manifest.id,
-    name: manifest.name.trim().slice(0, 80),
-    description: manifest.description.trim().slice(0, 240),
-    path: manifest.path,
-    category: manifest.category,
-    repository: expectedRepository,
-    ...(typeof manifest.icon === 'string' ? { icon: manifest.icon.slice(0, 160) } : {}),
-    ...(Array.isArray(manifest.capabilities)
-      ? { capabilities: manifest.capabilities.filter((item) => typeof item === 'string').slice(0, 20) }
-      : {}),
-    ...(manifest.status ? { status: manifest.status } : {})
-  };
-}
-
-async function discoverRepositories() {
-  const repositories = [];
-
+// Explicit sources are authoritative and work for private repositories.
+if (config.discovery) {
   for (const owner of config.trustedOwners) {
-    const q = encodeURIComponent(`user:${owner} topic:${config.topic} fork:false archived:false`);
-    const result = await github(`/search/repositories?q=${q}&per_page=100`);
-    repositories.push(...result.items);
-  }
-
-  return repositories;
-}
-
-async function loadManifest(repository) {
-  const path = encodeURIComponent(config.manifestPath);
-  const file = await github(`/repos/${repository.full_name}/contents/${path}`);
-
-  if (file.type !== 'file' || file.encoding !== 'base64') {
-    throw new Error('manifest is not a regular base64 GitHub content file');
-  }
-
-  return JSON.parse(Buffer.from(file.content.replace(/\n/g, ''), 'base64').toString('utf8'));
-}
-
-const repositories = await discoverRepositories();
-const seenIds = new Set();
-const seenPaths = new Set();
-const tools = [];
-
-for (const repository of repositories) {
-  try {
-    const manifest = await loadManifest(repository);
-    tools.push(validateManifest(manifest, repository, seenIds, seenPaths));
-    console.log(`✓ ${repository.full_name}`);
-  } catch (error) {
-    console.warn(`- skipped ${repository.full_name}: ${error.message}`);
+    for (let page = 1; ; page++) {
+      const q = encodeURIComponent(`user:${owner} topic:${config.topic} fork:false archived:false`);
+      const result = await github(`/search/repositories?q=${q}&per_page=100&page=${page}`);
+      for (const repo of result.items) {
+        if (sources.some((source) => source.repository === repo.full_name)) continue;
+        const commit = await github(`/repos/${repo.full_name}/commits/${encodeURIComponent(repo.default_branch)}`);
+        sources.push({ repository: repo.full_name, ref: commit.sha });
+      }
+      if (page * 100 >= result.total_count) break;
+      if (page === 10) throw new Error('GitHub discovery search exceeds 1000 results; use explicit sources');
+    }
   }
 }
 
-tools.sort((a, b) => a.name.localeCompare(b.name));
-await writeFile(outputUrl, `${JSON.stringify(tools, null, 2)}\n`);
-console.log(`Registered ${tools.length} tool(s).`);
+const loaded = [];
+const ids = new Set();
+for (const source of sources) {
+  // Fail closed: never silently publish a partial registry on a source failure.
+  const tool = await loadSource(source, config, root, github);
+  if (ids.has(tool.manifest.id)) throw new Error(`duplicate tool id/path: ${tool.manifest.id}`);
+  ids.add(tool.manifest.id);
+  loaded.push(tool);
+}
+loaded.sort((a, b) => a.manifest.name.localeCompare(b.manifest.name));
+await mkdir(resolve(root, 'static'), { recursive: true });
+const stage = await mkdtemp(resolve(root, 'static/.bundles-'));
+try {
+  for (const { manifest, html } of loaded) {
+    await mkdir(resolve(stage, manifest.id));
+    await writeFile(resolve(stage, manifest.id, `${manifest.bundle.sha256}.json`), JSON.stringify({ html }));
+  }
+  await rm(resolve(root, 'static/bundles'), { recursive: true, force: true });
+  await rename(stage, resolve(root, 'static/bundles'));
+  await writeFile(resolve(root, 'src/lib/registry/generated.json'), `${JSON.stringify(loaded.map(({ manifest }) => manifest), null, 2)}\n`);
+} finally {
+  await rm(stage, { recursive: true, force: true });
+}
+console.log(`Registered and verified ${loaded.length} bundle(s).`);

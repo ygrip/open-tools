@@ -1,0 +1,11 @@
+{
+  "trustedOwners": ["ygrip"],
+  "topic": "open-tools",
+  "discovery": false,
+  "sources": [
+    {
+      "repository": "ygrip/json-tools",
+      "ref": "231d88c31914448e10a0f6d6f9704ea73805453b"
+    }
+  ]
+}

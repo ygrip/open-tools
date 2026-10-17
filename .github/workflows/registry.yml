@@ -1,41 +1,45 @@
-name: Refresh tool registry
+name: Verify registry and bundles
 
 on:
   workflow_dispatch:
+  push:
+  pull_request:
   schedule:
     - cron: "17 2 * * *"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: tool-registry
+  group: tool-registry-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  refresh:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Refresh registry
+          cache: npm
+      - run: npm ci
+      - run: npm ci && npm test && npm run build
+        working-directory: examples/json-tools
+      - name: Fetch approved bundles
         env:
+          TOOLS_GITHUB_TOKEN: ${{ secrets.TOOLS_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run registry:sync
-
-      - name: Commit registry changes
-        run: |
-          if git diff --quiet -- src/lib/registry/generated.json; then
-            echo "Registry already current."
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/lib/registry/generated.json
-          git commit -m "chore: refresh tool registry"
-          git push
+      - run: npm test && npm run check
+      - name: Build static aggregator
+        env:
+          TOOLS_GITHUB_TOKEN: ${{ secrets.TOOLS_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: open-tools-site
+          path: build/

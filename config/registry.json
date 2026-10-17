@@ -1,5 +1,8 @@
 {
   "trustedOwners": ["ygrip"],
   "topic": "open-tools",
-  "manifestPath": "tool.manifest.json"
+  "discovery": false,
+  "sources": [
+    { "repository": "ygrip/json-tools", "local": "examples/json-tools" }
+  ]
 }

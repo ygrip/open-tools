@@ -37,7 +37,7 @@
 </script>
 
 {#if open}
-  <div class="search-overlay" role="dialog" aria-modal="true" aria-label="Search tools" onkeydown={handleKeydown}>
+  <div class="search-overlay" role="dialog" aria-modal="true" aria-label="Search tools" tabindex="-1" onkeydown={handleKeydown}>
     <button class="search-backdrop" aria-label="Close search" onclick={close}></button>
 
     <div class="search-panel surface">
@@ -58,7 +58,7 @@
         {#if results.length}
           {#each results as tool}
             <a class="search-result" href={tool.path} onclick={close}>
-              <span class="search-result-icon">{tool.icon ?? tool.name.slice(0, 2).toUpperCase()}</span>
+              <span class="search-result-icon">{tool.name.slice(0, 2).toUpperCase()}</span>
               <span class="search-result-copy">
                 <strong>{tool.name}</strong>
                 <small>{tool.description}</small>

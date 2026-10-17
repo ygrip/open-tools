@@ -6,11 +6,11 @@
     <h1>Tool Policy</h1>
     <p class="legal-updated">Last updated: October 5, 2026</p>
     <h2>Registration</h2>
-    <p>A tool is discoverable only when its repository owner is trusted, the repository opts in with the configured topic, and its root manifest passes validation.</p>
+    <p>Tools register through an approved source entry, or optional topic discovery under a trusted owner. Public and private repositories use the same versioned manifest and self-contained HTML bundle contract. The host verifies the repository identity and bundle checksum before publishing.</p>
     <h2>Routing</h2>
-    <p>Catalog metadata does not automatically grant proxy or deployment privileges. Routing remains controlled by the Open Tools host.</p>
+    <p>Open Tools publishes only validated catalog metadata and approved browser bundles. Each tool has a host-owned route and runs in an isolated, opaque-origin iframe. Repository credentials remain in the build environment. Private repositories do not make distributed browser bundles confidential.</p>
     <h2>Behavior</h2>
-    <p>Tools should clearly disclose network use, uploads, destructive operations, or external processing. Local processing is preferred when practical.</p>
+    <p>Contract v1 tools must be self-contained and process data locally. The host restricts network APIs, forms and resource loading, but sandboxing is not a complete defense against malicious code or excessive CPU use. Only reviewed tools should be registered. Do not enter secrets into tools you do not trust.</p>
     <h2>Removal</h2>
     <p>A tool may be removed from the registry if it becomes unsafe, misleading, unavailable, or no longer satisfies the manifest contract.</p>
   </article>

@@ -1,0 +1,17 @@
+{
+  "name": "@ygrip/json-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.3.8",
+    "jsonpath-plus": "^10.3.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12"
+  }
+}

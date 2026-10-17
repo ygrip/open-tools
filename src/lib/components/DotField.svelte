@@ -13,8 +13,9 @@
   let canvas: HTMLCanvasElement;
 
   onMount(() => {
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    const ctx = context;
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const coarse = window.matchMedia('(pointer: coarse)');
