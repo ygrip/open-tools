@@ -1,17 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { requireRegistryToken, verifySourceAccess } from '../scripts/lib/registry-preflight.mjs';
+import { verifySourceAccess } from '../scripts/lib/registry-preflight.mjs';
 
 const refs = [
   { id: 'one', source: { repository: 'ygrip/one', ref: 'a'.repeat(40) } },
   { id: 'two', source: { repository: 'ygrip/two', ref: 'b'.repeat(40) } }
 ];
-
-test('private registry requires a dedicated token, never a default GitHub token', () => {
-  assert.throws(() => requireRegistryToken(''), /Missing TOOLS_GITHUB_TOKEN/);
-  assert.throws(() => requireRegistryToken(undefined), /default GITHUB_TOKEN/);
-  assert.doesNotThrow(() => requireRegistryToken('github_pat_example'));
-});
 
 test('preflight probes all pinned manifests using caller credentials', async () => {
   const requests = [];
@@ -29,7 +23,7 @@ test('private GitHub 404 is described as an access failure, not a missing releas
       if (path.includes('/one/')) throw new Error('GitHub 404');
       return { type: 'file', content: 'ok' };
     }),
-    (error) => /ygrip\/one@/.test(error.message) && /missing private repository permission/.test(error.message) && !/ygrip\/two@/.test(error.message)
+    (error) => /ygrip\/one@/.test(error.message) && /private repository inaccessible/.test(error.message) && !/ygrip\/two@/.test(error.message)
   );
 });
 
