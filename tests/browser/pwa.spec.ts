@@ -72,3 +72,21 @@ test('PWA update requires approval and never reloads a running tool', async ({ p
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }
 });
+
+
+test('install affordance floats above the footer and respects the native install result', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    const event = Object.assign(new Event('beforeinstallprompt', { cancelable: true }), {
+      prompt: async () => { (window as unknown as { __installInvoked: boolean }).__installInvoked = true; },
+      userChoice: Promise.resolve({ outcome: 'accepted' })
+    });
+    window.dispatchEvent(event);
+  });
+  const card = page.getByRole('button', { name: 'Install trick-it' });
+  await expect(card).toBeVisible();
+  expect(await card.evaluate((node) => getComputedStyle(node.closest('.pwa-card')!).position)).toBe('fixed');
+  await card.click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __installInvoked?: boolean }).__installInvoked)).toBe(true);
+  await expect(card).toHaveCount(0);
+});

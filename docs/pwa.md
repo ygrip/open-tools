@@ -1,9 +1,9 @@
 # trick-it: PWA, SPA and offline behavior
 
 1. Build and deploy the entire `build/` directory atomically over HTTPS. Localhost also supports service workers. Set the public canonical origin through `PUBLIC_SITE_URL`; see [SEO](seo.md).
-2. Open the site online once. Use **Install trick-it**, the browser’s install menu, or Add to Home Screen. Installation availability depends on browser/OS; the button provides instructions when an install prompt is unavailable.
+2. Open the site online once. An elevated install card appears on compatible browser tabs, including desktops with a native install prompt. Tap **Install trick-it**, the browser’s install menu, or Add to Home Screen (iOS). The card can be dismissed; already-installed standalone sessions never see it. Unsupported browsers do not show a dead install button.
 3. Open the tools you need while online. Their validated, digest/version-pinned bundles can then work offline. Deferred external models need a successful consented download first; provider `private`/`no-store` responses are not persisted.
-4. When **Update available** appears, choose **Prepare update**. The running tool and its input stay unchanged. Choose **Reload to use the update** only after saving your work. Updates never force a reload.
+4. When the floating **Update available** popup appears, choose **Prepare update**. The running tool and its input stay unchanged. You can dismiss the popup, reopen it from the small update chip, or choose **Reload to use the update** once ready. The host never forces a reload.
 
 ## Routing and cache boundaries
 

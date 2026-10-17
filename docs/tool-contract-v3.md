@@ -10,7 +10,7 @@ V3 requires `runtimeVersion: 1` in addition to `appearance: { "theme": "host", "
 
 ## Minimal v3 manifest
 
-See [`examples/tool.manifest.json`](../examples/tool.manifest.json) for a copyable local-only template and [`examples/json-tools/tool.manifest.json`](../examples/json-tools/tool.manifest.json) for the first tool. Fill in a real checksum after building; the all-zero digest in the template is only a placeholder.
+See [`examples/tool.manifest.json`](../examples/tool.manifest.json) for a copyable local-only template and [the standalone JSON Tools manifest](https://github.com/ygrip/json-tools/blob/main/tool.manifest.json) for the first tool. Fill in a real checksum after building; the all-zero digest in the template is only a placeholder.
 
 ```json
 {
