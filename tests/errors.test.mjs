@@ -29,7 +29,10 @@ test('client and server error hooks never expose raw exceptions, stacks, or secr
   console.error = (...args) => diagnostics.push(args);
   try {
     for (const kind of ['client', 'server']) {
-      const source = (await readFile(new URL(`../src/hooks.${kind}.ts`, import.meta.url), 'utf8')).replace("from '$lib/errors'", `from '${errorsUrl}'`);
+      const source = (await readFile(new URL(`../src/hooks.${kind}.ts`, import.meta.url), 'utf8'))
+        .replace("from '$lib/errors'", `from '${errorsUrl}'`)
+        .replace("from '$lib/paraglide/server.js'", `from '${moduleUrl("export const paraglideMiddleware = (request, callback) => callback({ request, locale: 'en' });")}'`)
+        .replace("from '$lib/paraglide/runtime.js'", `from '${moduleUrl("export const getTextDirection = () => 'ltr';")}'`);
       const { handleError } = await import(moduleUrl(source));
       const result = handleError({ error: new Error('private-key-and-token-never-public'), status: 500, event: {}, message: 'unsafe original message' });
       assert.match(result.incidentId, /^[a-f0-9-]{36}$/);
