@@ -28,3 +28,14 @@ test('PWA metadata and service-worker lifecycle require an explicit update actio
   assert.ok(worker.includes("event.data?.type !== 'trick-it:activate'"));
   assert.ok(!worker.includes('clients.claim('));
 });
+test('static directory index files are precached at their redirect-free directory URL', async () => {
+  const { precachePath } = await import('../src/lib/precache.js');
+  assert.equal(precachePath('/offline/index.html'), '/offline/');
+  assert.equal(precachePath('/index.html'), '/');
+  assert.equal(precachePath('/app/offline/index.html'), '/app/offline/');
+  assert.equal(precachePath('/icons/tool.svg'), '/icons/tool.svg');
+  assert.equal(precachePath('/myindex.html'), '/myindex.html');
+  const worker = await readFile(new URL('../src/service-worker.ts', import.meta.url), 'utf8');
+  assert.ok(worker.includes('`${base}/offline/`'));
+  assert.ok(!worker.includes('offline.html'));
+});

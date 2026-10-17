@@ -66,7 +66,10 @@
     const failed = (event: MessageEvent) => {
       const source = event.source;
       if (!source || !('scriptURL' in source) || source.scriptURL !== new URL(`${base}/service-worker.js`, location.origin).href) return;
-      if (event.data?.type === 'trick-it:cache-failed') message = m.pwa_failed();
+      if (event.data?.type === 'trick-it:cache-failed') {
+        message = m.pwa_failed();
+        if (dev && event.data.url) console.warn(`[trick-it pwa] cache failed: ${event.data.url} — ${event.data.reason ?? 'unknown reason'}`);
+      }
       if (event.data?.type === 'trick-it:version-request') source.postMessage({ type: 'trick-it:client-ready', appVersion: version });
     };
     window.addEventListener('beforeinstallprompt', install);

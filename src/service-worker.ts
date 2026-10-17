@@ -1,17 +1,31 @@
 /// <reference lib="webworker" />
 import { build, files, prerendered, version, base } from '$service-worker';
+import { precachePath } from './lib/precache.js';
 import { cacheableRequest, cacheableResponse, bundlePath, immutablePath } from './lib/pwa-policy.js';
 
 declare const self: ServiceWorkerGlobalScope;
 const prefix = 'trick-it-shell-';
 const name = `${prefix}${version}`;
 const bundleCache = 'trick-it-bundles-v1';
-const publicPaths = new Set([...build, ...files.filter((path) => !path.includes('/bundles/') && !path.includes('/og/') && !/\/(?:robots\.txt|sitemap\.xml)$/.test(path) && !/\/(?:404|500|503)\.html$/.test(path)), ...prerendered]);
-const offline = `${base}/offline.html`;
+const publicPaths = new Set([...build, ...files.map(precachePath).filter((path) => !path.includes('/bundles/') && !path.includes('/og/') && !/\/(?:robots\.txt|sitemap\.xml)$/.test(path) && !/\/(?:404|500|503)\.html$/.test(path)), ...prerendered]);
+const offline = `${base}/offline/`;
 const clientVersions = new Map<string, string>();
 
-async function warnCache() {
-  for (const client of await self.clients.matchAll()) client.postMessage({ type: 'trick-it:cache-failed' });
+async function warnCache(detail?: { url: string; reason: string }) {
+  for (const client of await self.clients.matchAll()) client.postMessage({ type: 'trick-it:cache-failed', ...detail });
+}
+// Names the asset that broke offline setup; the browser's own error never says which URL it was.
+async function precache(cache: Cache, path: string) {
+  try {
+    const response = await fetch(path, { cache: 'reload', credentials: 'omit', redirect: 'error' });
+    if (!cacheableResponse(response)) throw new Error(`HTTP ${response.status} (${response.type}); offline setup requires public, cacheable successful assets`);
+    await cache.put(path, response);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error(`[trick-it sw] precache failed: ${path} — ${reason}`);
+    await warnCache({ url: path, reason });
+    throw new Error(`Precache failed for ${path}: ${reason}`, { cause: error });
+  }
 }
 async function cleanUnusedShells() {
   const clients = (await self.clients.matchAll({ type: 'window', includeUncontrolled: true })).filter((client) => new URL(client.url).origin === self.location.origin);
@@ -28,11 +42,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(name);
     try {
-      for (const path of publicPaths) {
-        const response = await fetch(path, { cache: 'reload', credentials: 'omit', redirect: 'error' });
-        if (!cacheableResponse(response)) throw new Error('Offline setup requires public, cacheable successful assets');
-        await cache.put(path, response);
-      }
+      for (const path of publicPaths) await precache(cache, path);
     } catch (error) { await caches.delete(name); throw error; }
   })());
 });
@@ -95,7 +105,7 @@ self.addEventListener('fetch', (event) => {
       if (navigation) {
         const fallback = await cache?.match(offline);
         const safeBase = base.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
-        const html = fallback ? (await fallback.text()).replaceAll('href="./"', `href="${safeBase}/"`).replaceAll('href="./id/"', `href="${safeBase}/id/"`) : 'Offline. Open trick-it online first.';
+        const html = fallback ? (await fallback.text()).replaceAll('href="../"', `href="${safeBase}/"`).replaceAll('href="../id/"', `href="${safeBase}/id/"`) : 'Offline. Open trick-it online first.';
         return new Response(html, { status: 503, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
       }
       return new Response('Offline resource unavailable', { status: 503, headers: { 'cache-control': 'no-store' } });
