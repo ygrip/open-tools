@@ -10,8 +10,8 @@ Read the project recipe at [docs/scaffold-tool.md](../../../docs/scaffold-tool.m
 ## Establish the boundary
 
 1. Identify the tool's operation, ID, category, capabilities, approved GitHub owner/repository and intended source location. Ask only for consequential missing inputs. Search existing registry IDs and source folders before choosing a path; preserve all existing registrations and never overwrite an existing tool scaffold.
-2. Inspect the current `src/lib/registry/contract.js`, `src/lib/registry/sandbox.ts`, `config/registry.json`, `scripts/lib/bundles.mjs` and relevant authentication docs. The implementation is authoritative if the recipe has drifted.
-3. Keep the tool independently buildable in its own repository. Use `examples/<id>` only for the explicit local development mirror. Do not import the tool's source/framework into the host or add a runtime API dependency.
+2. Inspect the current `src/lib/registry/contract.js`, `src/lib/registry/sandbox.ts`, `config/registry.json`, `config/tools/`, `scripts/lib/registrations.mjs`, `scripts/lib/bundles.mjs` and relevant authentication docs. The implementation is authoritative if the recipe has drifted.
+3. Keep the tool independently buildable in its own repository. Keep new production tool HTML, manifest, README and tests in its own repository. Use `examples/<id>` only for an intentional local development fixture; never create a production mirror by default. Do not import the tool's source/framework into the host or add a runtime API dependency.
 
 ## Build the tool
 
@@ -25,10 +25,10 @@ Read the project recipe at [docs/scaffold-tool.md](../../../docs/scaffold-tool.m
 ## Verify and publish
 
 1. Run the tool's functional tests and build. Test empty/invalid/large/Unicode inputs as appropriate; artifact checksum smoke tests alone are insufficient. Review the actual HTML for external loads and credential/private-sample leakage.
-2. Register the built local mirror under `examples/` and run `npm run registry:sync`. Test the actual host iframe in both themes, including a live theme change that preserves input/output, mobile layout and keyboard/error states. Add targeted browser regression coverage.
+2. For a standalone release, add `config/tools/<id>.json` with its pinned commit SHA and run `npm run registry:sync`. Keep any temporary local fixture unregistered in production. Test the actual host iframe in both themes, including a live theme change that preserves input/output, mobile layout and keyboard/error states. Add targeted browser regression coverage.
 3. Run host `npm test`, `npm run check`, `npm run build`, `npm run performance:check` and `npm run test:e2e`. Install Playwright Chromium only if needed. Report exactly which checks ran and their results; do not imply static review is runtime verification.
 4. Before any commit, configure **both author and committer** as `ygrip <yunaz.gilang@gmail.com>`; explicitly verify the resulting commit identity. Do not inherit a corporate global identity. Commit source, manifest, release HTML and dependency lockfile (if any) in the same standalone source commit. Never commit `node_modules`, credentials or real private samples. Do not push or rewrite history without authorization.
-5. After the source commit exists on GitHub, register its full lowercase 40-character SHA and approved owner in Open Tools. Local paths cannot point outside `examples/`; remote refs cannot be branch names/tags/short SHAs. Keep discovery disabled unless explicitly authorized. Re-run checks using the intended production configuration, then commit/push the registry change when authorized. Deploy the complete static output atomically.
+5. After the source commit exists on GitHub, add or update only `config/tools/<id>.json` with its repository and full lowercase 40-character SHA; the approved owner stays in the shared trust policy. Local paths cannot point outside `examples/`; remote refs cannot be branch names/tags/short SHAs. Keep discovery disabled unless explicitly authorized. Re-run checks using the intended production configuration, then commit/push the registry change when authorized. Deploy the complete static output atomically.
 
 ## Private-source credentials
 

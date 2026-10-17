@@ -1,6 +1,6 @@
 # Scaffold and register a trick-it tool
 
-Start in the trick-it platform repository (`ygrip/open-tools`). This recipe creates an independent, dependency-free **Text Counter** example. Change the ID, repository, labels and operation for your tool. It is a copyable recipe, not an installed scaffolding CLI.
+Start with a standalone tool repository. The example shown here can be built as a local fixture in trick-it but must be published to the tool repository before production registration. This recipe creates an independent, dependency-free **Text Counter** example. Change the ID, repository, labels and operation for your tool. It is a copyable recipe, not an installed scaffolding CLI.
 
 Use Node.js 22+. Each release contains one self-contained UTF-8 HTML document and `tool.manifest.json`. Source can be private; published browser code and repository provenance are public.
 
@@ -204,18 +204,10 @@ This is an artifact smoke test, not functional/security coverage. Add operation 
 
 ## 3. Register and test locally
 
-Add the source to `config/registry.json`, **preserving existing sources and approved owners**:
+For a temporary local development fixture, add `config/tools/text-counter.json`; production uses an immutable remote source:
 
 ```json
-{
-  "trustedOwners": ["ygrip"],
-  "topic": "open-tools",
-  "discovery": false,
-  "sources": [
-    { "repository": "ygrip/json-tools", "local": "examples/json-tools" },
-    { "repository": "ygrip/text-counter", "local": "examples/text-counter" }
-  ]
-}
+{ "repository": "ygrip/text-counter", "local": "examples/text-counter" }
 ```
 
 Local sources must resolve under `examples/`; arbitrary sibling paths and symlink escapes are rejected. Local mirrors are for scaffold development, not private production source.
@@ -277,14 +269,14 @@ The standalone source commit must contain the matching `dist/index.html` and man
 
 ## 5. Pin and release through trick-it
 
-Back in Open Tools, replace the new local source with its immutable source ref, retaining existing registrations:
+Back in trick-it, replace the content of `config/tools/text-counter.json` with the released source ref, retaining all other per-tool files:
 
 ```json
 { "repository": "ygrip/text-counter", "ref": "<full lowercase 40-character commit SHA>" }
 ```
 
-Add its owner to `trustedOwners` only after approval. Branches, tags and shortened SHAs are rejected. Keep `discovery: false` for explicit production approval. An alternate complete registry configuration can be selected with `TOOLS_REGISTRY_CONFIG`; apply that same environment setting to sync **and build**.
+Add its owner to global `trustedOwners` only after approval. Branches, tags and shortened SHAs are rejected. Keep `discovery: false` for explicit production approval. An alternate complete registry configuration can be selected with `TOOLS_REGISTRY_CONFIG`; apply that same environment setting to sync **and build**.
 
 For private sources, supply read-only credentials to the **Open Tools build**, not the tool runtime. See [multi-owner authentication](registry-auth.md): repository mapping → owner mapping → `TOOLS_GITHUB_TOKEN` → `GITHUB_TOKEN` → anonymous. Put only environment-variable names in configuration; an explicitly configured missing secret fails closed. GitHub App installation descriptors support separate owners and short-lived tokens. Neither sync nor the builder automatically loads `.env` files.
 
-Run sync, host tests, check, build, performance checks and browser tests again using the production registry configuration. Commit the registry change as `ygrip <yunaz.gilang@gmail.com>` and deploy the **entire** static build atomically. For every subsequent tool release, bump its version, rebuild, test, commit and push the artifact/manifest together, then review and update the pinned SHA here. A push to the tool repository alone does not update an explicit registration.
+Run sync, host tests, check, build, performance checks and browser tests again using the production registry configuration. Commit the registry change as `ygrip <yunaz.gilang@gmail.com>` and deploy the **entire** static build atomically. For every subsequent tool release, bump its version, rebuild, test, commit and push the artifact/manifest together, then review and update the pinned SHA here. A push to the tool repository alone does not update the pinned `config/tools/<id>.json` registration.

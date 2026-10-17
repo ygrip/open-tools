@@ -1,6 +1,6 @@
 # trick-it
 
-A localized, installable SvelteKit platform for independent browser tools. Each tool has a **versioned HTML entry bundle plus a validated manifest**, not imported source code. Optional deferred assets are fetched by the host only after consent and integrity checks. Source repositories may be private; shipped code and metadata are public. The GitHub repository remains `ygrip/open-tools`; the product name is now **trick-it**.
+A localized, installable SvelteKit platform for independent browser tools. Each tool has a **versioned HTML entry bundle plus a validated manifest**, not imported source code. Optional deferred assets are fetched by the host only after consent and integrity checks. Source repositories may be private; shipped code and metadata are public. The GitHub repository is [`ygrip/trick-it`](https://github.com/ygrip/trick-it) (formerly `ygrip/open-tools`).
 
 English and Indonesian pages are prerendered and support SPA navigation, per-tool guides/SEO, explicit capabilities, verified model/WASM downloads, and PWA offline access. Start with [localization](docs/i18n.md), [v3 metadata](docs/tool-contract-v3.md), [permissions/runtime](docs/tool-runtime.md), [PWA](docs/pwa.md), or [SEO deployment](docs/seo.md).
 
@@ -41,6 +41,8 @@ npm run dev
 ```
 
 Open `/json-tools` for JSON formatting, JSONPath queries, JSON → XML and XML → JSON. The checked-in first bundle works offline without GitHub credentials. Its independently buildable source is mirrored in `examples/json-tools`. The local v0.3.0 mirror adds the v3 contract and English/Indonesian controls. The standalone published v0.2.0 remains pinned to `73ccc3751785eb3203934535a223de89b788c31a` in the remote example and remains supported through v2 compatibility; publishing v0.3.0 there is a separate release step.
+
+`/text-manipulation/` is the second tool, offering case conversions, line deduplication and sorting, whitespace cleanup, literal find/replace, Unicode-friendly slugs, and text statistics. It is pinned to an immutable commit in the private [`ygrip/text-manipulation`](https://github.com/ygrip/text-manipulation) repository. **Local and CI builds must supply `TOOLS_GITHUB_TOKEN` with read-only access to that repository.** The existing JSON Tools local mirror remains available without authentication, but registry sync intentionally fails rather than silently omitting a private tool when its credentials are missing.
 
 ```sh
 npm test
@@ -94,9 +96,19 @@ To create a different tool, follow [Scaffold and register a tool](docs/scaffold-
 
 1. Bundle the entry application into one UTF-8 HTML file (maximum 5 MiB). Additional public code/models/data must use the declared, approved, consented asset loader—not direct iframe network access. Sensitive browser actions go through the host broker; never include runtime credentials or add `allow-same-origin`.
 2. Generate its SHA-256 and commit the HTML and manifest together. Source maps, server code, secrets and source checkout are not copied by trick-it.
-3. Register its repository and **full 40-character commit SHA** in `config/registry.json`. The owner must appear in `trustedOwners`; IDs/paths must be unique and cannot shadow host routes.
+3. Register its repository and **full 40-character commit SHA** in its own `config/tools/<id>.json` file. The owner must appear in `trustedOwners`; IDs/paths must be unique and cannot shadow host routes.
 
 Allowed categories: `media`, `developer`, `data`, `productivity`, `other`. Status: `stable`, `beta`, `experimental`. IDs use lowercase letters/numbers separated by hyphens; paths must equal `/<id>`. Increment the tool version when releasing a new bundle, then explicitly update the pinned registration. No private package registry is required.
+
+## Per-tool marketplace registrations
+
+**New production tools do not belong in `examples/`.** Each standalone tool repository owns its HTML, manifest, tests and release documentation. Register an immutable source through one small file in `config/tools/` (for example `id-generator.json`), rather than editing the shared `config/registry.json` sources array:
+
+```json
+{ "repository": "ygrip/id-generator", "ref": "633e6b044a21493dec72f5741f447b0e0ba60d6d" }
+```
+
+The shared config now only holds platform trust/discovery settings and `toolDirectory`. The existing local JSON Tools mirror is a temporary exception because its v0.3 release has not yet been published to its standalone repository. For private tool sources, set `TOOLS_GITHUB_TOKEN` with read-only Contents permission. See [per-tool registry and migration](docs/registry-layout.md).
 
 ## Register a private repository
 

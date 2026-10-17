@@ -3,12 +3,15 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { createGithubClient, loadSource } from './lib/bundles.mjs';
 import { createCredentialResolver } from './lib/credentials.mjs';
+import { readToolRegistrations } from './lib/registrations.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const configPath = process.env.TOOLS_REGISTRY_CONFIG || 'config/registry.json';
 const config = JSON.parse(await readFile(resolve(root, configPath), 'utf8'));
 const github = createGithubClient(createCredentialResolver(config));
-const sources = [...(config.sources ?? [])];
+const registrations = await readToolRegistrations(config, root);
+const sources = registrations.map(({ source }) => source);
+const configuredIds = new Map(registrations.map(({ id, source }) => [source.repository.toLowerCase(), id]));
 
 // Explicit sources are authoritative and work for private repositories.
 if (config.discovery) {
@@ -34,6 +37,8 @@ const ids = new Set();
 for (const source of sources) {
   // Fail closed: never silently publish a partial registry on a source failure.
   const tool = await loadSource(source, config, root, github);
+  const configuredId = configuredIds.get(source.repository.toLowerCase());
+  if (configuredId && tool.manifest.id !== configuredId) throw new Error(`tool registration filename does not match manifest id: ${configuredId}`);
   if (ids.has(tool.manifest.id)) throw new Error(`duplicate tool id/path: ${tool.manifest.id}`);
   ids.add(tool.manifest.id);
   loaded.push(tool);
