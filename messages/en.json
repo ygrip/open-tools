@@ -165,5 +165,12 @@
   "error_privacy": "Your privacy",
   "error_reference": "If you report this, include reference",
   "error_404_alt": "A curious clay toolbox searches a map with a magnifying glass.",
-  "error_500_alt": "A cheerful clay toolbox takes a repair break with a wrench and soft mint gear."
+  "error_500_alt": "A cheerful clay toolbox takes a repair break with a wrench and soft mint gear.",
+  "nav_toolbox": "Toolbox",
+  "hero_explore": "Explore the toolbox",
+  "hero_no_account": "No account. No fuss.",
+  "tool_ready": "Ready to help",
+  "empty_show_all": "Show all tools",
+  "collection_feedback": "Have a tool in mind?",
+  "skip_content": "Skip to content"
 }
