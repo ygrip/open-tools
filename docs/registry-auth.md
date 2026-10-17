@@ -3,23 +3,60 @@
 Open Tools resolves GitHub credentials **during registry sync/build**, separately for every repository. Registering a repository does not expose a token to that tool or its browser bundle. Public catalog metadata still includes the repository URL, even if its source is private.
 
 
-## Fixing CI failures on the trick-it production registry
+## Multi-owner CI and private tool permissions
 
-The current production registry pins **four private sibling repositories**:
-`ygrip/encoder-decoder`, `ygrip/id-generator`, `ygrip/json-tools`, and
-`ygrip/text-manipulation`. The standard workflow `GITHUB_TOKEN` is
-repository-scoped and **cannot** read them. GitHub returns HTTP 404 for
-unauthorized private repository requests even when the pinned commit exists.
+The host can register public repositories without authentication, or private
+repositories when an approved owner grants read access. GitHub Actions' default
+`GITHUB_TOKEN` only covers `trick-it`, not other private repositories. This
+explains the current CI 404s for the four private `ygrip` sources.
 
-1. Under GitHub **Settings → Developer settings → Personal access tokens → Fine-grained tokens**, create a token owned by `ygrip` selecting those four repositories (or use a GitHub App installed on them). Grant **Contents: Read-only**, with no write permissions.
-2. In **ygrip/trick-it → Settings → Secrets and variables → Actions**, add a **repository secret** called `TOOLS_GITHUB_TOKEN` containing that token. Do not put it in git, tool registrations, or this chat.
-3. Re-run **Verify registry and bundles** from Actions. Its `Verify private tool repository access` step probes each pinned manifest and identifies missing access explicitly before installing npm dependencies.
-4. If tool repos are added later, extend the token's **selected repositories**. A GitHub token selected for only the host repository will still fail, as will the default `GITHUB_TOKEN`.
+**One global token is optional, not required.** The registry preflight,
+synchronizer and build all use the same repository-aware credential resolver:
 
-The workflow no longer injects its default `GITHUB_TOKEN` as a misleading
-fallback for private-source sync or build. The production credential never
-reaches deployed JavaScript. Registry synchronization still fails closed if a
-private source cannot be verified, rather than silently dropping tools.
+- For the four private `ygrip/*` sources, a fine-grained token selected for
+  those repositories with Contents: read can be supplied as `TOOLS_GITHUB_TOKEN`.
+- A different user or organization can use its own entry in
+  `auth.owners` with `tokenEnv`, or an override in `auth.repositories`.
+- For an expanding marketplace, prefer a GitHub App with Contents: read,
+  installed on each consenting user/org's selected repositories. Each
+  owner gets its own `installationId` and short-lived installation token.
+- Public sources do not need any credential, though owner approval and
+  an explicit immutable registration are still required.
+
+Example: register `alice/text-cleaner` through its own
+`config/tools/text-cleaner.json` pinned to a full 40-character SHA, then add
+`alice` to `trustedOwners` in `config/registry.json` and map its credential:
+
+```json
+{
+  "trustedOwners": ["ygrip", "alice", "acme"],
+  "discovery": false,
+  "toolDirectory": "config/tools",
+  "auth": {
+    "owners": {
+      "alice": { "tokenEnv": "TOOLS_PARTNER_TOKEN" },
+      "acme": {
+        "appIdEnv": "TOOLS_APP_ID",
+        "privateKeyEnv": "TOOLS_APP_PRIVATE_KEY",
+        "installationId": 123456
+      }
+    }
+  }
+}
+```
+
+The GitHub Actions workflow exposes the optional repository secrets
+`TOOLS_GITHUB_TOKEN`, `TOOLS_PARTNER_TOKEN`, `TOOLS_APP_ID` and
+`TOOLS_APP_PRIVATE_KEY` to all three build phases. For an additional
+PAT-backed owner, add its secret environment mapping to each workflow step.
+App-backed owners only need their installation configuration; reuse the same
+App credentials, with a distinct installation ID per approved owner.
+
+Set required secret values under **trick-it → Settings → Secrets and variables
+→ Actions**. The preflight now validates each source independently rather
+than demanding one global token. A 404 may mean missing private-repository
+permission, an invalid SHA or missing manifest. It fails closed and does not
+publish an incomplete catalog. Tokens never enter generated browser files.
 
 ## Credential precedence
 
