@@ -165,5 +165,12 @@
   "error_privacy": "Privasi kamu",
   "error_reference": "Jika melaporkan masalah, sertakan referensi",
   "error_404_alt": "Ilustrasi kotak alat mencari halaman dengan kaca pembesar.",
-  "error_500_alt": "Ilustrasi kotak alat sedang diperbaiki."
+  "error_500_alt": "Ilustrasi kotak alat sedang diperbaiki.",
+  "nav_toolbox": "Kotak alat",
+  "hero_explore": "Jelajahi alat",
+  "hero_no_account": "Tanpa akun. Tanpa ribet.",
+  "tool_ready": "Siap digunakan",
+  "empty_show_all": "Tampilkan semua alat",
+  "collection_feedback": "Punya ide alat baru?",
+  "skip_content": "Lewati ke konten"
 }
