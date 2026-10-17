@@ -101,8 +101,10 @@ h1, h2, h3 { line-height: 1.15; text-wrap: balance; }
 .brand strong { font-size: 25px; font-weight: 900; letter-spacing: -.055em; line-height: 1; }
 .brand-accent { color: var(--accent-strong); }
 .brand small { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: .015em; font-weight: 700; }
-.topnav { display: flex; align-items: center; gap: 12px; }
-.nav-link { font-weight: 800; font-size: 14px; min-height: 44px; display: inline-flex; align-items: center; padding: 8px 10px; }
+.topbar > .brand { margin-right: auto; }
+.topnav, .header-actions { display: flex; align-items: center; gap: 12px; }
+.topnav .mobile-github { display: none; }
+.nav-link { font-weight: 800; font-size: 14px; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; }
 .nav-link:hover, .text-link:hover, .site-footer a:hover { color: var(--accent-strong); }
 .icon-button, .theme-toggle { width: 44px; height: 44px; display: inline-grid; place-items: center; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--text); box-shadow: 0 3px 0 var(--line), inset 1px 2px 2px var(--highlight); }
 .theme-toggle svg { width: 20px; height: 20px; }
@@ -152,7 +154,7 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
 .chips button.active { background: var(--peach); color: var(--text); border-color: var(--line); box-shadow: inset 1px 2px 2px var(--highlight), 0 2px 0 var(--line); }
 .tool-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .tool-card { padding: 28px; display: flex; flex-direction: column; min-height: 335px; transition: transform var(--duration-fast) var(--ease-smooth-out); }
-.tool-card:first-child { grid-column: span 2; }
+.tool-grid.single-result .tool-card:first-child { grid-column: span 2; }
 .tool-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; gap: 12px; }
 .tool-card-top .clay-icon { width: 65px; height: 65px; border-radius: 21px; }
 .tool-status { display: inline-flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 850; color: var(--muted); padding: 6px 10px; border-radius: 100px; border: 1px solid var(--line); }
@@ -272,12 +274,16 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
 }
 @media (max-width: 760px) {
   .page-shell { width: calc(100% - 32px); padding-top: 18px; }
-  .topbar { gap: 12px; margin-bottom: 20px; }
+  .topbar { gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .header-actions { order: 1; gap: 8px; }
   .brand strong { font-size: 23px; }
   .brand img { width: 40px; height: 40px; }
-  .about-link, .github-link, .brand small { display: none; }
-  .topnav { gap: 8px; }
-  .nav-link { font-size: 12px; padding: 0 4px; }
+  .github-link, .brand small { display: none; }
+  .topnav { order: 2; width: 100%; gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); box-shadow: 0 3px 0 var(--line), inset 1px 2px 2px var(--highlight); }
+  .topnav .nav-link { flex: 1; justify-content: center; font-size: 12px; padding: 8px 6px; white-space: nowrap; border-radius: 14px; }
+  .topnav .nav-link:first-child { background: var(--peach); }
+  .topnav .nav-link:hover { background: var(--peach); }
+  .topnav .mobile-github { display: inline-flex; }
   .hero-bento { gap: 15px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hero-copy, .hero-art { grid-column: 1 / -1; }
   .hero-copy { padding: 30px 27px; }
@@ -300,7 +306,7 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
   .search-input-wrap { min-width: 100%; }
   .chips { width: 100%; border-top: 1px solid var(--line); padding-top: 10px; }
   .tool-grid { grid-template-columns: 1fr; }
-  .tool-card:first-child { grid-column: auto; }
+  .tool-grid.single-result .tool-card:first-child { grid-column: auto; }
   .tool-card, .collection-card { padding: 25px; }
   .collection-card { min-height: 320px; }
   .mini-tool-scene { float: right; width: 145px; margin-left: 10px; }
@@ -314,7 +320,6 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
   .site-footer nav { width: 100%; justify-content: space-between; margin-left: 0; }
 }
 @media (max-width: 380px) {
-  .search-nav { display: none; }
   .hero-actions .clay-button { width: 100%; }
   .friendly-pill { font-size: 10px; }
 }

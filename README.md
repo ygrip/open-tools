@@ -4,14 +4,23 @@ A static SvelteKit aggregator for independent browser tools. Each registered too
 
 ## Screenshots
 
-Full-page desktop captures at 1440px wide from the production preview.
+Captured from the production preview. Mobile views show the complete header and navigation at **375 × 812**; desktop captures are full-page at 1440px wide.
 
-### Light mode
+### Mobile
+
+<img src="docs/screenshots/open-tools-mobile-light.png" width="375" alt="Open Tools mobile light view with logo, search, theme control, Toolbox, How it works and GitHub navigation" /> <img src="docs/screenshots/open-tools-mobile-dark.png" width="375" alt="Open Tools mobile dark view with the same visible header and navigation" />
+
+Header close-ups: [light](docs/screenshots/open-tools-mobile-header-light.png) · [dark](docs/screenshots/open-tools-mobile-header-dark.png).
+
+<details>
+<summary>Desktop — light mode</summary>
 
 ![Open Tools homepage in light mode, with a clay toolbox illustration and bento-style tool catalog](docs/screenshots/open-tools-light.png)
 
+</details>
+
 <details>
-<summary>Dark mode</summary>
+<summary>Desktop — dark mode</summary>
 
 ![Open Tools homepage in dark mode, with the same clay illustration and dark bento cards](docs/screenshots/open-tools-dark.png)
 
@@ -69,6 +78,8 @@ Every repository publishes `tool.manifest.json` and the referenced self-containe
 Version 2 requires `appearance: { theme: "host", protocolVersion: 1 }`; legacy v1 manifests are rejected rather than registering a tool that ignores the host theme. To migrate, implement both theme styles, add the declaration, rebuild and update the pinned release.
 
 See `examples/json-tools/tool.manifest.json` for a real manifest with a verified checksum. `src/lib/registry/contract.js` is the shared validation implementation used by the build and catalog.
+
+To create a different tool, follow [Scaffold and register a tool](docs/scaffold-tool.md). It includes copyable HTML, a dependency-free builder, a v2 manifest, a checksum smoke test, local registration and private-repository publishing. The project-local agent skill lives at `.agents/skills/open-tools-scaffold/SKILL.md`; ask your agent to “scaffold and register an Open Tools tool.”
 
 1. Bundle all JavaScript, CSS and dependencies into one UTF-8 HTML file (maximum 5 MiB). No CDN imports, framework coupling, host callbacks, storage, clipboard permissions or runtime credentials.
 2. Generate its SHA-256 and commit the HTML and manifest together. Source maps, server code, secrets and source checkout are not copied by Open Tools.
@@ -151,7 +162,9 @@ The shared `+error.svelte` handles missing routes and unexpected navigation/rend
 
 The responsive shell uses warm cream/coral clay surfaces, rounded bento cards, mint/lavender details, tactile buttons, a self-hosted subsetted Nunito variable font and a cartoon toolbox mascot. Dark mode uses warm charcoal surfaces rather than an inverted light palette. The SVG logo/favicon are original artwork; the optimized responsive hero illustration was generated with Fal.ai. Asset provenance lives in `static/brand/README.md` and `static/illustrations/README.md`. No Fal credential or request is used by the website.
 
-Quick search is loaded only on first use, with a native modal focus trap, Escape dismissal and focus restoration. The homepage no longer loads or runs the animated canvas dot field. The hero reserves its dimensions, loads eagerly with responsive WebP variants and high fetch priority, and weighs 7.2/14.8 kB. Font preload and `font-display: optional` avoid avoidable font shifts. Motion uses explicit properties and respects reduced-motion preferences.
+Quick search is loaded only on first use, with a native modal focus trap, Escape dismissal and focus restoration. The homepage no longer loads or runs the animated canvas dot field. The hero reserves its dimensions, loads eagerly with responsive WebP variants and high fetch priority, and weighs 7.2/14.8 kB. Font preload and `font-display: optional` avoid avoidable font shifts. Motion uses explicit properties and respects reduced-motion preferences. The hero combines a native CSS border orbit, gentle float and sparkles, inspired by [Libraries.dev Border beam](https://libraries.dev/beam.html). It adds no React, canvas, WebGL or animation runtime. The pause/play control stops all hero motion; animations also pause offscreen or in a hidden tab and are disabled for reduced motion.
+
+The mobile header keeps search/theme controls and a separate 44px-target navigation row visible down to 320px. The tool catalog renders six results per page, with numbered desktop controls and compact previous/next controls on mobile. Search/category changes reset to page one; paging focuses the catalog heading. The single registered tool currently occupies one page. Browser tests mount the actual homepage with 14 test-only entries to exercise multiple pages without publishing fake tools.
 
 The requested skills are installed in project scope under `.agents/skills`: `transitions-dev` from the official `Jakubantalik/transitions.dev` repository and `web-performance` from skills.ws. Modal/icon motion uses the free Transitions.dev recipes; its license is included with the installed skill. Reinstall with:
 
@@ -160,4 +173,4 @@ npx skills add Jakubantalik/transitions.dev --skill transitions-dev --agent code
 npx skills-ws install web-performance --dir .agents/skills
 ```
 
-`npm run performance:check` enforces build budgets across all routes: 130 kB gzip JavaScript, 20 kB gzip CSS, 90 kB images, 45 kB WOFF2 fonts and 90 kB gzip per tool bundle. CI also runs browser checks for tool isolation, theme synchronization, search/focus, mobile overflow, reduced motion and automated WCAG A/AA checks in light/dark mode. A local production-preview audit with Lighthouse 13.5.0 and simulated mobile throttling scored **99 performance / 100 accessibility / 100 best practices**, with LCP 2.0 s, CLS 0 and TBT 0 ms. Build budgets and local lab scores are not production Core Web Vitals; field p75 LCP/INP/CLS still require real traffic measurements.
+`npm run performance:check` enforces build budgets across all routes: 130 kB gzip JavaScript, 20 kB gzip CSS, 90 kB images, 45 kB WOFF2 fonts and 90 kB gzip per tool bundle. CI also runs browser checks for tool isolation, theme synchronization, search/focus, mobile overflow, reduced motion and automated WCAG A/AA checks in light/dark mode. A local production-preview audit with Lighthouse 13.5.0 and simulated mobile throttling scored **99 performance / 100 accessibility / 100 best practices**, with LCP 2.1 s, CLS 0 and TBT 0 ms. Build budgets and local lab scores are not production Core Web Vitals; field p75 LCP/INP/CLS still require real traffic measurements.

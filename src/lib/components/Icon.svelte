@@ -1,5 +1,5 @@
 <script lang="ts">
-  export type IconName = 'arrow-left' | 'arrow-right' | 'search' | 'sun' | 'moon' | 'shield' | 'braces' | 'grid' | 'sparkles' | 'github' | 'check' | 'x' | 'toolbox' | 'external' | 'bolt' | 'heart' | 'filter' | 'lock';
+  export type IconName = 'arrow-left' | 'arrow-right' | 'search' | 'sun' | 'moon' | 'shield' | 'braces' | 'grid' | 'sparkles' | 'github' | 'check' | 'x' | 'toolbox' | 'external' | 'bolt' | 'heart' | 'filter' | 'lock' | 'play' | 'pause';
   let { name, size = 22, class: className = '' }: { name: IconName; size?: number; class?: string } = $props();
   const paths: Record<IconName, string> = {
     'arrow-left': 'M19 12H5m7-7-7 7 7 7',
@@ -19,7 +19,9 @@
     bolt: 'm13 2-9 12h7l-1 8 10-12h-7l1-8Z',
     heart: 'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z',
     filter: 'M4 7h16M7 12h10m-7 5h4',
-    lock: 'M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5V10Zm7 4v3'
+    lock: 'M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5V10Zm7 4v3',
+    play: 'm8 4 12 8-12 8V4Z',
+    pause: 'M8 5v14M16 5v14'
   };
 </script>
 

@@ -1,10 +1,15 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { base } from '$app/paths';
   import Icon from '$lib/components/Icon.svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+  import HeroArt from '$lib/components/HeroArt.svelte';
+  import Pagination from '$lib/components/Pagination.svelte';
+  import { getPagination } from '$lib/pagination.js';
   import { categories, tools } from '$lib/registry/tools';
 
+  const pageSize = 6;
+  let currentPage = $state(1);
   let selectedCategory = $state('all');
   let query = $state('');
   let searchOpen = $state(false);
@@ -15,6 +20,22 @@
     (selectedCategory === 'all' || tool.category === selectedCategory) &&
     [tool.name, tool.description, ...tool.capabilities].join(' ').toLowerCase().includes(query.trim().toLowerCase())
   ));
+
+  const pageState = $derived(getPagination(filteredTools.length, pageSize, currentPage));
+  const pagedTools = $derived(filteredTools.slice(pageState.offset, pageState.end));
+
+  function selectCategory(category: string) {
+    selectedCategory = category;
+    currentPage = 1;
+  }
+
+  async function changePage(page: number) {
+    currentPage = page;
+    await tick();
+    const heading = document.getElementById('catalog-title');
+    heading?.focus({ preventScroll: true });
+    heading?.scrollIntoView({ block: 'start' });
+  }
 
   async function openSearch() {
     searchError = '';
@@ -56,12 +77,15 @@
       <span><strong>open<span class="brand-accent">tools</span></strong><small>little tools. lovely results.</small></span>
     </a>
     <nav class="topnav" aria-label="Primary navigation">
-      <a class="nav-link" href="#tools">The toolbox</a>
+      <a class="nav-link" href="#tools"><Icon name="grid" size={17} /> Toolbox</a>
       <a class="nav-link about-link" href="#how-it-works">How it works</a>
+      <a class="nav-link mobile-github" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer"><Icon name="github" size={17} /> GitHub</a>
+    </nav>
+    <div class="header-actions">
       <button class="icon-button search-nav" type="button" onclick={openSearch} aria-label="Search tools"><Icon name="search" /></button>
       <ThemeToggle />
       <a class="clay-button small github-link" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer"><Icon name="github" size={19} /><span>GitHub</span><Icon name="external" size={15} /></a>
-    </nav>
+    </div>
   </header>
 
   <main id="main-content">
@@ -76,29 +100,25 @@
         </div>
         <div class="hero-proof"><span class="tiny-clay-icon"><Icon name="shield" size={17} /></span><span>Thoughtful little utilities. One happy home.</span></div>
       </div>
-      <div class="hero-art surface">
-        <div class="art-caption"><span class="status-dot"></span> Your handy little sidekick</div>
-        <img src={`${base}/illustrations/clay-workbench-768.webp`} srcset={`${base}/illustrations/clay-workbench-448.webp 448w, ${base}/illustrations/clay-workbench-768.webp 768w`} sizes="(max-width: 760px) calc(100vw - 64px), 480px" width="768" height="768" fetchpriority="high" decoding="async" alt="A smiling orange clay toolbox with a lavender code tile, mint data stack, and yellow magnifying glass." />
-        <span class="art-sticker"><Icon name="heart" size={16} /> Made for your everyday</span>
-      </div>
+      <HeroArt />
       <div class="benefit-tile surface mint"><span class="clay-icon"><Icon name="lock" size={23} /></span><div><strong>Your data stays yours</strong><p>Our first tools work right in your browser.</p></div></div>
       <div class="benefit-tile surface lavender"><span class="clay-icon"><Icon name="bolt" size={23} /></span><div><strong>Skip the setup</strong><p>Pick a tool. Drop in your data. Done.</p></div></div>
       <div class="benefit-tile surface butter"><span class="clay-icon"><Icon name="grid" size={23} /></span><div><strong>A growing little collection</strong><p>Independent tools, brought together.</p></div></div>
     </section>
 
     <section class="catalog-section" id="tools" aria-labelledby="catalog-title">
-      <div class="section-heading"><div><p class="eyebrow">Make room for a shortcut</p><h2 id="catalog-title">What can we help with?</h2></div><span class="count-pill">{tools.length} {tools.length === 1 ? 'handy tool' : 'handy tools'} & counting</span></div>
+      <div class="section-heading"><div><p class="eyebrow">Make room for a shortcut</p><h2 id="catalog-title" tabindex="-1">What can we help with?</h2></div><span class="count-pill">{tools.length} {tools.length === 1 ? 'handy tool' : 'handy tools'} & counting</span></div>
       <div class="catalog-controls surface">
-        <div class="search-input-wrap"><Icon name="search" size={21} /><label class="sr-only" for="tool-search">Search the toolbox</label><input id="tool-search" type="search" bind:value={query} placeholder="Try “JSON”, “XML”, or a task…" /><kbd>/</kbd></div>
+        <div class="search-input-wrap"><Icon name="search" size={21} /><label class="sr-only" for="tool-search">Search the toolbox</label><input id="tool-search" type="search" bind:value={query} oninput={() => currentPage = 1} placeholder="Try “JSON”, “XML”, or a task…" /><kbd>/</kbd></div>
         <div class="chips" aria-label="Tool categories">
-          <button type="button" class:active={selectedCategory === 'all'} aria-pressed={selectedCategory === 'all'} onclick={() => selectedCategory = 'all'}><Icon name="grid" size={16} /> All tools</button>
-          {#each categories as category}<button type="button" class:active={selectedCategory === category} aria-pressed={selectedCategory === category} onclick={() => selectedCategory = category}>{categoryNames[category]}</button>{/each}
+          <button type="button" class:active={selectedCategory === 'all'} aria-pressed={selectedCategory === 'all'} onclick={() => selectCategory('all')}><Icon name="grid" size={16} /> All tools</button>
+          {#each categories as category}<button type="button" class:active={selectedCategory === category} aria-pressed={selectedCategory === category} onclick={() => selectCategory(category)}>{categoryNames[category]}</button>{/each}
         </div>
       </div>
       {#if searchError}<p role="status">{searchError}</p>{/if}
       <p class="sr-only" role="status">{filteredTools.length} tools found</p>
-      <div class="tool-grid">
-        {#each filteredTools as tool}
+      <div class="tool-grid" class:single-result={filteredTools.length === 1}>
+        {#each pagedTools as tool (tool.id)}
           <a class="tool-card surface" href={`${base}${tool.path}/`}>
             <div class="tool-card-top"><span class="clay-icon peach"><Icon name={tool.category === 'data' || tool.category === 'developer' ? 'braces' : 'toolbox'} size={30} /></span><span class="tool-status"><span class="status-dot"></span> Ready to help</span></div>
             <div class="tool-card-copy"><span class="eyebrow">{categoryNames[tool.category]}</span><h3>{tool.name}</h3><p>{tool.id === 'json-tools' ? 'Messy JSON? Make it readable, find just the bits you need, or turn it into XML. All in one tidy spot.' : tool.description}</p></div>
@@ -106,12 +126,13 @@
             <div class="tool-card-bottom"><span>Open {tool.name}</span><span class="round-arrow"><Icon name="arrow-right" size={21} /></span></div>
           </a>
         {:else}
-          <div class="empty-state surface"><span class="clay-icon lavender"><Icon name="search" size={30} /></span><h3>{tools.length ? 'No little helpers found. Yet.' : 'The toolbox is getting ready.'}</h3><p>{tools.length ? 'Try a different word, or clear your filters to see the whole toolbox.' : 'Our first tools are on their way. Check back for a fresh little shortcut.'}</p>{#if tools.length}<button class="clay-button" type="button" onclick={() => { query = ''; selectedCategory = 'all'; }}>Show all tools <Icon name="arrow-right" size={18} /></button>{/if}</div>
+          <div class="empty-state surface"><span class="clay-icon lavender"><Icon name="search" size={30} /></span><h3>{tools.length ? 'No little helpers found. Yet.' : 'The toolbox is getting ready.'}</h3><p>{tools.length ? 'Try a different word, or clear your filters to see the whole toolbox.' : 'Our first tools are on their way. Check back for a fresh little shortcut.'}</p>{#if tools.length}<button class="clay-button" type="button" onclick={() => { query = ''; selectCategory('all'); }}>Show all tools <Icon name="arrow-right" size={18} /></button>{/if}</div>
         {/each}
-        {#if !query && selectedCategory === 'all'}
+        {#if filteredTools.length <= 1 && !query && selectedCategory === 'all'}
           <aside class="collection-card surface lavender"><div class="mini-tool-scene" aria-hidden="true"><span class="mini-block one"><Icon name="toolbox" size={38} /></span><span class="mini-block two"><Icon name="sparkles" size={30} /></span><span class="mini-block three"><Icon name="braces" size={26} /></span></div><span class="eyebrow">Small collection. Big heart.</span><h3>Good things come<br />in little toolboxes.</h3><p>We’re starting small and making each helper count. More useful little things are on the way.</p><a class="text-link" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer">Have a tool in mind? <Icon name="arrow-right" size={18} /></a></aside>
         {/if}
       </div>
+      <Pagination totalItems={filteredTools.length} {pageSize} {currentPage} onPageChange={changePage} />
     </section>
 
     <section class="how-section surface" id="how-it-works" aria-labelledby="how-title">
