@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "trick-it",
+  "compatibility_date": "2026-05-01",
+  "assets": {
+    "directory": "./build",
+    "not_found_handling": "404-page"
+  },
+  "routes": [{ "pattern": "tools.readynaz.com", "custom_domain": true }]
+}
