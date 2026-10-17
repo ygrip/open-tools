@@ -182,7 +182,7 @@
   "pwa_update": "Update available",
   "pwa_activate": "Prepare update",
   "pwa_reload": "Reload to use the update",
-  "pwa_ready": "Update prepared. Your current input is unchanged; reload only when you are ready.",
+  "pwa_ready": "Your open tool stays untouched. Save any unsaved work before reloading.",
   "pwa_failed": "Offline setup could not finish. You can continue online and try again after reloading.",
   "pwa_offline": "You are offline. Previously opened tools and the cached shell remain available.",
   "tool_guide": "How to use this tool",
