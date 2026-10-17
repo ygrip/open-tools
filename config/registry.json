@@ -4,6 +4,6 @@
   "discovery": false,
   "sources": [
     { "repository": "ygrip/json-tools", "local": "examples/json-tools" },
-    { "repository": "ygrip/text-manipulation", "ref": "5d8c39b59419ae0df9e1894004b32887a8ec197d" }
+    { "repository": "ygrip/text-manipulation", "ref": "8859877db549168a39bd40a29ceff5ccd6fa949f" }
   ]
 }
