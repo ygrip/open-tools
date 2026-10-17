@@ -1,7 +1,8 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { base } from '$app/paths';
-  import { getLocale, localizeHref, locales } from '$lib/paraglide/runtime.js';
+  import { getLocale, locales } from '$lib/paraglide/runtime.js';
+  import { localizedPath } from '$lib/i18n';
 
   const labels: Record<string, string> = { en: 'English', id: 'Bahasa Indonesia' };
 </script>
@@ -9,7 +10,7 @@
 <nav class="language-switcher" aria-label="Languages">
   {#each locales as locale}
     <a
-      href={`${base}${localizeHref(page.url.pathname.slice(base.length) || '/', { locale })}`}
+      href={localizedPath(page.url.pathname.slice(base.length) || '/', locale)}
       aria-label={labels[locale]}
       aria-current={getLocale() === locale ? 'page' : undefined}
       hreflang={locale}
