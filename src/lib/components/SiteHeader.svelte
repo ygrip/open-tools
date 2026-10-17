@@ -26,17 +26,18 @@
     <LanguageSwitcher />
     <ThemeToggle />
     <ShareButton {catalog} />
-    <a class="clay-button small github-link" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer"><Icon name="github" size={19} /><span>GitHub</span><Icon name="external" size={15} /></a>
+    <a class="clay-button small github-link" aria-label="GitHub" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer"><Icon name="github" size={19} /><span>GitHub</span><Icon name="external" size={15} /></a>
   </div>
 </header>
 
 <style>
+  /* Share + GitHub are compact icon buttons; they leave the header on phones (footer and nav keep them). */
+  .header-actions :global(.share-button) { width: 44px; padding: 0; }
+  .header-actions :global(.share-button span), .github-link span, .github-link :global(svg:last-child) { display: none; }
+  .github-link { width: 44px; padding: 0; }
+  .header-actions { padding-left: 14px; margin-left: 4px; border-left: 2px dashed var(--line); }
   @media (max-width: 760px) {
-    .header-actions :global(.share-button span) { display: none; }
-    .header-actions :global(.share-button) { width: 44px; padding: 0; }
-  }
-  @media (max-width: 1000px) and (min-width: 761px) {
-    .header-actions :global(.share-button span), .github-link span { display: none; }
-    .header-actions :global(.share-button) { width: 44px; padding: 0; }
+    .header-actions { padding-left: 0; margin-left: 0; border-left: 0; }
+    .header-actions :global(.share-button) { display: none; }
   }
 </style>

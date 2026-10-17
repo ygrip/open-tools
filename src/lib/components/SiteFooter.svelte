@@ -34,13 +34,4 @@
       </ul>
     </nav>
   </div>
-  <div class="footer-bottom">
-    <span class="footer-made"><Icon name="heart" size={16} class="heart" /> {m.footer_made()}</span>
-    <button class="clay-button small" type="button" onclick={() => window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}><Icon name="arrow-left" size={16} class="up" /> {m.footer_top()}</button>
-  </div>
 </footer>
-
-<style>
-  .footer-made :global(.heart) { color: var(--accent-strong); }
-  :global(.up) { transform: rotate(90deg); }
-</style>
