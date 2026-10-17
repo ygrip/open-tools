@@ -188,10 +188,11 @@
     backdrop-filter: blur(6px) saturate(0.9);
     -webkit-backdrop-filter: blur(6px) saturate(0.9);
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-    transition: opacity var(--duration-fast) var(--ease-smooth-out);
+    transition: opacity var(--duration-fast) var(--ease-smooth-out), visibility 0s linear var(--duration-fast);
   }
-  .qs-backdrop.open { opacity: 1; pointer-events: auto; }
+  .qs-backdrop.open { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
   /* Header parts made inert while the menu is open fade back so the options stand out. */
   :global(.qs-dimmed) { opacity: 0.35; filter: blur(1.5px); transition: opacity var(--duration-fast) var(--ease-smooth-out), filter var(--duration-fast) var(--ease-smooth-out); }
 

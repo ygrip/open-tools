@@ -59,7 +59,9 @@
   .bubble-two { width: 13px; height: 13px; right: 8%; top: 40%; background: radial-gradient(circle at 32% 28%, #f4fff8, #b9dfcb 70%); animation-delay: -1.8s; }
   .bubble-three { width: 16px; height: 16px; right: 20%; bottom: 10%; background: radial-gradient(circle at 32% 28%, #fbf6ff, #cdbfe6 70%); animation-delay: -3.2s; }
   .art-sticker { animation: sticker-wiggle 3.4s ease-in-out infinite; animation-play-state: paused; transform-origin: 80% 80%; }
-  .motion-running img, .motion-running .hero-beam::before, .motion-running .hero-spark, .motion-running .hero-heart, .motion-running .hero-bubble, .motion-running .art-sticker { animation-play-state: running; }
+  .motion-running img, .motion-running .hero-spark, .motion-running .hero-heart, .motion-running .hero-bubble, .motion-running .art-sticker { animation-play-state: running; }
+  /* Masked conic beam repaints every frame: spin it only while the card is hovered or focused. */
+  .motion-running:hover .hero-beam::before, .motion-running:focus-within .hero-beam::before { animation-play-state: running; }
   @keyframes clay-bob {
     0%, 100% { transform: translateY(0) scale(1.04, 1.04) rotate(-.4deg); }
     30% { transform: translateY(-9px) scale(1.035, 1.055) rotate(.5deg); }
