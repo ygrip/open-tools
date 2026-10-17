@@ -40,9 +40,9 @@ npm run registry:sync
 npm run dev
 ```
 
-Open `/json-tools` for JSON formatting, JSONPath queries, JSON → XML and XML → JSON. The checked-in first bundle works offline without GitHub credentials. Its independently buildable source is mirrored in `examples/json-tools`. The local v0.3.0 mirror adds the v3 contract and English/Indonesian controls. The standalone published v0.2.0 remains pinned to `73ccc3751785eb3203934535a223de89b788c31a` in the remote example and remains supported through v2 compatibility; publishing v0.3.0 there is a separate release step.
+Open `/json-tools` for JSON formatting, JSONPath queries, JSON → XML and XML → JSON. Version 0.3.0 is built and released from the separate private `ygrip/json-tools` repository, with the tool's own HTML and manifest pinned to an immutable source commit. The trick-it host no longer carries a duplicate source or bundle.
 
-`/text-manipulation/` is the second tool, offering case conversions, line deduplication and sorting, whitespace cleanup, literal find/replace, Unicode-friendly slugs, and text statistics. It is pinned to an immutable commit in the private [`ygrip/text-manipulation`](https://github.com/ygrip/text-manipulation) repository. **Local and CI builds must supply `TOOLS_GITHUB_TOKEN` with read-only access to that repository.** The existing JSON Tools local mirror remains available without authentication, but registry sync intentionally fails rather than silently omitting a private tool when its credentials are missing.
+`/text-manipulation/` is the second tool, offering case conversions, line deduplication and sorting, whitespace cleanup, literal find/replace, Unicode-friendly slugs, and text statistics. It is pinned to an immutable commit in the private [`ygrip/text-manipulation`](https://github.com/ygrip/text-manipulation) repository. **Local and CI builds must supply `TOOLS_GITHUB_TOKEN` with read-only access to that repository.** JSON Tools is also a private remote source: CI and local builds need `TOOLS_GITHUB_TOKEN` with Contents: read on both repositories.
 
 ```sh
 npm test
@@ -90,7 +90,7 @@ Every repository publishes `tool.manifest.json` and the referenced self-containe
 
 New tools use v3 with runtime protocol 1. Legacy v2 manifests still receive safe icon/SEO/guide defaults and no privileges; they cannot opt into permissions or external assets without migrating. Both versions require the host theme declaration; v1 remains rejected. For v3 assets, explicitly approve HTTPS origins in `trustedAssetOrigins`; declare byte size, digest, type and deferred loading. See [complete limits and migration](docs/tool-contract-v3.md).
 
-See `examples/json-tools/tool.manifest.json` for a real manifest with a verified checksum. `src/lib/registry/contract.js` is the shared validation implementation used by the build and catalog.
+See the independently versioned [JSON Tools manifest](https://github.com/ygrip/json-tools/blob/main/tool.manifest.json) for a real manifest with a verified checksum. `src/lib/registry/contract.js` is the shared validation implementation used by the build and catalog.
 
 To create a different tool, follow [Scaffold and register a tool](docs/scaffold-tool.md). It includes copyable HTML, a dependency-free builder, a v3 manifest, a checksum smoke test, optional local scaffolding, and private-repository publishing. The project-local agent skill lives at `.agents/skills/trick-it-scaffold/SKILL.md`; ask your agent to “scaffold and register a trick-it tool.”
 
@@ -108,11 +108,11 @@ Allowed categories: `media`, `developer`, `data`, `productivity`, `other`. Statu
 { "repository": "ygrip/id-generator", "ref": "633e6b044a21493dec72f5741f447b0e0ba60d6d" }
 ```
 
-The shared config now only holds platform trust/discovery settings and `toolDirectory`. The existing local JSON Tools mirror is a temporary exception because its v0.3 release has not yet been published to its standalone repository. For private tool sources, set `TOOLS_GITHUB_TOKEN` with read-only Contents permission. See [per-tool registry and migration](docs/registry-layout.md).
+The shared config now only holds platform trust/discovery settings and `toolDirectory`. JSON Tools v0.3 is published in its standalone repository and pinned as a remote source, like the other production tools. For private tool sources, set `TOOLS_GITHUB_TOKEN` with read-only Contents permission. See [per-tool registry and migration](docs/registry-layout.md).
 
 ## Register a private repository
 
-The local example keeps development credential-free. To load the actual standalone repository, use `config/registry.remote.example.json`, already pinned to the published scaffold, or replace the local source with an immutable remote source:
+A private tool is registered by its own `config/tools/<id>.json`, pinned to a release commit. Legacy alternate registry files such as `config/registry.remote.example.json` still support a `sources` array for compatibility:
 
 ```json
 {
@@ -140,7 +140,7 @@ TOOLS_REGISTRY_CONFIG=config/registry.remote.example.json npm run build
 
 The sync reads only the manifest and HTML at the pinned commit, verifies identity, contract, checksum, UTF-8 and size, then publishes sanitized metadata and content-addressed `static/bundles/<id>/<sha256>.json`. It never installs dependencies or executes build scripts from a discovered repository. Authentication failures, invalid contracts and collisions fail the entire sync before replacing current output; they are not silently skipped.
 
-`local: "examples/json-tools"` is an explicit offline scaffold source, constrained to `examples/` with symlink escape checks. Do not use it for private production source. Remote `ref` values cannot be branch names or tags.
+Local development fixtures may still live in `examples/`, with symlink escape checks. No production tool uses this mode; every production entry resolves a standalone repository. Remote `ref` values cannot be branch names or tags.
 
 ## Discovery and approval
 
@@ -160,12 +160,13 @@ Registered bundles must support both host themes. trick-it sets `html[data-theme
 
 On a host theme change, trick-it sends `{ type: "open-tools:theme", version: 1, theme: "light" | "dark" }` directly to its iframe. The host-owned receiver checks `event.source === parent` and validates every protocol field. It changes the root theme without reloading the frame or losing input/output. An opaque frame requires `targetOrigin: "*"`; this legacy theme channel never carries user data. The separate v3 capability channel validates frame source, random session token, request ID and declared/granted permission before acting; sensitive operations require a host confirmation. Sandbox flags remain `allow-scripts` only, while WebAssembly and blob workers are conditional CSP grants.
 
-The first tool release, JSON Tools v0.2.0, implements this contract and has browser regressions for both modes, persistence, denied storage, and input/output preservation. Custom bundle markup still needs visual review: declaring a theme cannot make an arbitrary hardcoded design compliant automatically. Do not register a tool that ignores the host theme.
+JSON Tools v0.3.0 implements this contract and has browser regressions for both modes, persistence, denied storage, and input/output preservation. Custom bundle markup still needs visual review: declaring a theme cannot make an arbitrary hardcoded design compliant automatically. Do not register a tool that ignores the host theme.
 
 ## First bundle development
 
 ```sh
-cd examples/json-tools
+git clone git@github.com:ygrip/json-tools.git
+cd json-tools
 npm ci
 npm test
 npm run build
@@ -173,7 +174,7 @@ cd ../..
 npm run registry:sync
 ```
 
-The initial scaffold has been pushed to the standalone repository. For subsequent releases, publish the changed source, lockfile, manifest and HTML together there (excluding `node_modules`), then update the aggregator's pinned ref. See its README for supported JSONPath selectors, XML mapping conventions and limitations.
+The standalone JSON Tools repository owns its source and release HTML. For subsequent releases, publish the changed source, lockfile, manifest and HTML together there (excluding `node_modules`), then update the aggregator's pinned ref. See its README for supported JSONPath selectors, XML mapping conventions and limitations.
 
 ## Illustrated global errors
 

@@ -24,8 +24,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm ci && npm test && npm run build
-        working-directory: examples/json-tools
       - name: Fetch approved bundles
         env:
           TOOLS_GITHUB_TOKEN: ${{ secrets.TOOLS_GITHUB_TOKEN }}

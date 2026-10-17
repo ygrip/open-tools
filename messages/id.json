@@ -182,7 +182,7 @@
   "pwa_update": "Pembaruan tersedia",
   "pwa_activate": "Siapkan pembaruan",
   "pwa_reload": "Muat ulang untuk memakai pembaruan",
-  "pwa_ready": "Pembaruan siap. Inputmu tidak berubah; muat ulang setelah kamu siap.",
+  "pwa_ready": "Alat yang terbuka tidak berubah. Simpan pekerjaanmu sebelum memuat ulang.",
   "pwa_failed": "Penyiapan luring belum selesai. Kamu tetap bisa memakai aplikasi daring dan mencoba lagi setelah memuat ulang.",
   "pwa_offline": "Kamu sedang luring. Alat yang pernah dibuka dan antarmuka tersimpan tetap tersedia.",
   "tool_guide": "Cara memakai alat ini",
@@ -220,5 +220,11 @@
   "support_thanks": "Sekecil apa pun, lampunya tetap menyala. Terima kasih!",
   "support_maker": "Karya lainnya dari pembuatnya di readynaz.com",
   "footer_support": "Dukung pengembang",
-  "footer_maker": "Dibuat oleh readynaz"
+  "footer_maker": "Dibuat oleh readynaz",
+  "pwa_ready_title": "Pembaruan siap",
+  "pwa_update_description": "trick-it versi baru tersedia. Siapkan tanpa mengganggu alat yang sedang dipakai.",
+  "pwa_install_title": "Simpan kotak alatmu",
+  "pwa_install_description": "Pasang trick-it untuk akses cepat dan memakai alat yang sudah tersimpan saat luring.",
+  "pwa_later": "Nanti saja",
+  "pwa_close": "Mengerti"
 }

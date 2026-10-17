@@ -6,7 +6,7 @@ trick-it is a **build-time marketplace**, not a runtime code downloader. Every i
 config/
   registry.json             # shared trust, discovery and optional auth policy
   tools/
-    json-tools.json         # legacy local development mirror
+    json-tools.json         # immutable standalone release
     text-manipulation.json  # immutable remote source
     id-generator.json       # another immutable remote source (when registered)
 ```
@@ -24,7 +24,7 @@ The filename must equal the manifest ID. `ref` must be the complete 40-character
 
 ## Existing local development fixture
 
-`config/tools/json-tools.json` temporarily points to `examples/json-tools`, which contains a newer v0.3 bundle than the standalone private repository's published v0.2 release. It remains for backwards compatibility and development until v0.3 is published in `ygrip/json-tools`; do not copy this pattern for new production tools. Local sources still undergo the same manifest and digest checks.
+`config/tools/json-tools.json` now pins the standalone JSON Tools v0.3.0 release. The local mirror was deleted after verifying the exact HTML and manifest against the new source commit. All production entries use immutable remote commits; local development fixtures, if intentionally used, still undergo digest checks.
 
 ## Credentials and builds
 
