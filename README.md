@@ -92,7 +92,7 @@ New tools use v3 with runtime protocol 1. Legacy v2 manifests still receive safe
 
 See `examples/json-tools/tool.manifest.json` for a real manifest with a verified checksum. `src/lib/registry/contract.js` is the shared validation implementation used by the build and catalog.
 
-To create a different tool, follow [Scaffold and register a tool](docs/scaffold-tool.md). It includes copyable HTML, a dependency-free builder, a v3 manifest, a checksum smoke test, local registration and private-repository publishing. The project-local agent skill lives at `.agents/skills/trick-it-scaffold/SKILL.md`; ask your agent to “scaffold and register a trick-it tool.”
+To create a different tool, follow [Scaffold and register a tool](docs/scaffold-tool.md). It includes copyable HTML, a dependency-free builder, a v3 manifest, a checksum smoke test, optional local scaffolding, and private-repository publishing. The project-local agent skill lives at `.agents/skills/trick-it-scaffold/SKILL.md`; ask your agent to “scaffold and register a trick-it tool.”
 
 1. Bundle the entry application into one UTF-8 HTML file (maximum 5 MiB). Additional public code/models/data must use the declared, approved, consented asset loader—not direct iframe network access. Sensitive browser actions go through the host broker; never include runtime credentials or add `allow-same-origin`.
 2. Generate its SHA-256 and commit the HTML and manifest together. Source maps, server code, secrets and source checkout are not copied by trick-it.
@@ -146,7 +146,7 @@ The sync reads only the manifest and HTML at the pinned commit, verifies identit
 
 Explicit registrations are the default and recommended production approval mechanism. With `discovery: true`, the sync additionally searches trusted owners for the `open-tools` topic, resolves each default branch to a commit and applies the same contract/integrity checks. Private repositories are discoverable only when the build token can see them. Explicit sources take precedence. Discovery follows new releases on each sync, so enable it only if those repositories' maintainers are authorized to publish browser code to your site. A topic is not an independent security review.
 
-`.github/workflows/registry.yml` verifies, builds and uploads the complete static site. Add `TOOLS_GITHUB_TOKEN` as an Actions secret for private sources; external-fork PRs cannot access it and therefore cannot validate private registrations. The workflow does not push generated commits or deploy automatically.
+`.github/workflows/registry.yml` verifies, builds and uploads the complete static site. Add `TOOLS_GITHUB_TOKEN` as an Actions secret for private sources; external-fork PRs cannot access it and therefore cannot validate private registrations. The workflow does not push generated commits and deploys only for verified pushes to main, not pull requests.
 
 ## Isolation and trust
 
@@ -187,7 +187,7 @@ The responsive shell uses warm cream/coral clay surfaces, rounded bento cards, m
 
 Quick search is loaded only on first use, with a native modal focus trap, Escape dismissal and focus restoration. The homepage no longer loads or runs the animated canvas dot field. The hero reserves its dimensions, loads eagerly with responsive WebP variants and high fetch priority, and weighs 7.2/14.8 kB. Font preload and `font-display: optional` avoid avoidable font shifts. Motion uses explicit properties and respects reduced-motion preferences. The hero combines a native CSS border orbit, gentle float and sparkles, inspired by [Libraries.dev Border beam](https://libraries.dev/beam.html). It adds no React, canvas, WebGL or animation runtime. The pause/play control stops all hero motion; animations also pause offscreen or in a hidden tab and are disabled for reduced motion.
 
-The mobile header keeps search/theme controls and a separate 44px-target navigation row visible down to 320px. The tool catalog renders six results per page, with numbered desktop controls and compact previous/next controls on mobile. Search/category changes reset to page one; paging focuses the catalog heading. The single registered tool currently occupies one page. Browser tests mount the actual homepage with 14 test-only entries to exercise multiple pages without publishing fake tools.
+The mobile header keeps search/theme controls and a separate 44px-target navigation row visible down to 320px. The tool catalog renders six results per page, with numbered desktop controls and compact previous/next controls on mobile. Search/category changes reset to page one; paging focuses the catalog heading. The catalog may span multiple pages as more standalone tools are registered. Browser tests mount the actual homepage with 14 test-only entries to exercise multiple pages without publishing fake tools.
 
 The requested skills are installed in project scope under `.agents/skills`: `transitions-dev` from the official `Jakubantalik/transitions.dev` repository and `web-performance` from skills.ws. Modal/icon motion uses the free Transitions.dev recipes; its license is included with the installed skill. Reinstall with:
 
