@@ -9,6 +9,7 @@
   let waiting = $state<ServiceWorker | null>(null);
   let refresh = $state(false);
   let spaUpdate = $state(false);
+  let controlled = $state(false);
   let installed = $state(false);
   let mobile = $state(false);
   let iosSafari = $state(false);
@@ -20,7 +21,8 @@
   // Chromium may offer native installation on desktop; iOS needs manual guidance.
   const showInstall = $derived(!installed && !installDismissed && (prompt !== null || (mobile && iosSafari)));
   const hasUpdate = $derived(waiting !== null || refresh || spaUpdate || updated.current);
-  const readyToReload = $derived(refresh || (!waiting && (spaUpdate || updated.current)));
+  // A controlling worker may still serve an old offline shell. Activate it before reloading.
+  const readyToReload = $derived(refresh || (!controlled && !waiting && (spaUpdate || updated.current)));
 
   onMount(() => {
     let disposed = false;
@@ -31,7 +33,10 @@
       if (disposed || dev || !navigator.onLine || document.visibilityState !== 'visible' || Date.now() - lastVersionCheck < 60_000) return;
       lastVersionCheck = Date.now();
       void updated.check().then((isNew) => {
-        if (!disposed && isNew) { spaUpdate = true; updateDismissed = false; }
+        if (!disposed && isNew) {
+          spaUpdate = true; updateDismissed = false;
+          if (navigator.serviceWorker?.controller) void navigator.serviceWorker.getRegistration().then((r) => r?.update()).catch(() => {});
+        }
       }).catch(() => { /* Offline version checks must not interrupt a tool. */ });
     };
     window.addEventListener('focus', checkSpaVersion);
@@ -42,6 +47,7 @@
       document.removeEventListener('visibilitychange', checkSpaVersion);
       clearInterval(versionTimer);
     });
+    controlled = Boolean(navigator.serviceWorker?.controller);
     const standalone = matchMedia('(display-mode: standalone)');
     const touch = matchMedia('(hover: none) and (pointer: coarse)');
     const syncInstalled = () => { installed = standalone.matches || (navigator as Navigator & { standalone?: boolean }).standalone === true; if (installed) { prompt = null; manualInstructions = false; } };
@@ -56,7 +62,7 @@
     const appInstalled = () => { installed = true; prompt = null; manualInstructions = false; };
     const offline = () => { message = navigator.onLine ? '' : m.pwa_offline(); };
     const ready = () => navigator.serviceWorker.controller?.postMessage({ type: 'trick-it:client-ready', appVersion: version });
-    const controllerChanged = () => { refresh = true; waiting = null; updateDismissed = false; ready(); };
+    const controllerChanged = () => { controlled = true; refresh = true; waiting = null; updateDismissed = false; ready(); };
     const failed = (event: MessageEvent) => {
       const source = event.source;
       if (!source || !('scriptURL' in source) || source.scriptURL !== new URL(`${base}/service-worker.js`, location.origin).href) return;
@@ -107,6 +113,17 @@
     };
   });
 
+  async function prepareUpdate() {
+    if (waiting) { waiting.postMessage({ type: 'trick-it:activate', version: 1 }); return; }
+    try {
+      const registration = await navigator.serviceWorker?.getRegistration();
+      if (registration) {
+        await registration.update();
+        if (registration.waiting) { waiting = registration.waiting; updateDismissed = false; }
+      }
+    } catch { message = m.pwa_failed(); }
+  }
+
   async function install() {
     if (!prompt) { manualInstructions = true; return; }
     // Keep the one-shot event locally: appinstalled may clear shared state while it resolves.
@@ -130,9 +147,11 @@
       <p>{readyToReload ? m.pwa_ready() : m.pwa_update_description()}</p>
       <div class="pwa-actions">
         {#if waiting}
-          <button class="clay-button primary small" type="button" onclick={() => waiting?.postMessage({ type: 'trick-it:activate', version: 1 })}>{m.pwa_activate()}</button>
+          <button class="clay-button primary small" type="button" onclick={prepareUpdate}>{m.pwa_activate()}</button>
         {:else if readyToReload}
           <button class="clay-button primary small" type="button" onclick={() => location.reload()}>{m.pwa_reload()}</button>
+        {:else if spaUpdate || updated.current}
+          <button class="clay-button primary small" type="button" onclick={prepareUpdate}>{m.pwa_activate()}</button>
         {/if}
         <button class="pwa-quiet" type="button" onclick={() => updateDismissed = true}>{m.pwa_later()}</button>
       </div>
