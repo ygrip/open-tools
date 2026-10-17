@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import Seo from '$lib/components/Seo.svelte';
   import { base } from '$app/paths';
   import Icon from '$lib/components/Icon.svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
@@ -21,35 +22,32 @@
   }[group]);
 </script>
 
-<svelte:head>
-  <title>{page.status} · {m.error_title()} · Open Tools</title>
-  <meta name="robots" content="noindex" />
-</svelte:head>
+<Seo title={`${page.status} · ${m.error_title()}`} description={copy[2]} path={page.url.pathname} robots="noindex" />
 
 <main id="main-content" class="page-shell illustrated-error">
   <header class="topbar">
-    <a class="brand" href={localizedPath('/')} aria-label={m.brand_home()}><img src={`${base}/brand/logo.svg`} alt="" width="46" height="46" /><span><strong>open<span class="brand-accent">tools</span></strong><small>{m.brand_tagline()}</small></span></a>
+    <a class="brand" href={localizedPath('/')} aria-label={m.brand_home()}><img src={`${base}/brand/logo.svg`} alt="" width="46" height="46" /><span><strong>trick<span class="brand-accent">-it</span></strong><small>{m.brand_tagline()}</small></span></a>
     <div class="error-header-actions"><LanguageSwitcher /><ThemeToggle /></div>
   </header>
   <section class="error-bento" aria-labelledby="error-title">
     <div class="error-copy surface">
-      <span class="error-status"><Icon name={page.status >= 500 ? 'toolbox' : 'search'} size={18} /> Error {page.status}</span>
+      <span class="error-status"><Icon name={page.status >= 500 ? 'toolbox' : 'search'} size={18} /> {m.error_label()} {page.status}</span>
       <p class="eyebrow">{copy[0]}</p>
       <h1 id="error-title">{copy[1]}</h1>
       <p class="error-description">{copy[2]}</p>
       <div class="error-actions">
-        {#if presentation.retry}<button class="clay-button primary" type="button" onclick={() => window.location.reload()}>Try again <Icon name="arrow-right" size={19} /></button>{/if}
-        <a class:primary={!presentation.retry} class="clay-button" href={`${base}/`}><Icon name="arrow-left" size={19} /> Back to the toolbox</a>
+        {#if presentation.retry}<button class="clay-button primary" type="button" onclick={() => window.location.reload()}>{m.error_try()} <Icon name="arrow-right" size={19} /></button>{/if}
+        <a class:primary={!presentation.retry} class="clay-button" href={localizedPath('/')}><Icon name="arrow-left" size={19} /> {m.error_back()}</a>
       </div>
       {#if incidentId}<p class="error-reference">{m.error_reference()} <code>{incidentId}</code>.</p>{/if}
-      <a class="text-link error-report" href="https://github.com/ygrip/open-tools/issues" target="_blank" rel="noreferrer">Tell us what happened <Icon name="external" size={15} /></a>
+      <a class="text-link error-report" href="https://github.com/ygrip/open-tools/issues" target="_blank" rel="noreferrer">{m.error_report()} <Icon name="external" size={15} /></a>
     </div>
     <div class="error-illustration surface">
       <img src={`${base}/illustrations/error-${presentation.illustration}-640.webp`} srcset={`${base}/illustrations/error-${presentation.illustration}-384.webp 384w, ${base}/illustrations/error-${presentation.illustration}-640.webp 640w`} sizes="(max-width: 760px) calc(100vw - 32px), 50vw" width="640" height="640" fetchpriority="high" alt={presentation.illustration === '404' ? m.error_404_alt() : m.error_500_alt()} />
-      <span class="error-art-note"><Icon name="heart" size={16} /> A small detour. You’re still welcome.</span>
+      <span class="error-art-note"><Icon name="heart" size={16} /> {m.error_art_note()}</span>
     </div>
   </section>
-  <aside class="error-reassurance surface"><span class="clay-icon mint"><Icon name="shield" size={24} /></span><div><strong>{m.error_reassurance()}</strong><p>{m.error_reassurance_desc()}</p></div><a href={localizedPath('/privacy/')}>Your privacy <Icon name="arrow-right" size={17} /></a></aside>
+  <aside class="error-reassurance surface"><span class="clay-icon mint"><Icon name="shield" size={24} /></span><div><strong>{m.error_reassurance()}</strong><p>{m.error_reassurance_desc()}</p></div><a href={localizedPath('/privacy/')}>{m.error_privacy()} <Icon name="arrow-right" size={17} /></a></aside>
 </main>
 
 <style>

@@ -24,12 +24,13 @@ function remoteFile(bytes) {
 }
 
 test('contract strips private/unknown metadata and validates every published field', () => {
-  assert.deepEqual(validateManifest({ ...manifest, secret: 'not public' }), manifest);
+  assert.deepEqual(validateManifest({ ...manifest, secret: 'not public' }), validateManifest(manifest));
+  assert.ok(!Object.hasOwn(validateManifest({ ...manifest, secret: 'not public' }), 'secret'));
   for (const patch of [
     { schemaVersion: 1 }, { schemaVersion: 3 }, { appearance: undefined },
     { appearance: { theme: 'independent', protocolVersion: 1 } },
     { appearance: { theme: 'host', protocolVersion: 2 } }, { id: '../oops' }, { id: 'policy', path: '/policy' },
-    { path: '/privacy' }, { category: 'unknown' }, { status: 'unknown' }, { version: 'latest' },
+    { path: '/privacy' }, { category: 'unknown' }, { status: 'unknown' }, { version: 'latest' }, { version: `${'1'.repeat(81)}.0.0` },
     { name: ' ' }, { name: [] }, { description: '' }, { capabilities: [1] },
     { repository: 'https://evil.example/tool' },
     { bundle: { ...manifest.bundle, file: '../secret.html' } },
@@ -39,7 +40,7 @@ test('contract strips private/unknown metadata and validates every published fie
 });
 
 test('tool routes cannot shadow static namespaces or prerender filenames', () => {
-  for (const id of ['brand', 'illustrations', 'index', '404', '500', '503', 'bundles', 'icons']) {
+  for (const id of ['brand', 'illustrations', 'index', '404', '500', '503', 'bundles', 'icons', 'offline', 'manifest', 'service-worker', 'pwa', 'id', 'og', 'robots', 'sitemap']) {
     assert.throws(() => validateManifest({ ...manifest, id, path: `/${id}` }), /reserved id/);
   }
 });
@@ -60,7 +61,7 @@ test('private remote contents use build-only authentication and a pinned commit'
     const file = url.includes('tool.manifest.json') ? Buffer.from(JSON.stringify(manifest)) : html;
     return new Response(JSON.stringify(remoteFile(file)));
   });
-  assert.deepEqual(await loadSource(source, config, '.', github), { manifest, html: html.toString() });
+  assert.deepEqual(await loadSource(source, config, '.', github), { manifest: validateManifest(manifest), html: html.toString() });
   assert.equal(calls.length, 2);
   for (const call of calls) {
     assert.ok(call.url.endsWith(`?ref=${source.ref}`));
@@ -116,7 +117,7 @@ test('local scaffold loads offline and prevents symlink traversal', async () => 
     await writeFile(join(directory, 'tool.manifest.json'), JSON.stringify(manifest));
     await writeFile(join(directory, 'dist/index.html'), html);
     const local = { repository: source.repository, local: 'examples/json-tools' };
-    assert.deepEqual(await loadSource(local, config, root), { manifest, html: html.toString() });
+    assert.deepEqual(await loadSource(local, config, root), { manifest: validateManifest(manifest), html: html.toString() });
     await rm(join(directory, 'dist/index.html'));
     await writeFile(join(root, 'secret.html'), html);
     await symlink(join(root, 'secret.html'), join(directory, 'dist/index.html'));

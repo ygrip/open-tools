@@ -59,6 +59,19 @@ test('parent policy blocks external iframe self-navigation', async ({ page }) =>
   expect(externalRequests).toBe(0);
 });
 
+test('opaque tools cannot leak data through same-origin iframe navigation', async ({ page }) => {
+  let requests = 0;
+  const policyMessages: string[] = [];
+  page.on('console', (message) => policyMessages.push(message.text()));
+  await page.route('**/exfil-probe**', (route) => { requests++; return route.abort(); });
+  await page.goto('/json-tools/');
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'JSON Tools' })).toBeVisible();
+  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  await frame.evaluate(() => { location.href = '/exfil-probe?payload=sentinel'; });
+  await expect.poll(() => policyMessages.join('\n')).toContain('frame-src');
+  expect(requests).toBe(0);
+});
+
 test('bundle request failures show a working retry', async ({ page }) => {
   let fail = true;
   await page.route('**/bundles/**', async (route) => {

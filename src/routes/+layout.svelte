@@ -1,8 +1,7 @@
 <script lang="ts">
   import './app.css';
-  import { page } from '$app/state';
-  import { locales } from '$lib/paraglide/runtime.js';
-  import { localizedPath } from '$lib/i18n';
+  import PwaStatus from '$lib/components/PwaStatus.svelte';
+  import { base } from '$app/paths';
   import { m } from '$lib/paraglide/messages.js';
   import fontUrl from '@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2?url';
 
@@ -10,12 +9,15 @@
 </script>
 
 <svelte:head>
-  <title>Open Tools</title>
-  {#each locales as locale}
-    <link rel="alternate" hreflang={locale} href={localizedPath(page.url.pathname, locale)} />
-  {/each}
+  <link rel="manifest" href={`${base}/manifest.webmanifest`} />
+  <meta name="application-name" content="trick-it" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="trick-it" />
+  <link rel="apple-touch-icon" href={`${base}/pwa/icon-192.png`} />
   <link rel="preload" href={fontUrl} as="font" type="font/woff2" crossorigin="anonymous" />
 </svelte:head>
 
 <a class="skip-link" href="#main-content">{m.skip_content()}</a>
 {@render children()}
+<PwaStatus />

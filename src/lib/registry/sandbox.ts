@@ -51,8 +51,45 @@ const themeBootstrap = `
 })();
 `;
 
-export function sandboxDocument(html: string, initialTheme: Theme = 'light'): string {
-  // Keep interpolation restricted to the enum even if called from untyped code.
+export type RuntimeOptions = { locale?: string; token?: string; permissions?: readonly string[]; scriptAssets?: boolean };
+
+export function sandboxDocument(html: string, initialTheme: Theme = 'light', options: RuntimeOptions = {}): string {
   const theme = isTheme(initialTheme) ? initialTheme : 'light';
-  return `<!doctype html><html lang="en" data-theme="${theme}" style="color-scheme:${theme}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${bundlePolicy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}</style><script>${themeBootstrap}</script></head><body>${html}</body></html>`;
+  const locale = options.locale === 'id' ? 'id' : 'en';
+  const permissions = options.permissions ?? [];
+  let policy = bundlePolicy;
+  if (permissions.includes('wasm')) policy = policy.replace("script-src 'unsafe-inline'", "script-src 'unsafe-inline' 'wasm-unsafe-eval'");
+  if (permissions.includes('workers')) policy = policy.replace("worker-src 'none'", 'worker-src blob:');
+  if (permissions.includes('workers') || (permissions.includes('external-assets') && options.scriptAssets)) policy = policy.replace("script-src 'unsafe-inline'", "script-src 'unsafe-inline' blob:");
+  const token = /^[a-zA-Z0-9_-]{16,128}$/.test(options.token ?? '') ? options.token! : '';
+  const config = JSON.stringify({ token, permissions: permissions.filter((name) => ['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'external-assets', 'wasm', 'workers'].includes(name)) }).replaceAll('<', '\\u003c');
+  const sdk = `(() => {
+    const config = ${config};
+    const pending = new Map(); let sequence = 0;
+    addEventListener('message', event => {
+      if (event.source !== parent) return;
+      const data = event.data;
+      if (data?.type === 'trick-it:locale' && data.version === 1 && (data.locale === 'en' || data.locale === 'id') && data.locale !== document.documentElement.lang) {
+        document.documentElement.lang = data.locale;
+        dispatchEvent(new CustomEvent('trick-it:localechange', { detail: { locale: data.locale } }));
+      }
+      if (!config.token || data?.type !== 'trick-it:response' || data.version !== 1 || data.token !== config.token || typeof data.id !== 'string') return;
+      const request = pending.get(data.id); if (!request) return;
+      pending.delete(data.id); clearTimeout(request.timer);
+      if (data.ok === true) request.resolve(data.value); else request.reject(new Error('The requested capability was denied or could not complete.'));
+    });
+    function request(operation, payload) {
+      if (!config.token || (operation !== 'asset' && !config.permissions.includes(operation)) || (operation === 'asset' && !config.permissions.includes('external-assets'))) return Promise.reject(new Error('Permission not granted.'));
+      if (pending.size >= 16) return Promise.reject(new Error('Too many pending requests.'));
+      const id = String(++sequence);
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => { pending.delete(id); reject(new Error('Capability request timed out.')); }, 330000);
+        pending.set(id, { resolve, reject, timer });
+        try { parent.postMessage({ type: 'trick-it:request', version: 1, token: config.token, id, operation, payload }, '*'); }
+        catch { clearTimeout(timer); pending.delete(id); reject(new Error('Invalid capability payload.')); }
+      });
+    }
+    Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, asset: id => request('asset', { id }), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
+  })();`;
+  return `<!doctype html><html lang="${locale}" data-theme="${theme}" style="color-scheme:${theme}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}</style><script>${themeBootstrap}${sdk}</script></head><body>${html}</body></html>`;
 }

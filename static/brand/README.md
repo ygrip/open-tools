@@ -1,6 +1,6 @@
-# Open Tools vector brand assets
+# trick-it vector brand assets
 
-These are original SVG source illustrations authored directly for Open Tools, not Fal-generated raster images or downloaded stock assets. They contain no JavaScript, embedded raster images, external fonts, external resources, or SVG filters.
+These are original SVG source illustrations authored directly for trick-it, not Fal-generated raster images or downloaded stock assets. They contain no JavaScript, embedded raster images, external fonts, external resources, or SVG filters.
 
 - `logo.svg` — 96 × 96 smiling orange clay toolbox mark.
 - `favicon.svg` — simplified 48 × 48 mark for small browser-tab rendering.

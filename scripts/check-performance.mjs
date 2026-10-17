@@ -9,13 +9,18 @@ async function files(directory) {
 }
 
 const catalog = JSON.parse(await readFile('src/lib/registry/generated.json', 'utf8'));
-for (const route of ['', 'privacy/', 'terms/', 'policy/', ...catalog.map((tool) => `${tool.id}/`)]) {
+const routes = ['', 'privacy/', 'terms/', 'policy/', ...catalog.map((tool) => `${tool.id}/`)];
+for (const route of routes.flatMap((path) => [path, `id/${path}`])) {
   const file = join('build', route, 'index.html');
   const html = await readFile(file, 'utf8');
   if (!/<main(?:\s|>)/.test(html)) throw new Error(`Static page has no rendered content: ${file}`);
 }
 await Promise.all(['500', '503'].map((status) => readFile(`build/${status}.html`, 'utf8')));
-console.log('Static HTML exports verified (home, legal pages, tool routes, and server-error fallbacks).');
+await readFile('build/service-worker.js', 'utf8');
+await readFile('build/manifest.webmanifest', 'utf8');
+await readFile('build/robots.txt', 'utf8');
+await readFile('build/sitemap.xml', 'utf8');
+console.log('Static EN/ID HTML, tool routes, error fallbacks, PWA, and crawler exports verified.');
 
 const client = '.svelte-kit/output/client';
 const assets = await files(client);
@@ -27,7 +32,8 @@ for (const file of assets) {
   const bytes = await readFile(file);
   if (file.endsWith('.js')) javascript += gzipSync(bytes).length;
   if (file.endsWith('.css')) css += gzipSync(bytes).length;
-  if (/\.(?:webp|svg|png|avif)$/.test(file)) images += bytes.length;
+  if (/\.(?:webp|svg|png|avif)$/.test(file) && !file.includes('/og/')) images += bytes.length;
+  if (file.includes('/og/') && file.endsWith('.png') && bytes.length > 200_000) throw new Error(`Social card exceeds 200 kB budget: ${file}`);
   if (file.endsWith('.woff2')) fonts += bytes.length;
   if (/\/bundles\/.*\.json$/.test(file) && gzipSync(bytes).length > 90_000) throw new Error(`Tool bundle exceeds 90 kB gzip budget: ${relative(client, file)}`);
 }

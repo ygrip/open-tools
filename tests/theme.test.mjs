@@ -32,11 +32,13 @@ test('sandbox receiver accepts only its parent and the exact theme message shape
   const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
   const parent = {};
   const root = { dataset: { theme: 'light' }, style: { colorScheme: 'light' } };
-  let receive;
+  const receivers = [];
+  const receive = (event) => { for (const listener of receivers) listener(event); };
   vm.runInNewContext(script, {
     parent,
+    window: {},
     document: { documentElement: root },
-    addEventListener(type, listener) { assert.equal(type, 'message'); receive = listener; }
+    addEventListener(type, listener) { assert.equal(type, 'message'); receivers.push(listener); }
   });
   const valid = { type: 'open-tools:theme', version: 1, theme: 'dark' };
   for (const event of [

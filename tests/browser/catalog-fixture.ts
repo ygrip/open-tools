@@ -28,8 +28,9 @@ export function catalogFixtureScript() {
           builder.onResolve({ filter: /^\$lib\/registry\/tools$/ }, () => ({ path: 'catalog', namespace: 'fixture' }));
           builder.onResolve({ filter: /^\$app\/paths$/ }, () => ({ path: 'paths', namespace: 'fixture' }));
           builder.onResolve({ filter: /^\$app\/state$/ }, () => ({ path: 'state', namespace: 'fixture' }));
+          builder.onResolve({ filter: /^\$app\/environment$/ }, () => ({ path: 'environment', namespace: 'fixture' }));
           builder.onLoad({ filter: /.*/, namespace: 'fixture' }, ({ path }) => ({
-            contents: path === 'paths' ? "export const base = '';" : path === 'state' ? "export const page = { url: new URL(location.href) };" : `export const tools = ${JSON.stringify(tools)}; export const categories = ['data', 'developer'];`
+            contents: path === 'environment' ? "export const browser = true; export const dev = false; export const version = 'fixture';" : path === 'paths' ? "export const base = '';" : path === 'state' ? "export const page = { url: new URL(location.href) };" : `export const tools = ${JSON.stringify(tools)}; export const categories = ['data', 'developer'];`
           }));
           builder.onResolve({ filter: /^\$lib\// }, (args) => builder.resolve(resolve(root, 'src/lib', args.path.slice(5)), { resolveDir: root, kind: args.kind }));
           builder.onLoad({ filter: /\.svelte$/ }, async ({ path }) => ({

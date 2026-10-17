@@ -1,12 +1,15 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { m } from '$lib/paraglide/messages.js';
+  import { getLocale } from '$lib/paraglide/runtime.js';
+  import { localizedTool } from '$lib/registry/presentation';
   import { localizedPath } from '$lib/i18n';
   import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
   import { base } from '$app/paths';
   import Icon from '$lib/components/Icon.svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import HeroArt from '$lib/components/HeroArt.svelte';
+  import Seo from '$lib/components/Seo.svelte';
   import Pagination from '$lib/components/Pagination.svelte';
   import { getPagination } from '$lib/pagination.js';
   import { categories, tools } from '$lib/registry/tools';
@@ -19,7 +22,8 @@
   let searchError = $state('');
   let SearchOverlay = $state<typeof import('$lib/components/SearchOverlay.svelte').default | null>(null);
   const categoryNames: Record<string, string> = { all: m.category_all(), data: m.category_data(), developer: m.category_developer(), media: m.category_media(), productivity: m.category_productivity(), other: m.category_other() };
-  const filteredTools = $derived(tools.filter((tool) =>
+  const catalog = $derived(tools.map((tool) => localizedTool(tool, getLocale())));
+  const filteredTools = $derived(catalog.filter((tool) =>
     (selectedCategory === 'all' || tool.category === selectedCategory) &&
     [tool.name, tool.description, ...tool.capabilities].join(' ').toLowerCase().includes(query.trim().toLowerCase())
   ));
@@ -65,19 +69,18 @@
   });
 </script>
 
+<Seo title={m.home_title()} description={m.home_description()} path="/" />
 <svelte:head>
-  <title>{m.home_title()}</title>
-  <meta name="description" content={m.home_description()} />
   <link rel="preload" as="image" href={`${base}/illustrations/clay-workbench-768.webp`} imagesrcset={`${base}/illustrations/clay-workbench-448.webp 448w, ${base}/illustrations/clay-workbench-768.webp 768w`} imagesizes="(max-width: 760px) calc(100vw - 64px), 480px" />
 </svelte:head>
 
-{#if SearchOverlay}<SearchOverlay bind:open={searchOpen} {tools} />{/if}
+{#if SearchOverlay}<SearchOverlay bind:open={searchOpen} tools={catalog} />{/if}
 
 <div class="page-shell">
   <header class="topbar">
     <a class="brand" href={localizedPath('/')} aria-label={m.brand_home()}>
       <img src={`${base}/brand/logo.svg`} width="46" height="46" alt="" />
-      <span><strong>open<span class="brand-accent">tools</span></strong><small>{m.brand_tagline()}</small></span>
+      <span><strong>trick<span class="brand-accent">-it</span></strong><small>{m.brand_tagline()}</small></span>
     </a>
     <nav class="topnav" aria-label={m.nav_primary()}>
       <a class="nav-link" href="#tools"><Icon name="grid" size={17} /> {m.nav_toolbox()}</a>
@@ -124,8 +127,8 @@
       <div class="tool-grid" class:single-result={filteredTools.length === 1}>
         {#each pagedTools as tool (tool.id)}
           <a class="tool-card surface" href={localizedPath(`${tool.path}/`)}>
-            <div class="tool-card-top"><span class="clay-icon peach"><Icon name={tool.category === 'data' || tool.category === 'developer' ? 'braces' : 'toolbox'} size={30} /></span><span class="tool-status"><span class="status-dot"></span> {m.tool_ready()}</span></div>
-            <div class="tool-card-copy"><span class="eyebrow">{categoryNames[tool.category]}</span><h3>{tool.name}</h3><p>{tool.id === 'json-tools' ? m.json_intro() : tool.description}</p></div>
+            <div class="tool-card-top"><span class="clay-icon peach"><Icon name={tool.icon} size={30} /></span><span class="tool-status"><span class="status-dot"></span> {m.tool_ready()}</span></div>
+            <div class="tool-card-copy"><span class="eyebrow">{categoryNames[tool.category]}</span><h3>{tool.name}</h3><p>{tool.description}</p></div>
             <div class="tool-capabilities">{#each tool.capabilities.slice(0, 3) as capability}<span>{capability.replaceAll('-', ' ')}</span>{/each}</div>
             <div class="tool-card-bottom"><span>{m.open_tool()} {tool.name}</span><span class="round-arrow"><Icon name="arrow-right" size={21} /></span></div>
           </a>
@@ -145,5 +148,5 @@
     </section>
   </main>
 
-  <footer class="site-footer"><a class="brand footer-brand" href={localizedPath('/')}><img src={`${base}/brand/logo.svg`} alt="" width="36" height="36" /><strong>opentools</strong></a><span>{m.footer_tagline()}</span><nav aria-label={m.nav_legal()}><a href={localizedPath('/privacy/')}>{m.footer_privacy()}</a><a href={localizedPath('/terms/')}>{m.footer_terms()}</a><a href={localizedPath('/policy/')}>{m.footer_policy()}</a><a href="https://github.com/ygrip/open-tools" aria-label={m.brand_github()} target="_blank" rel="noreferrer"><Icon name="github" size={20} /></a></nav></footer>
+  <footer class="site-footer"><a class="brand footer-brand" href={localizedPath('/')}><img src={`${base}/brand/logo.svg`} alt="" width="36" height="36" /><strong>trick-it</strong></a><span>{m.footer_tagline()}</span><nav aria-label={m.nav_legal()}><a href={localizedPath('/privacy/')}>{m.footer_privacy()}</a><a href={localizedPath('/terms/')}>{m.footer_terms()}</a><a href={localizedPath('/policy/')}>{m.footer_policy()}</a><a href="https://github.com/ygrip/open-tools" aria-label={m.brand_github()} target="_blank" rel="noreferrer"><Icon name="github" size={20} /></a></nav></footer>
 </div>

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { base } from '$app/paths';
   import Icon from './Icon.svelte';
+  import { m } from '$lib/paraglide/messages.js';
 
   let artwork = $state<HTMLDivElement>();
   let visible = $state(false);
@@ -25,15 +26,15 @@
 </script>
 
 <div class="hero-art surface" class:motion-running={visible && !hidden && !paused} bind:this={artwork}>
-  <div class="art-caption"><span class="status-dot"></span> Your handy little sidekick</div>
-  <img src={`${base}/illustrations/clay-workbench-768.webp`} srcset={`${base}/illustrations/clay-workbench-448.webp 448w, ${base}/illustrations/clay-workbench-768.webp 768w`} sizes="(max-width: 760px) calc(100vw - 64px), 480px" width="768" height="768" fetchpriority="high" decoding="async" alt="A smiling orange clay toolbox with a lavender code tile, mint data stack, and yellow magnifying glass." />
+  <div class="art-caption"><span class="status-dot"></span> {m.hero_caption()}</div>
+  <img src={`${base}/illustrations/clay-workbench-768.webp`} srcset={`${base}/illustrations/clay-workbench-448.webp 448w, ${base}/illustrations/clay-workbench-768.webp 768w`} sizes="(max-width: 760px) calc(100vw - 64px), 480px" width="768" height="768" fetchpriority="high" decoding="async" alt={m.hero_alt()} />
   <span class="hero-beam" aria-hidden="true"></span>
   <span class="hero-spark spark-one" aria-hidden="true"><Icon name="sparkles" size={23} /></span>
   <span class="hero-spark spark-two" aria-hidden="true"><Icon name="sparkles" size={17} /></span>
-  <button class="motion-toggle icon-button" type="button" aria-label={paused ? 'Play hero animation' : 'Pause hero animation'} onclick={() => paused = !paused}>
+  <button class="motion-toggle icon-button" type="button" aria-label={paused ? m.hero_play() : m.hero_pause()} onclick={() => paused = !paused}>
     <Icon name={paused ? 'play' : 'pause'} size={18} />
   </button>
-  <span class="art-sticker"><Icon name="heart" size={16} /> Made for your everyday</span>
+  <span class="art-sticker"><Icon name="heart" size={16} /> {m.hero_sticker()}</span>
 </div>
 
 <style>

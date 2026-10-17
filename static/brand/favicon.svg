@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" role="img" aria-labelledby="ot-favicon-title">
-  <title id="ot-favicon-title">Open Tools</title>
+  <title id="ot-favicon-title">trick-it</title>
   <defs><linearGradient id="ot-favicon-body" x1="10" y1="13" x2="39" y2="44" gradientUnits="userSpaceOnUse"><stop stop-color="#FFC67E"/><stop offset="1" stop-color="#EF813F"/></linearGradient></defs>
   <path d="M16 16v-4c0-4 3-7 7-7h2c4 0 7 3 7 7v4h-5v-4c0-1-1-2-2-2h-2c-1 0-2 1-2 2v4z" fill="#D9753A"/>
   <rect x="4" y="14" width="40" height="29" rx="11" fill="#C86334"/>

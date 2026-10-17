@@ -40,6 +40,6 @@ export function reportUnexpectedError(error: unknown, status: number, source: 'c
     if (typeof name === 'string' && kinds.has(name)) kind = name;
   } catch { kind = 'UnknownError'; }
   // Keep diagnostics intentionally narrow: exception messages/objects can contain user data or secrets.
-  console.error('[open-tools] unexpected error', { incidentId, status, source, kind });
+  console.error('[trick-it] unexpected error', { incidentId, status, source, kind });
   return { message: 'Something on our side didn’t go as planned. Please try again.', incidentId };
 }

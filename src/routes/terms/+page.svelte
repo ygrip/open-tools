@@ -1,11 +1,12 @@
 <script lang="ts">
   import { m } from '$lib/paraglide/messages.js';
+  import Seo from '$lib/components/Seo.svelte';
   import { localizedPath } from '$lib/i18n';
   import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 </script>
-<svelte:head><title>{m.terms_title()} · Open Tools</title><meta name="description" content={m.terms_description()} /></svelte:head>
+<Seo title={m.terms_title()} description={m.terms_description()} path="/terms/" />
 <main id="main-content" class="page-shell legal-shell">
-  <div class="legal-top"><a class="legal-back" href={localizedPath('/')}>← Open Tools</a><LanguageSwitcher /></div>
+  <div class="legal-top"><a class="legal-back" href={localizedPath('/')}>← trick-it</a><LanguageSwitcher /></div>
   <article class="legal-card surface">
     <p class="eyebrow">{m.legal_label()}</p>
     <h1>{m.terms_title()}</h1>
