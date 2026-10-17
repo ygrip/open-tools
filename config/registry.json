@@ -1,17 +1,9 @@
 {
-  "trustedOwners": [
-    "ygrip"
-  ],
+  "trustedOwners": ["ygrip"],
   "topic": "open-tools",
   "discovery": false,
   "sources": [
-    {
-      "repository": "ygrip/json-tools",
-      "local": "examples/json-tools"
-    },
-    {
-      "repository": "ygrip/text-manipulation",
-      "ref": "5d8c39b59419ae0df9e1894004b32887a8ec197d"
-    }
+    { "repository": "ygrip/json-tools", "local": "examples/json-tools" },
+    { "repository": "ygrip/text-manipulation", "ref": "5d8c39b59419ae0df9e1894004b32887a8ec197d" }
   ]
 }
