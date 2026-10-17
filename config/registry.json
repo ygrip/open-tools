@@ -1,17 +1,9 @@
 {
-  "trustedOwners": [
-    "ygrip"
-  ],
+  "trustedOwners": ["ygrip"],
   "topic": "open-tools",
   "discovery": false,
   "sources": [
-    {
-      "repository": "ygrip/json-tools",
-      "local": "examples/json-tools"
-    },
-    {
-      "repository": "ygrip/encoder-decoder",
-      "ref": "b1f97dba44123005d7852e5af8ec19055eecda5f"
-    }
+    { "repository": "ygrip/json-tools", "local": "examples/json-tools" },
+    { "repository": "ygrip/encoder-decoder", "ref": "b1f97dba44123005d7852e5af8ec19055eecda5f" }
   ]
 }
