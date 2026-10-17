@@ -1,8 +1,17 @@
 {
-  "trustedOwners": ["ygrip"],
+  "trustedOwners": [
+    "ygrip"
+  ],
   "topic": "open-tools",
   "discovery": false,
   "sources": [
-    { "repository": "ygrip/json-tools", "local": "examples/json-tools" }
+    {
+      "repository": "ygrip/json-tools",
+      "local": "examples/json-tools"
+    },
+    {
+      "repository": "ygrip/id-generator",
+      "local": "examples/id-generator"
+    }
   ]
 }

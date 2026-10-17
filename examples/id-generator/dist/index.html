@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ID Generator</title>
+  <style>
+    :root { font-family: ui-rounded, system-ui, -apple-system, sans-serif; color-scheme: light; --ot-bg: #fff8f0; --ot-surface: #fffdf9; --ot-text: #392f2c; --ot-muted: #71615a; --ot-border: #e7d8cc; --ot-accent: #f7a174; --ot-on-accent: #42291e; --ot-shadow: rgba(62,36,20,.12); --ot-highlight: rgba(255,255,255,.92); }
+    :root[data-theme="dark"] { color-scheme: dark; --ot-bg: #242127; --ot-surface: #312c34; --ot-text: #fff5eb; --ot-muted: #cbbab3; --ot-border: #514650; --ot-accent: #ffb18b; --ot-on-accent: #3e251d; --ot-shadow: rgba(0,0,0,.35); --ot-highlight: rgba(255,255,255,.075); }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: clamp(14px,3vw,28px); background: var(--ot-bg); color: var(--ot-text); }
+    main { max-width: 1120px; margin: auto; }
+    .intro { display: flex; align-items: start; gap: 18px; justify-content: space-between; margin-bottom: 24px; }
+    .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 800; color: var(--ot-muted); margin: 0 0 8px; }
+    h1 { margin: 0 0 10px; font-size: clamp(26px, 4vw, 36px); letter-spacing: -.04em; }
+    p { color: var(--ot-muted); line-height: 1.6; margin: 0; }
+    .badge { flex: none; font-size: 12px; font-weight: 750; padding: 12px 14px; border: 1px solid var(--ot-border); border-radius: 15px; background: var(--ot-surface); box-shadow: inset 0 2px 0 var(--ot-highlight), 0 4px 0 var(--ot-shadow); }
+    .workbench { display: grid; grid-template-columns: minmax(260px, 350px) minmax(0, 1fr); gap: 18px; }
+    .card { padding: clamp(16px,2.5vw,24px); border: 1px solid var(--ot-border); border-radius: 24px; background: var(--ot-surface); box-shadow: inset 0 2px 1px var(--ot-highlight), 0 5px 0 var(--ot-shadow); min-width: 0; }
+    .group { margin-bottom: 20px; }
+    label { display: block; font-weight: 750; font-size: 13px; margin-bottom: 9px; }
+    select, input, textarea { width: 100%; color: var(--ot-text); background: var(--ot-bg); border: 1px solid var(--ot-border); border-radius: 14px; padding: 12px; font: inherit; font-size: 14px; }
+    input, select { min-height: 46px; }
+    textarea { min-height: 320px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+    .hint { font-size: 12px; margin-top: 8px; }
+    button { min-height: 46px; padding: 12px 16px; font: inherit; font-weight: 750; font-size: 13px; border: 1px solid var(--ot-border); border-radius: 14px; color: var(--ot-text); background: var(--ot-surface); box-shadow: inset 0 2px 0 var(--ot-highlight), 0 4px 0 var(--ot-shadow); cursor: pointer; }
+    button.primary { background: var(--ot-accent); color: var(--ot-on-accent); border-color: transparent; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    button:hover:not(:disabled) { filter: brightness(1.04); }
+    button:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 2px var(--ot-shadow); }
+    :focus-visible { outline: 3px solid var(--ot-text); outline-offset: 3px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .actions button { flex: 1; }
+    .result-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+    .result-head label { margin: 0; font-size: 15px; }
+    .result-actions { display: flex; gap: 8px; }
+    .notice { font-size: 12px; padding: 15px; margin-top: 18px; border: 1px dashed var(--ot-border); border-radius: 14px; }
+    #status { margin: 15px 2px 0; font-size: 13px; min-height: 20px; }
+    #status.error { color: #b73d37; }
+    .guide { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--ot-border); }
+    .guide h2 { font-size: 15px; margin: 0 0 12px; }
+    .guide p { font-size: 12px; margin: 7px 0; }
+    [hidden] { display: none !important; }
+    @media (max-width: 760px) { .workbench { grid-template-columns: 1fr; } .intro { flex-wrap: wrap; } .badge { padding: 9px 12px; } textarea { min-height: 250px; } }
+    @media (max-width: 380px) { .result-actions { width: 100%; } .result-actions button { flex: 1; } }
+    @media (prefers-reduced-motion: reduce) { button { transition: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="intro"><div><p class="eyebrow" data-i18n="eyebrow">Developer utilities</p><h1 data-i18n="title">ID Generator</h1><p data-i18n="subtitle">Make unique identifiers without sending anything to a server.</p></div><span class="badge" data-i18n="local">Generated in your browser</span></header>
+    <div class="workbench">
+      <section class="card" aria-label="Generator settings">
+        <div class="group"><label for="format" data-i18n="format">ID format</label><select id="format"><option value="uuid-v4">UUID v4</option><option value="uuid-v7">UUID v7</option><option value="ulid">ULID</option><option value="nanoid">Nano ID</option><option value="custom">Custom ID</option></select><p class="hint" id="format-hint"></p></div>
+        <div class="group"><label for="count" data-i18n="count">How many?</label><input id="count" type="number" min="1" max="500" step="1" value="10" required></div>
+        <div class="group" id="length-field" hidden><label for="length" data-i18n="length">Random length</label><input id="length" type="number" min="1" max="64" step="1" value="21"></div>
+        <div class="group" id="alphabet-field" hidden><label for="alphabet" data-i18n="alphabet">Custom alphabet</label><input id="alphabet" type="text" value="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" maxlength="128" spellcheck="false"></div>
+        <div class="group" id="prefix-field" hidden><label for="prefix" data-i18n="prefix">Prefix (optional)</label><input id="prefix" type="text" value="order_" maxlength="24" spellcheck="false"></div>
+        <div class="group"><label for="export" data-i18n="export">Output format</label><select id="export"><option value="lines" data-i18n="labelNewline">One per line</option><option value="csv" data-i18n="labelCsv">CSV</option></select></div>
+        <div class="actions"><button id="generate" class="primary" type="button" data-i18n="generate">Generate IDs</button></div>
+        <div class="guide"><h2 data-i18n="compare">Quick format guide</h2><p data-i18n="hintV4">UUID v4 · random · 36 characters</p><p data-i18n="hintV7">UUID v7 · timestamp-sortable · 36 characters</p><p data-i18n="hintUlid">ULID · monotonic within this batch · 26 characters</p><p data-i18n="hintNano">Nano ID · URL-friendly · configurable length</p><p data-i18n="hintCustom">Custom · prefix and alphabet</p></div>
+      </section>
+      <section class="card" aria-label="Generated output"><div class="result-head"><label for="output" data-i18n="output">Generated IDs</label><div class="result-actions"><button id="select" type="button" data-i18n="select">Select all</button><button id="clear" type="button" data-i18n="clear">Clear</button></div></div><textarea id="output" readonly spellcheck="false" aria-describedby="output-hint"></textarea><p id="output-hint" class="hint" data-i18n="outputHint">Copy with Ctrl+C or Command+C after selecting.</p><p id="status" role="status" aria-live="polite">Choose a format and generate your first ID.</p><p class="notice" data-i18n="sample">Use long, random IDs for large datasets. Short custom IDs can collide.</p><p class="notice" data-i18n="caution">UUIDv7 and ULID reveal an approximate creation timestamp. UUIDv7 results are timestamp-ordered, not guaranteed monotonic within one millisecond. Identifiers do not provide authorization or access control.</p></section>
+    </div>
+  </main>
+  <script>// Pure ID generation functions. Each call requires an explicit cryptographic RNG.
+const NANO_ALPHABET = '_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+const MAX_TIME = 2 ** 48 - 1;
+const MAX_ULID_RANDOM = (1n << 80n) - 1n;
+
+function fillBytes(bytes) {
+  if (!globalThis.crypto?.getRandomValues) throw new Error('Cryptographic randomness is unavailable in this browser.');
+  return globalThis.crypto.getRandomValues(bytes);
+}
+function randomBytes(length, rng) { return rng(new Uint8Array(length)); }
+function checkedTime(time) {
+  if (!Number.isSafeInteger(time) || time < 0 || time > MAX_TIME) throw new RangeError('Invalid timestamp.');
+  return time;
+}
+function hexUuid(bytes) {
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+function uuidV4(rng = fillBytes) {
+  const bytes = randomBytes(16, rng);
+  bytes[6] = (bytes[6] & 15) | 0x40;
+  bytes[8] = (bytes[8] & 63) | 0x80;
+  return hexUuid(bytes);
+}
+function uuidV7(timestamp = Date.now(), rng = fillBytes) {
+  checkedTime(timestamp);
+  const bytes = randomBytes(16, rng);
+  for (let i = 5, value = timestamp; i >= 0; i--, value = Math.floor(value / 256)) bytes[i] = value % 256;
+  bytes[6] = (bytes[6] & 15) | 0x70;
+  bytes[8] = (bytes[8] & 63) | 0x80;
+  return hexUuid(bytes);
+}
+function asBigInt(bytes) {
+  let result = 0n;
+  for (const value of bytes) result = (result << 8n) | BigInt(value);
+  return result;
+}
+function encode32(value, width) {
+  let result = '';
+  for (let i = 0; i < width; i++) {
+    result = CROCKFORD[Number(value & 31n)] + result;
+    value >>= 5n;
+  }
+  return result;
+}
+function createUlidFactory(rng = fillBytes) {
+  let lastTime = -1;
+  let lastRandom = 0n;
+  return (timestamp = Date.now()) => {
+    checkedTime(timestamp);
+    if (timestamp > lastTime) {
+      lastTime = timestamp;
+      lastRandom = asBigInt(randomBytes(10, rng));
+    } else {
+      if (lastRandom === MAX_ULID_RANDOM) throw new RangeError('ULID counter overflow.');
+      lastRandom += 1n;
+    }
+    return encode32(BigInt(lastTime), 10) + encode32(lastRandom, 16);
+  };
+}
+function randomId(length = 21, alphabet = NANO_ALPHABET, rng = fillBytes) {
+  if (!Number.isSafeInteger(length) || length < 1 || length > 64) throw new RangeError('Length must be 1–64.');
+  const characters = [...alphabet];
+  if (characters.length < 2 || characters.length > 128 || new Set(characters).size !== characters.length || characters.some((c) => c.length !== 1 || c.charCodeAt(0) < 33 || c.charCodeAt(0) > 126)) {
+    throw new RangeError('Alphabet must contain 2–128 different printable ASCII characters.');
+  }
+  const limit = Math.floor(256 / characters.length) * characters.length;
+  let result = '';
+  while (result.length < length) {
+    const bytes = randomBytes(Math.min(256, Math.ceil((length - result.length) * 256 / limit * 1.5)), rng);
+    for (const value of bytes) {
+      if (value >= limit) continue; // Rejection sampling prevents modulo bias.
+      result += characters[value % characters.length];
+      if (result.length === length) break;
+    }
+  }
+  return result;
+}
+function generateBatch(options, rng = fillBytes, now = () => Date.now()) {
+  const { type = 'uuid-v4', count = 1, length = 21, alphabet = NANO_ALPHABET, prefix = '' } = options;
+  if (!Number.isSafeInteger(count) || count < 1 || count > 500) throw new RangeError('Count must be between 1 and 500.');
+  if (!['uuid-v4', 'uuid-v7', 'ulid', 'nanoid', 'custom'].includes(type)) throw new RangeError('Unsupported ID format.');
+  if (type === 'custom' && (!/^[A-Za-z0-9_-]{0,24}$/.test(prefix))) throw new RangeError('Prefix must contain up to 24 letters, numbers, _ or -.');
+  const ulid = createUlidFactory(rng);
+  const results = [];
+  for (let i = 0; i < count; i++) {
+    switch (type) {
+      case 'uuid-v4': results.push(uuidV4(rng)); break;
+      case 'uuid-v7': results.push(uuidV7(now(), rng)); break;
+      case 'ulid': results.push(ulid(now())); break;
+      case 'nanoid': results.push(randomId(length, NANO_ALPHABET, rng)); break;
+      case 'custom': results.push(prefix + randomId(length, alphabet, rng)); break;
+    }
+  }
+  return results;
+}
+
+const $ = (id) => document.getElementById(id);
+const content = {
+  en: {
+    eyebrow: 'Developer utilities', title: 'ID Generator', subtitle: 'Make unique identifiers without sending anything to a server.',
+    local: 'Generated in your browser', format: 'ID format', count: 'How many?', length: 'Random length', alphabet: 'Custom alphabet', prefix: 'Prefix (optional)',
+    generate: 'Generate IDs', select: 'Select all', clear: 'Clear', output: 'Generated IDs', outputHint: 'Copy with Ctrl+C or Command+C after selecting.',
+    empty: 'Choose a format and generate your first ID.', ready: '{count} IDs generated locally.', selected: 'Output selected. Press Ctrl+C or Command+C to copy.', cleared: 'Output cleared.',
+    fail: 'Could not generate IDs. Check the inputs and retry.',
+    caution: 'UUIDv7 and ULID reveal an approximate creation timestamp. UUIDv7 results are timestamp-ordered, not guaranteed monotonic within one millisecond. Identifiers do not provide authorization or access control.',
+    compare: 'Quick format guide', hintV4: 'UUID v4 · random · 36 characters', hintV7: 'UUID v7 · timestamp-sortable · 36 characters', hintUlid: 'ULID · monotonic within this batch · 26 characters', hintNano: 'Nano ID · URL-friendly · configurable length', hintCustom: 'Custom · prefix and alphabet',
+    placeholder: 'Results will appear here', sample: 'Use long, random IDs for large datasets. Short custom IDs can collide.', unavailable: 'Cryptographic randomness is unavailable.',
+    labelNewline: 'One per line', labelCsv: 'CSV', export: 'Output format'
+  },
+  id: {
+    eyebrow: 'Alat pengembang', title: 'Pembuat ID', subtitle: 'Buat pengenal unik tanpa mengirim data ke server.',
+    local: 'Dibuat di perambanmu', format: 'Format ID', count: 'Jumlah ID', length: 'Panjang acak', alphabet: 'Karakter khusus', prefix: 'Awalan (opsional)',
+    generate: 'Buat ID', select: 'Pilih semua', clear: 'Bersihkan', output: 'ID yang dihasilkan', outputHint: 'Salin dengan Ctrl+C atau Command+C setelah memilih.',
+    empty: 'Pilih format lalu buat ID pertamamu.', ready: '{count} ID dibuat secara lokal.', selected: 'Hasil dipilih. Tekan Ctrl+C atau Command+C untuk menyalin.', cleared: 'Hasil dibersihkan.',
+    fail: 'Gagal membuat ID. Periksa input lalu coba lagi.',
+    caution: 'UUIDv7 dan ULID mengungkap perkiraan waktu pembuatan. UUIDv7 diurutkan berdasarkan waktu, tetapi tidak selalu berurutan dalam milidetik yang sama. ID bukan pengganti otorisasi atau kontrol akses.',
+    compare: 'Panduan format singkat', hintV4: 'UUID v4 · acak · 36 karakter', hintV7: 'UUID v7 · urut waktu · 36 karakter', hintUlid: 'ULID · berurutan dalam satu batch · 26 karakter', hintNano: 'Nano ID · aman untuk URL · panjang dapat diatur', hintCustom: 'Kustom · awalan dan karakter pilihan',
+    placeholder: 'Hasil muncul di sini', sample: 'Gunakan ID acak yang panjang untuk data besar. ID pendek lebih mudah bertabrakan.', unavailable: 'Pengacak kriptografis tidak tersedia.',
+    labelNewline: 'Satu per baris', labelCsv: 'CSV', export: 'Format hasil'
+  }
+};
+let message = 'empty';
+let count = 0;
+let ids = [];
+let failed = false;
+const locale = () => document.documentElement.lang === 'id' ? 'id' : 'en';
+function updateStatus() {
+  $('status').textContent = (content[locale()][message] || content[locale()].fail).replace('{count}', count.toLocaleString(locale()));
+  $('status').classList.toggle('error', failed);
+}
+function localize() {
+  const labels = content[locale()];
+  for (const node of document.querySelectorAll('[data-i18n]')) node.textContent = labels[node.dataset.i18n];
+  $('output').placeholder = labels.placeholder;
+  document.title = labels.title;
+  updateStatus();
+}
+function adjustFields() {
+  const mode = $('format').value;
+  $('length-field').hidden = !(mode === 'nanoid' || mode === 'custom');
+  $('alphabet-field').hidden = mode !== 'custom';
+  $('prefix-field').hidden = mode !== 'custom';
+  const hints = { 'uuid-v4': 'hintV4', 'uuid-v7': 'hintV7', ulid: 'hintUlid', nanoid: 'hintNano', custom: 'hintCustom' };
+  $('format-hint').textContent = content[locale()][hints[mode]];
+}
+function render() {
+  const csv = $('export').value === 'csv';
+  $('output').value = ids.length ? (csv ? ['id', ...ids.map(id => `"${id.replaceAll('"', '""')}"`)].join('\n') : ids.join('\n')) : '';
+}
+$('format').addEventListener('change', adjustFields);
+$('export').addEventListener('change', render);
+$('generate').addEventListener('click', () => {
+  try {
+    ids = generateBatch({ type: $('format').value, count: Number($('count').value), length: Number($('length').value), alphabet: $('alphabet').value, prefix: $('prefix').value });
+    count = ids.length;
+    failed = false;
+    message = 'ready';
+    render();
+  } catch (_) {
+    failed = true;
+    message = 'fail';
+    // Keep prior results if validation or browser randomness fails.
+  }
+  updateStatus();
+});
+$('select').addEventListener('click', () => {
+  if (!ids.length) return;
+  $('output').focus(); $('output').select();
+  message = 'selected'; failed = false; updateStatus();
+});
+$('clear').addEventListener('click', () => {
+  ids = []; count = 0; render(); message = 'cleared'; failed = false; updateStatus();
+});
+addEventListener('trick-it:localechange', () => { localize(); adjustFields(); });
+localize(); adjustFields();
+if (!globalThis.crypto?.getRandomValues) {
+  $('generate').disabled = true;
+  $('status').textContent = content[locale()].unavailable;
+}
+</script>
+</body>
+</html>
