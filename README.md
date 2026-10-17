@@ -96,9 +96,19 @@ To create a different tool, follow [Scaffold and register a tool](docs/scaffold-
 
 1. Bundle the entry application into one UTF-8 HTML file (maximum 5 MiB). Additional public code/models/data must use the declared, approved, consented asset loader—not direct iframe network access. Sensitive browser actions go through the host broker; never include runtime credentials or add `allow-same-origin`.
 2. Generate its SHA-256 and commit the HTML and manifest together. Source maps, server code, secrets and source checkout are not copied by trick-it.
-3. Register its repository and **full 40-character commit SHA** in `config/registry.json`. The owner must appear in `trustedOwners`; IDs/paths must be unique and cannot shadow host routes.
+3. Register its repository and **full 40-character commit SHA** in its own `config/tools/<id>.json` file. The owner must appear in `trustedOwners`; IDs/paths must be unique and cannot shadow host routes.
 
 Allowed categories: `media`, `developer`, `data`, `productivity`, `other`. Status: `stable`, `beta`, `experimental`. IDs use lowercase letters/numbers separated by hyphens; paths must equal `/<id>`. Increment the tool version when releasing a new bundle, then explicitly update the pinned registration. No private package registry is required.
+
+## Per-tool marketplace registrations
+
+**New production tools do not belong in `examples/`.** Each standalone tool repository owns its HTML, manifest, tests and release documentation. Register an immutable source through one small file in `config/tools/` (for example `id-generator.json`), rather than editing the shared `config/registry.json` sources array:
+
+```json
+{ "repository": "ygrip/id-generator", "ref": "633e6b044a21493dec72f5741f447b0e0ba60d6d" }
+```
+
+The shared config now only holds platform trust/discovery settings and `toolDirectory`. The existing local JSON Tools mirror is a temporary exception because its v0.3 release has not yet been published to its standalone repository. For private tool sources, set `TOOLS_GITHUB_TOKEN` with read-only Contents permission. See [per-tool registry and migration](docs/registry-layout.md).
 
 ## Register a private repository
 
