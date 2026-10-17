@@ -23,17 +23,19 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Verify private tool repository access
+        env:
+          TOOLS_GITHUB_TOKEN: ${{ secrets.TOOLS_GITHUB_TOKEN }}
+        run: node scripts/registry-preflight.mjs
       - run: npm ci
       - name: Fetch approved bundles
         env:
           TOOLS_GITHUB_TOKEN: ${{ secrets.TOOLS_GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run registry:sync
       - run: npm test && npm run check
       - name: Build static aggregator
         env:
           TOOLS_GITHUB_TOKEN: ${{ secrets.TOOLS_GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build
       - run: npm run performance:check
       - run: npx playwright install --with-deps chromium

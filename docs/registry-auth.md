@@ -2,6 +2,25 @@
 
 Open Tools resolves GitHub credentials **during registry sync/build**, separately for every repository. Registering a repository does not expose a token to that tool or its browser bundle. Public catalog metadata still includes the repository URL, even if its source is private.
 
+
+## Fixing CI failures on the trick-it production registry
+
+The current production registry pins **four private sibling repositories**:
+`ygrip/encoder-decoder`, `ygrip/id-generator`, `ygrip/json-tools`, and
+`ygrip/text-manipulation`. The standard workflow `GITHUB_TOKEN` is
+repository-scoped and **cannot** read them. GitHub returns HTTP 404 for
+unauthorized private repository requests even when the pinned commit exists.
+
+1. Under GitHub **Settings → Developer settings → Personal access tokens → Fine-grained tokens**, create a token owned by `ygrip` selecting those four repositories (or use a GitHub App installed on them). Grant **Contents: Read-only**, with no write permissions.
+2. In **ygrip/trick-it → Settings → Secrets and variables → Actions**, add a **repository secret** called `TOOLS_GITHUB_TOKEN` containing that token. Do not put it in git, tool registrations, or this chat.
+3. Re-run **Verify registry and bundles** from Actions. Its `Verify private tool repository access` step probes each pinned manifest and identifies missing access explicitly before installing npm dependencies.
+4. If tool repos are added later, extend the token's **selected repositories**. A GitHub token selected for only the host repository will still fail, as will the default `GITHUB_TOKEN`.
+
+The workflow no longer injects its default `GITHUB_TOKEN` as a misleading
+fallback for private-source sync or build. The production credential never
+reaches deployed JavaScript. Registry synchronization still fails closed if a
+private source cannot be verified, rather than silently dropping tools.
+
 ## Credential precedence
 
 1. `auth.repositories["owner/repository"]`
