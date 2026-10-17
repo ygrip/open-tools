@@ -17,3 +17,7 @@ static/og/
 static/.og-*/
 static/robots.txt
 static/sitemap.xml
+
+# Local agent skills (not published)
+.agents/skills/transitions-dev/
+.agents/skills/web-performance/
