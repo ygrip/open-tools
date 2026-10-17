@@ -1,6 +1,6 @@
-# Scaffold and register a tool
+# Scaffold and register a trick-it tool
 
-Start in the Open Tools repository. This recipe creates an independent, dependency-free **Text Counter** example. Change the ID, repository, labels and operation for your tool. It is a copyable recipe, not an installed scaffolding CLI.
+Start in the trick-it platform repository (`ygrip/open-tools`). This recipe creates an independent, dependency-free **Text Counter** example. Change the ID, repository, labels and operation for your tool. It is a copyable recipe, not an installed scaffolding CLI.
 
 Use Node.js 22+. Each release contains one self-contained UTF-8 HTML document and `tool.manifest.json`. Source can be private; published browser code and repository provenance are public.
 
@@ -40,8 +40,15 @@ Create `examples/text-counter/tool.manifest.json`:
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
+  "runtimeVersion": 1,
   "appearance": { "theme": "host", "protocolVersion": 1 },
+  "icon": "braces",
+  "seo": { "title": "Text Counter", "description": "Count Unicode code points locally in your browser.", "keywords": ["text", "unicode", "counter"], "robots": "index" },
+  "guide": { "summary": "Count text without sending it to a server.", "steps": ["Paste text into the input.", "Read the code-point count.", "Use Clear text to start again."] },
+  "permissions": [],
+  "assets": [],
+  "translations": {},
   "id": "text-counter",
   "name": "Text Counter",
   "description": "Count Unicode code points locally in your browser.",
@@ -136,7 +143,7 @@ Create `examples/text-counter/src/index.html`:
 
 The host supplies `html[data-theme]`, the `--ot-*` tokens, and its validated theme-message receiver **before tool scripts run**. Do not set a competing root theme, use stored preferences, reload on theme changes, or duplicate the receiver. The CSS above uses host tokens for all surfaces; its root defaults also permit opening the file standalone. `--ot-shadow` and `--ot-highlight` are colors, not complete shadow declarations.
 
-For frameworks or larger tools, bundle dependencies and inline their output, as in [`examples/json-tools/scripts/build.mjs`](../examples/json-tools/scripts/build.mjs). Do not load external scripts, CSS, fonts or images; embed necessary assets as data URLs. `eval`, `new Function`, fetch, workers, forms, parent-DOM access, cookies, storage and clipboard permissions are not a supported integration API. Never weaken the opaque `sandbox="allow-scripts"` iframe by adding `allow-same-origin`.
+For frameworks or larger tools, bundle dependencies and inline their output, as in [`examples/json-tools/scripts/build.mjs`](../examples/json-tools/scripts/build.mjs). Do not issue external loads from the iframe: bundle resources, embed data URLs, or use declared assets through the verified host loader. `eval`, `new Function`, arbitrary fetch, forms, parent-DOM access, cookies and ambient browser privileges are not supported. WASM, blob workers and script-asset blob imports require their corresponding host grants; sensitive browser actions use the consent broker described below. Never weaken the opaque `sandbox="allow-scripts"` iframe by adding `allow-same-origin`.
 
 ## 2. Build the immutable artifact and add a smoke test
 
@@ -171,11 +178,12 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
-test('release contains the expected HTML and matching theme-v2 manifest', async () => {
+test('release contains the expected HTML and matching theme-aware v3 manifest', async () => {
   const root = new URL('../', import.meta.url);
   const bytes = await readFile(new URL('dist/index.html', root));
   const manifest = JSON.parse(await readFile(new URL('tool.manifest.json', root), 'utf8'));
-  assert.equal(manifest.schemaVersion, 2);
+  assert.equal(manifest.schemaVersion, 3);
+  assert.equal(manifest.runtimeVersion, 1);
   assert.deepEqual(manifest.appearance, { theme: 'host', protocolVersion: 1 });
   assert.equal(manifest.path, `/${manifest.id}`);
   assert.equal(manifest.bundle.sha256, createHash('sha256').update(bytes).digest('hex'));
@@ -231,10 +239,12 @@ npm run test:e2e
 
 Playwright requires Chromium (`npx playwright install chromium` on a fresh setup). Registry sync validates the complete contract, repository identity, uniqueness, checksum, UTF-8 and size; it does not execute the tool's build. Current performance policy also caps each compressed tool at 90,000 gzip bytes, below the 5 MiB hard acceptance limit.
 
+For deferred models, scripts, workers and browser capabilities, read [the v3 contract](tool-contract-v3.md) and [runtime/consent guide](tool-runtime.md). Assets need approved `trustedAssetOrigins`, exact byte sizes and SHA-256. The host downloads and verifies them only after consent; the iframe still cannot fetch arbitrary URLs. Use `window.trickIt.asset(id)` for verified bytes and `request(permission, payload)` for brokered capabilities. Do not bundle credentials or add `allow-same-origin`. New tools should declare translated metadata and respond to `trick-it:localechange` without clearing input. See [SEO configuration](seo.md) for automatic social cards and production canonical URLs.
+
 Contract reminders:
 
 - IDs: lowercase letters/digits separated by hyphens, at most 64 characters; `path` must be exactly `/<id>` (no trailing slash). The host's public route uses a trailing slash.
-- Reserved IDs: `policy`, `privacy`, `terms`, `bundles`, `icons`, `brand`, `illustrations`, `index`, `404`, `500`, `503`, `_app`. Recheck [`contract.js`](../src/lib/registry/contract.js) for changes.
+- Reserved IDs include `policy`, `privacy`, `terms`, `bundles`, `icons`, `brand`, `illustrations`, `index`, `404`, `500`, `503`, `_app`, the `id` locale prefix, and platform `offline`, `manifest`, `service-worker`, `pwa`, `og`, `robots`, `sitemap` namespaces. Recheck [`contract.js`](../src/lib/registry/contract.js) for changes.
 - Categories: `media`, `developer`, `data`, `productivity`, `other`. Status: `stable`, `beta`, `experimental`. `version` is `major.minor.patch` with an optional prerelease suffix.
 - Names: nonempty, at most 80 characters; descriptions: nonempty, at most 240. Capabilities: at most 20 nonempty strings, each at most 80 characters.
 - Repository: exact `https://github.com/owner/repository` provenance matching the configured source. Bundle: safe relative `.html` path, lowercase 64-character SHA-256. Schema v1 is rejected; declaring v2 does not replace visual/security review.
@@ -265,7 +275,7 @@ Use the configured personal SSH alias shown above only if it exists in your envi
 
 The standalone source commit must contain the matching `dist/index.html` and manifest. Open Tools downloads these artifacts only; it never installs dependencies or builds an untrusted tool repository. Never commit credentials or real private input samples.
 
-## 5. Pin and release through Open Tools
+## 5. Pin and release through trick-it
 
 Back in Open Tools, replace the new local source with its immutable source ref, retaining existing registrations:
 

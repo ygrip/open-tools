@@ -1,9 +1,15 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
+  import { m } from '$lib/paraglide/messages.js';
+  import { getLocale } from '$lib/paraglide/runtime.js';
+  import { localizedTool } from '$lib/registry/presentation';
+  import { localizedPath } from '$lib/i18n';
+  import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
   import { base } from '$app/paths';
   import Icon from '$lib/components/Icon.svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import HeroArt from '$lib/components/HeroArt.svelte';
+  import Seo from '$lib/components/Seo.svelte';
   import Pagination from '$lib/components/Pagination.svelte';
   import { getPagination } from '$lib/pagination.js';
   import { categories, tools } from '$lib/registry/tools';
@@ -15,8 +21,9 @@
   let searchOpen = $state(false);
   let searchError = $state('');
   let SearchOverlay = $state<typeof import('$lib/components/SearchOverlay.svelte').default | null>(null);
-  const categoryNames: Record<string, string> = { all: 'All tools', data: 'Data & formats', developer: 'Developer', media: 'Images & media', productivity: 'Everyday work', other: 'A little of everything' };
-  const filteredTools = $derived(tools.filter((tool) =>
+  const categoryNames: Record<string, string> = { all: m.category_all(), data: m.category_data(), developer: m.category_developer(), media: m.category_media(), productivity: m.category_productivity(), other: m.category_other() };
+  const catalog = $derived(tools.map((tool) => localizedTool(tool, getLocale())));
+  const filteredTools = $derived(catalog.filter((tool) =>
     (selectedCategory === 'all' || tool.category === selectedCategory) &&
     [tool.name, tool.description, ...tool.capabilities].join(' ').toLowerCase().includes(query.trim().toLowerCase())
   ));
@@ -43,7 +50,7 @@
       SearchOverlay ??= (await import('$lib/components/SearchOverlay.svelte')).default;
       searchOpen = true;
     } catch {
-      searchError = 'Quick search could not open. You can still search the tools below.';
+      searchError = m.search_error();
       document.getElementById('tool-search')?.focus();
     }
   }
@@ -62,27 +69,27 @@
   });
 </script>
 
+<Seo title={m.home_title()} description={m.home_description()} path="/" />
 <svelte:head>
-  <title>Open Tools · Little tools. Lovely results.</title>
-  <meta name="description" content="Your friendly little toolbox for the web. Format JSON, find what you need, and turn tricky data into a small win. No account needed." />
   <link rel="preload" as="image" href={`${base}/illustrations/clay-workbench-768.webp`} imagesrcset={`${base}/illustrations/clay-workbench-448.webp 448w, ${base}/illustrations/clay-workbench-768.webp 768w`} imagesizes="(max-width: 760px) calc(100vw - 64px), 480px" />
 </svelte:head>
 
-{#if SearchOverlay}<SearchOverlay bind:open={searchOpen} {tools} />{/if}
+{#if SearchOverlay}<SearchOverlay bind:open={searchOpen} tools={catalog} />{/if}
 
 <div class="page-shell">
   <header class="topbar">
-    <a class="brand" href={`${base}/`} aria-label="Open Tools home">
+    <a class="brand" href={localizedPath('/')} aria-label={m.brand_home()}>
       <img src={`${base}/brand/logo.svg`} width="46" height="46" alt="" />
-      <span><strong>open<span class="brand-accent">tools</span></strong><small>little tools. lovely results.</small></span>
+      <span><strong>trick<span class="brand-accent">-it</span></strong><small>{m.brand_tagline()}</small></span>
     </a>
-    <nav class="topnav" aria-label="Primary navigation">
-      <a class="nav-link" href="#tools"><Icon name="grid" size={17} /> Toolbox</a>
-      <a class="nav-link about-link" href="#how-it-works">How it works</a>
+    <nav class="topnav" aria-label={m.nav_primary()}>
+      <a class="nav-link" href="#tools"><Icon name="grid" size={17} /> {m.nav_toolbox()}</a>
+      <a class="nav-link about-link" href="#how-it-works">{m.nav_how()}</a>
       <a class="nav-link mobile-github" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer"><Icon name="github" size={17} /> GitHub</a>
     </nav>
     <div class="header-actions">
-      <button class="icon-button search-nav" type="button" onclick={openSearch} aria-label="Search tools"><Icon name="search" /></button>
+      <button class="icon-button search-nav" type="button" onclick={openSearch} aria-label={m.search_label()}><Icon name="search" /></button>
+      <LanguageSwitcher />
       <ThemeToggle />
       <a class="clay-button small github-link" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer"><Icon name="github" size={19} /><span>GitHub</span><Icon name="external" size={15} /></a>
     </div>
@@ -91,55 +98,55 @@
   <main id="main-content">
     <section class="hero-bento" aria-labelledby="hero-title">
       <div class="hero-copy surface">
-        <span class="eyebrow friendly-pill"><Icon name="sparkles" size={16} /> A little less busywork</span>
-        <h1 id="hero-title">Small tools.<br />Big <span class="headline-highlight">little wins.</span></h1>
-        <p class="hero-description">Untangle your data. Tidy up a task. Get on with the good stuff. Your next shortcut is right here.</p>
+        <span class="eyebrow friendly-pill"><Icon name="sparkles" size={16} /> {m.hero_eyebrow()}</span>
+        <h1 id="hero-title">{m.hero_small()}<br />{m.hero_big()} <span class="headline-highlight">{m.hero_wins()}</span></h1>
+        <p class="hero-description">{m.hero_description()}</p>
         <div class="hero-actions">
-          <a class="clay-button primary" href="#tools">Explore the toolbox <Icon name="arrow-right" size={20} /></a>
-          <span class="no-account"><Icon name="check" size={16} /> No account. No fuss.</span>
+          <a class="clay-button primary" href="#tools">{m.hero_explore()} <Icon name="arrow-right" size={20} /></a>
+          <span class="no-account"><Icon name="check" size={16} /> {m.hero_no_account()}</span>
         </div>
-        <div class="hero-proof"><span class="tiny-clay-icon"><Icon name="shield" size={17} /></span><span>Thoughtful little utilities. One happy home.</span></div>
+        <div class="hero-proof"><span class="tiny-clay-icon"><Icon name="shield" size={17} /></span><span>{m.hero_proof()}</span></div>
       </div>
       <HeroArt />
-      <div class="benefit-tile surface mint"><span class="clay-icon"><Icon name="lock" size={23} /></span><div><strong>Your data stays yours</strong><p>Our first tools work right in your browser.</p></div></div>
-      <div class="benefit-tile surface lavender"><span class="clay-icon"><Icon name="bolt" size={23} /></span><div><strong>Skip the setup</strong><p>Pick a tool. Drop in your data. Done.</p></div></div>
-      <div class="benefit-tile surface butter"><span class="clay-icon"><Icon name="grid" size={23} /></span><div><strong>A growing little collection</strong><p>Independent tools, brought together.</p></div></div>
+      <div class="benefit-tile surface mint"><span class="clay-icon"><Icon name="lock" size={23} /></span><div><strong>{m.benefit_private()}</strong><p>{m.benefit_private_desc()}</p></div></div>
+      <div class="benefit-tile surface lavender"><span class="clay-icon"><Icon name="bolt" size={23} /></span><div><strong>{m.benefit_setup()}</strong><p>{m.benefit_setup_desc()}</p></div></div>
+      <div class="benefit-tile surface butter"><span class="clay-icon"><Icon name="grid" size={23} /></span><div><strong>{m.benefit_collection()}</strong><p>{m.benefit_collection_desc()}</p></div></div>
     </section>
 
     <section class="catalog-section" id="tools" aria-labelledby="catalog-title">
-      <div class="section-heading"><div><p class="eyebrow">Make room for a shortcut</p><h2 id="catalog-title" tabindex="-1">What can we help with?</h2></div><span class="count-pill">{tools.length} {tools.length === 1 ? 'handy tool' : 'handy tools'} & counting</span></div>
+      <div class="section-heading"><div><p class="eyebrow">{m.catalog_eyebrow()}</p><h2 id="catalog-title" tabindex="-1">{m.catalog_heading()}</h2></div><span class="count-pill">{tools.length} {tools.length === 1 ? m.handy_tool() : m.handy_tools()} {m.count_and_counting()}</span></div>
       <div class="catalog-controls surface">
-        <div class="search-input-wrap"><Icon name="search" size={21} /><label class="sr-only" for="tool-search">Search the toolbox</label><input id="tool-search" type="search" bind:value={query} oninput={() => currentPage = 1} placeholder="Try “JSON”, “XML”, or a task…" /><kbd>/</kbd></div>
-        <div class="chips" aria-label="Tool categories">
-          <button type="button" class:active={selectedCategory === 'all'} aria-pressed={selectedCategory === 'all'} onclick={() => selectCategory('all')}><Icon name="grid" size={16} /> All tools</button>
+        <div class="search-input-wrap"><Icon name="search" size={21} /><label class="sr-only" for="tool-search">{m.search_toolbox()}</label><input id="tool-search" type="search" bind:value={query} oninput={() => currentPage = 1} placeholder={m.search_placeholder()} /><kbd>/</kbd></div>
+        <div class="chips" aria-label={m.nav_categories()}>
+          <button type="button" class:active={selectedCategory === 'all'} aria-pressed={selectedCategory === 'all'} onclick={() => selectCategory('all')}><Icon name="grid" size={16} /> {m.category_all()}</button>
           {#each categories as category}<button type="button" class:active={selectedCategory === category} aria-pressed={selectedCategory === category} onclick={() => selectCategory(category)}>{categoryNames[category]}</button>{/each}
         </div>
       </div>
       {#if searchError}<p role="status">{searchError}</p>{/if}
-      <p class="sr-only" role="status">{filteredTools.length} tools found</p>
+      <p class="sr-only" role="status">{filteredTools.length} {m.tools_found()}</p>
       <div class="tool-grid" class:single-result={filteredTools.length === 1}>
         {#each pagedTools as tool (tool.id)}
-          <a class="tool-card surface" href={`${base}${tool.path}/`}>
-            <div class="tool-card-top"><span class="clay-icon peach"><Icon name={tool.category === 'data' || tool.category === 'developer' ? 'braces' : 'toolbox'} size={30} /></span><span class="tool-status"><span class="status-dot"></span> Ready to help</span></div>
-            <div class="tool-card-copy"><span class="eyebrow">{categoryNames[tool.category]}</span><h3>{tool.name}</h3><p>{tool.id === 'json-tools' ? 'Messy JSON? Make it readable, find just the bits you need, or turn it into XML. All in one tidy spot.' : tool.description}</p></div>
+          <a class="tool-card surface" href={localizedPath(`${tool.path}/`)}>
+            <div class="tool-card-top"><span class="clay-icon peach"><Icon name={tool.icon} size={30} /></span><span class="tool-status"><span class="status-dot"></span> {m.tool_ready()}</span></div>
+            <div class="tool-card-copy"><span class="eyebrow">{categoryNames[tool.category]}</span><h3>{tool.name}</h3><p>{tool.description}</p></div>
             <div class="tool-capabilities">{#each tool.capabilities.slice(0, 3) as capability}<span>{capability.replaceAll('-', ' ')}</span>{/each}</div>
-            <div class="tool-card-bottom"><span>Open {tool.name}</span><span class="round-arrow"><Icon name="arrow-right" size={21} /></span></div>
+            <div class="tool-card-bottom"><span>{m.open_tool()} {tool.name}</span><span class="round-arrow"><Icon name="arrow-right" size={21} /></span></div>
           </a>
         {:else}
-          <div class="empty-state surface"><span class="clay-icon lavender"><Icon name="search" size={30} /></span><h3>{tools.length ? 'No little helpers found. Yet.' : 'The toolbox is getting ready.'}</h3><p>{tools.length ? 'Try a different word, or clear your filters to see the whole toolbox.' : 'Our first tools are on their way. Check back for a fresh little shortcut.'}</p>{#if tools.length}<button class="clay-button" type="button" onclick={() => { query = ''; selectCategory('all'); }}>Show all tools <Icon name="arrow-right" size={18} /></button>{/if}</div>
+          <div class="empty-state surface"><span class="clay-icon lavender"><Icon name="search" size={30} /></span><h3>{tools.length ? m.empty_title() : m.empty_title_no_tools()}</h3><p>{tools.length ? m.empty_desc() : m.empty_desc_no_tools()}</p>{#if tools.length}<button class="clay-button" type="button" onclick={() => { query = ''; selectCategory('all'); }}>{m.empty_show_all()} <Icon name="arrow-right" size={18} /></button>{/if}</div>
         {/each}
         {#if filteredTools.length <= 1 && !query && selectedCategory === 'all'}
-          <aside class="collection-card surface lavender"><div class="mini-tool-scene" aria-hidden="true"><span class="mini-block one"><Icon name="toolbox" size={38} /></span><span class="mini-block two"><Icon name="sparkles" size={30} /></span><span class="mini-block three"><Icon name="braces" size={26} /></span></div><span class="eyebrow">Small collection. Big heart.</span><h3>Good things come<br />in little toolboxes.</h3><p>We’re starting small and making each helper count. More useful little things are on the way.</p><a class="text-link" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer">Have a tool in mind? <Icon name="arrow-right" size={18} /></a></aside>
+          <aside class="collection-card surface lavender"><div class="mini-tool-scene" aria-hidden="true"><span class="mini-block one"><Icon name="toolbox" size={38} /></span><span class="mini-block two"><Icon name="sparkles" size={30} /></span><span class="mini-block three"><Icon name="braces" size={26} /></span></div><span class="eyebrow">{m.collection_eyebrow()}</span><h3>{m.collection_title_1()}<br />{m.collection_title_2()}</h3><p>{m.collection_desc()}</p><a class="text-link" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer">{m.collection_feedback()} <Icon name="arrow-right" size={18} /></a></aside>
         {/if}
       </div>
       <Pagination totalItems={filteredTools.length} {pageSize} {currentPage} onPageChange={changePage} />
     </section>
 
     <section class="how-section surface" id="how-it-works" aria-labelledby="how-title">
-      <div class="how-heading"><span class="eyebrow">Less figuring out. More getting done.</span><h2 id="how-title">A shortcut, not<br />another learning curve.</h2><p>No downloads. No account to remember. Just a small, useful thing when you need it.</p></div>
-      <ol class="how-steps"><li><span class="step-number peach">01</span><div><h3>Find your little helper</h3><p>Browse the toolbox or search for your task.</p></div></li><li><span class="step-number mint">02</span><div><h3>Make yourself at home</h3><p>Open a tool and add what you’re working on.</p></div></li><li><span class="step-number lavender">03</span><div><h3>Take your small win</h3><p>Copy your result. Get back to your day.</p></div></li></ol>
+      <div class="how-heading"><span class="eyebrow">{m.how_eyebrow()}</span><h2 id="how-title">{m.how_title_1()}<br />{m.how_title_2()}</h2><p>{m.how_intro()}</p></div>
+      <ol class="how-steps"><li><span class="step-number peach">01</span><div><h3>{m.step_find()}</h3><p>{m.step_find_desc()}</p></div></li><li><span class="step-number mint">02</span><div><h3>{m.step_use()}</h3><p>{m.step_use_desc()}</p></div></li><li><span class="step-number lavender">03</span><div><h3>{m.step_done()}</h3><p>{m.step_done_desc()}</p></div></li></ol>
     </section>
   </main>
 
-  <footer class="site-footer"><a class="brand footer-brand" href={`${base}/`}><img src={`${base}/brand/logo.svg`} alt="" width="36" height="36" /><strong>opentools</strong></a><span>A little help goes a long way.</span><nav aria-label="Legal"><a href={`${base}/privacy`}>Privacy</a><a href={`${base}/terms`}>Terms</a><a href={`${base}/policy`}>Tool policy</a><a href="https://github.com/ygrip/open-tools" aria-label="Open Tools on GitHub" target="_blank" rel="noreferrer"><Icon name="github" size={20} /></a></nav></footer>
+  <footer class="site-footer"><a class="brand footer-brand" href={localizedPath('/')}><img src={`${base}/brand/logo.svg`} alt="" width="36" height="36" /><strong>trick-it</strong></a><span>{m.footer_tagline()}</span><nav aria-label={m.nav_legal()}><a href={localizedPath('/privacy/')}>{m.footer_privacy()}</a><a href={localizedPath('/terms/')}>{m.footer_terms()}</a><a href={localizedPath('/policy/')}>{m.footer_policy()}</a><a href="https://github.com/ygrip/open-tools" aria-label={m.brand_github()} target="_blank" rel="noreferrer"><Icon name="github" size={20} /></a></nav></footer>
 </div>

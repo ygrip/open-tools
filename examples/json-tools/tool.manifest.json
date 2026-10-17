@@ -1,5 +1,7 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
+  "runtimeVersion": 1,
+  "locales": ["en", "id"],
   "appearance": {
     "theme": "host",
     "protocolVersion": 1
@@ -10,7 +12,8 @@
   "path": "/json-tools",
   "category": "data",
   "repository": "https://github.com/ygrip/json-tools",
-  "version": "0.2.0",
+  "version": "0.3.0",
+  "icon": "braces",
   "capabilities": [
     "json",
     "pretty-print",
@@ -19,9 +22,57 @@
     "conversion"
   ],
   "status": "experimental",
+  "seo": {
+    "title": "JSON formatter, JSONPath and XML converter",
+    "description": "Format JSON, find values with safe JSONPath, and convert JSON and XML locally in your browser.",
+    "keywords": [
+      "JSON",
+      "JSONPath",
+      "XML",
+      "formatter",
+      "converter"
+    ],
+    "robots": "index"
+  },
+  "guide": {
+    "summary": "Your input is processed locally inside an isolated tool. No additional permissions or external downloads are needed.",
+    "steps": [
+      "Choose JSON formatting, JSONPath, JSON to XML, or XML to JSON.",
+      "Paste input or use an example. For JSONPath, enter a query such as $.store.book[*].title.",
+      "Run the operation and review the output. Changing language or theme keeps your input and result."
+    ]
+  },
+  "permissions": [],
+  "assets": [],
+  "translations": {
+    "id": {
+      "name": "Alat JSON",
+      "description": "Rapikan JSON, cari data dengan JSONPath, serta ubah JSON ke XML atau XML ke JSON langsung di peramban.",
+      "seo": {
+        "title": "Perapi JSON, JSONPath, dan pengubah XML",
+        "description": "Rapikan JSON, temukan nilai dengan JSONPath yang aman, dan ubah JSON serta XML secara lokal di peramban.",
+        "keywords": [
+          "JSON",
+          "JSONPath",
+          "XML",
+          "perapi",
+          "konverter"
+        ],
+        "robots": "index"
+      },
+      "guide": {
+        "summary": "Input diproses secara lokal di dalam alat yang terisolasi. Tidak memerlukan izin tambahan atau unduhan eksternal.",
+        "steps": [
+          "Pilih perapian JSON, JSONPath, JSON ke XML, atau XML ke JSON.",
+          "Tempel input atau gunakan contoh. Untuk JSONPath, masukkan kueri seperti $.store.book[*].title.",
+          "Jalankan operasi lalu periksa hasilnya. Mengganti bahasa atau tema tidak menghapus input dan hasil."
+        ]
+      }
+    }
+  },
   "bundle": {
     "format": "html",
     "file": "dist/index.html",
-    "sha256": "a9996a58962088b9887d508a1cdc2451238621d05e2713e0f9a564f0729a7929"
+    "sha256": "b0f816c15ce8c0a6f57cd4106645ad85238350dd55350ce4e1aef05ff6b5d7c0"
   }
 }

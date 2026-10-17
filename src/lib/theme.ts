@@ -17,6 +17,7 @@ export function documentTheme(document: Document): Theme {
 export function applyTheme(document: Document, theme: Theme): boolean {
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = theme;
+  document.querySelector?.('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#211f25' : '#f6f1e9');
   try {
     document.defaultView?.localStorage.setItem(THEME_STORAGE_KEY, theme);
     return true;

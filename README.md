@@ -1,6 +1,8 @@
-# Open Tools
+# trick-it
 
-A static SvelteKit aggregator for independent browser tools. Each registered tool is a **versioned bundle plus a manifest contract**, not an imported source repository. Tool repositories may be private; their released browser bundles and catalog metadata are public.
+A localized, installable SvelteKit platform for independent browser tools. Each tool has a **versioned HTML entry bundle plus a validated manifest**, not imported source code. Optional deferred assets are fetched by the host only after consent and integrity checks. Source repositories may be private; shipped code and metadata are public. The GitHub repository remains `ygrip/open-tools`; the product name is now **trick-it**.
+
+English and Indonesian pages are prerendered and support SPA navigation, per-tool guides/SEO, explicit capabilities, verified model/WASM downloads, and PWA offline access. Start with [localization](docs/i18n.md), [v3 metadata](docs/tool-contract-v3.md), [permissions/runtime](docs/tool-runtime.md), [PWA](docs/pwa.md), or [SEO deployment](docs/seo.md).
 
 ## Screenshots
 
@@ -8,21 +10,23 @@ Captured from the production preview. Mobile views show the complete header and 
 
 ### Mobile
 
-<img src="docs/screenshots/open-tools-mobile-light.png" width="375" alt="Open Tools mobile light view with logo, search, theme control, Toolbox, How it works and GitHub navigation" /> <img src="docs/screenshots/open-tools-mobile-dark.png" width="375" alt="Open Tools mobile dark view with the same visible header and navigation" />
+<img src="docs/screenshots/open-tools-mobile-light.png" width="375" alt="trick-it mobile light view with logo, search, theme control, Toolbox, How it works and GitHub navigation" /> <img src="docs/screenshots/open-tools-mobile-dark.png" width="375" alt="trick-it mobile dark view with the same visible header and navigation" />
 
 Header close-ups: [light](docs/screenshots/open-tools-mobile-header-light.png) · [dark](docs/screenshots/open-tools-mobile-header-dark.png).
+
+Also see the [Indonesian mobile view](docs/screenshots/trick-it-mobile-id.png), [localized tool guide](docs/screenshots/trick-it-tool-id.png), and [generated social card](docs/screenshots/trick-it-og-preview.png).
 
 <details>
 <summary>Desktop — light mode</summary>
 
-![Open Tools homepage in light mode, with a clay toolbox illustration and bento-style tool catalog](docs/screenshots/open-tools-light.png)
+![trick-it homepage in light mode, with a clay toolbox illustration and bento-style tool catalog](docs/screenshots/open-tools-light.png)
 
 </details>
 
 <details>
 <summary>Desktop — dark mode</summary>
 
-![Open Tools homepage in dark mode, with the same clay illustration and dark bento cards](docs/screenshots/open-tools-dark.png)
+![trick-it homepage in dark mode, with the same clay illustration and dark bento cards](docs/screenshots/open-tools-dark.png)
 
 </details>
 
@@ -36,7 +40,7 @@ npm run registry:sync
 npm run dev
 ```
 
-Open `/json-tools` for JSON formatting, JSONPath queries, JSON → XML and XML → JSON. The checked-in first bundle works offline without GitHub credentials. Its independently buildable source is mirrored in `examples/json-tools`; the standalone scaffold is published at `git@github.com-personal:ygrip/json-tools.git`, commit `73ccc3751785eb3203934535a223de89b788c31a`.
+Open `/json-tools` for JSON formatting, JSONPath queries, JSON → XML and XML → JSON. The checked-in first bundle works offline without GitHub credentials. Its independently buildable source is mirrored in `examples/json-tools`. The local v0.3.0 mirror adds the v3 contract and English/Indonesian controls. The standalone published v0.2.0 remains pinned to `73ccc3751785eb3203934535a223de89b788c31a` in the remote example and remains supported through v2 compatibility; publishing v0.3.0 there is a separate release step.
 
 ```sh
 npm test
@@ -50,21 +54,28 @@ npm run test:e2e
 
 `npm run build` syncs approved bundles before building the static site. The build output is `build/`; deploy it to any static host. It includes prerendered home/legal/tool routes as directory indexes and JSON-encoded bundle files. Directory indexes avoid depending on host-specific clean-URL rewrites. Deploy the complete output atomically, not just the catalog. `npm run dev` requires an initial sync; rerun sync and restart development after registry changes.
 
-## Bundle contract v2
+## Bundle contract v3 (with legacy v2 compatibility)
 
 Every repository publishes `tool.manifest.json` and the referenced self-contained HTML in the **same Git commit**:
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
+  "runtimeVersion": 1,
   "appearance": { "theme": "host", "protocolVersion": 1 },
+  "icon": "braces",
+  "seo": { "title": "JSON Tools", "description": "Format, query and convert JSON locally.", "keywords": ["json", "xml"], "robots": "index" },
+  "guide": { "summary": "Process data locally.", "steps": ["Choose an operation.", "Paste input and run.", "Select the result to copy it."] },
+  "permissions": [],
+  "assets": [],
+  "translations": {},
   "id": "json-tools",
   "name": "JSON Tools",
   "description": "Format JSON, query with JSONPath, and convert JSON and XML.",
   "path": "/json-tools",
   "category": "data",
   "repository": "https://github.com/ygrip/json-tools",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "status": "experimental",
   "capabilities": ["json", "jsonpath", "xml"],
   "bundle": {
@@ -75,14 +86,14 @@ Every repository publishes `tool.manifest.json` and the referenced self-containe
 }
 ```
 
-Version 2 requires `appearance: { theme: "host", protocolVersion: 1 }`; legacy v1 manifests are rejected rather than registering a tool that ignores the host theme. To migrate, implement both theme styles, add the declaration, rebuild and update the pinned release.
+New tools use v3 with runtime protocol 1. Legacy v2 manifests still receive safe icon/SEO/guide defaults and no privileges; they cannot opt into permissions or external assets without migrating. Both versions require the host theme declaration; v1 remains rejected. For v3 assets, explicitly approve HTTPS origins in `trustedAssetOrigins`; declare byte size, digest, type and deferred loading. See [complete limits and migration](docs/tool-contract-v3.md).
 
 See `examples/json-tools/tool.manifest.json` for a real manifest with a verified checksum. `src/lib/registry/contract.js` is the shared validation implementation used by the build and catalog.
 
-To create a different tool, follow [Scaffold and register a tool](docs/scaffold-tool.md). It includes copyable HTML, a dependency-free builder, a v2 manifest, a checksum smoke test, local registration and private-repository publishing. The project-local agent skill lives at `.agents/skills/open-tools-scaffold/SKILL.md`; ask your agent to “scaffold and register an Open Tools tool.”
+To create a different tool, follow [Scaffold and register a tool](docs/scaffold-tool.md). It includes copyable HTML, a dependency-free builder, a v3 manifest, a checksum smoke test, local registration and private-repository publishing. The project-local agent skill lives at `.agents/skills/trick-it-scaffold/SKILL.md`; ask your agent to “scaffold and register a trick-it tool.”
 
-1. Bundle all JavaScript, CSS and dependencies into one UTF-8 HTML file (maximum 5 MiB). No CDN imports, framework coupling, host callbacks, storage, clipboard permissions or runtime credentials.
-2. Generate its SHA-256 and commit the HTML and manifest together. Source maps, server code, secrets and source checkout are not copied by Open Tools.
+1. Bundle the entry application into one UTF-8 HTML file (maximum 5 MiB). Additional public code/models/data must use the declared, approved, consented asset loader—not direct iframe network access. Sensitive browser actions go through the host broker; never include runtime credentials or add `allow-same-origin`.
+2. Generate its SHA-256 and commit the HTML and manifest together. Source maps, server code, secrets and source checkout are not copied by trick-it.
 3. Register its repository and **full 40-character commit SHA** in `config/registry.json`. The owner must appear in `trustedOwners`; IDs/paths must be unique and cannot shadow host routes.
 
 Allowed categories: `media`, `developer`, `data`, `productivity`, `other`. Status: `stable`, `beta`, `experimental`. IDs use lowercase letters/numbers separated by hyphens; paths must equal `/<id>`. Increment the tool version when releasing a new bundle, then explicitly update the pinned registration. No private package registry is required.
@@ -133,9 +144,9 @@ This is defense in depth for **approved code**, not a complete hostile-code cont
 
 ## Host-controlled tool themes
 
-Registered bundles must support both host themes. Open Tools sets `html[data-theme="light" | "dark"]` and `color-scheme` before tool scripts run. It supplies host-priority color tokens `--ot-bg`, `--ot-surface`, `--ot-text`, `--ot-muted`, `--ot-border`, `--ot-accent`, `--ot-on-accent`, `--ot-shadow` and `--ot-highlight`; the last two are colors, not whole shadow declarations. Style tool surfaces through these tokens and/or explicit `[data-theme]` rules. The host protects those token defaults with CSS priority. Do not override the host with an independent stored preference.
+Registered bundles must support both host themes. trick-it sets `html[data-theme="light" | "dark"]` and `color-scheme` before tool scripts run. It supplies host-priority color tokens `--ot-bg`, `--ot-surface`, `--ot-text`, `--ot-muted`, `--ot-border`, `--ot-accent`, `--ot-on-accent`, `--ot-shadow` and `--ot-highlight`; the last two are colors, not whole shadow declarations. Style tool surfaces through these tokens and/or explicit `[data-theme]` rules. The host protects those token defaults with CSS priority. Do not override the host with an independent stored preference.
 
-On a host theme change, Open Tools sends `{ type: "open-tools:theme", version: 1, theme: "light" | "dark" }` directly to its iframe. The host-owned receiver checks `event.source === parent` and validates every protocol field. It changes the root theme without reloading the frame or losing input/output. An opaque frame requires `targetOrigin: "*"`; this is a one-way theme-only channel, never a channel for user data. Sandbox permissions remain `allow-scripts` only.
+On a host theme change, trick-it sends `{ type: "open-tools:theme", version: 1, theme: "light" | "dark" }` directly to its iframe. The host-owned receiver checks `event.source === parent` and validates every protocol field. It changes the root theme without reloading the frame or losing input/output. An opaque frame requires `targetOrigin: "*"`; this legacy theme channel never carries user data. The separate v3 capability channel validates frame source, random session token, request ID and declared/granted permission before acting; sensitive operations require a host confirmation. Sandbox flags remain `allow-scripts` only, while WebAssembly and blob workers are conditional CSP grants.
 
 The first tool release, JSON Tools v0.2.0, implements this contract and has browser regressions for both modes, persistence, denied storage, and input/output preservation. Custom bundle markup still needs visual review: declaring a theme cannot make an arbitrary hardcoded design compliant automatically. Do not register a tool that ignores the host theme.
 

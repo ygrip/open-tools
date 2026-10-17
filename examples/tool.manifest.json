@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 3,
+  "runtimeVersion": 1,
+  "appearance": { "theme": "host", "protocolVersion": 1 },
+  "id": "text-counter",
+  "name": "Text Counter",
+  "description": "Count Unicode code points locally in your browser.",
+  "path": "/text-counter",
+  "category": "productivity",
+  "repository": "https://github.com/ygrip/text-counter",
+  "version": "0.1.0",
+  "status": "experimental",
+  "capabilities": ["text", "counting"],
+  "icon": "braces",
+  "seo": {
+    "title": "Text Counter",
+    "description": "Count Unicode code points without sending your text to a server.",
+    "keywords": ["text", "Unicode", "counter"],
+    "robots": "index"
+  },
+  "guide": {
+    "summary": "This local-only tool does not need extra permissions.",
+    "steps": ["Enter text.", "Review the character count.", "Clear the input when finished."]
+  },
+  "permissions": [],
+  "assets": [],
+  "translations": {},
+  "bundle": {
+    "format": "html",
+    "file": "dist/index.html",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  }
+}

@@ -44,7 +44,7 @@ const stage = await mkdtemp(resolve(root, 'static/.bundles-'));
 try {
   for (const { manifest, html } of loaded) {
     await mkdir(resolve(stage, manifest.id));
-    await writeFile(resolve(stage, manifest.id, `${manifest.bundle.sha256}.json`), JSON.stringify({ html }));
+    await writeFile(resolve(stage, manifest.id, `${manifest.bundle.sha256}.json`), JSON.stringify({ id: manifest.id, version: manifest.version, sha256: manifest.bundle.sha256, html }).replaceAll('<', '\\u003c'));
   }
   await rm(resolve(root, 'static/bundles'), { recursive: true, force: true });
   await rename(stage, resolve(root, 'static/bundles'));

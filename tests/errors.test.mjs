@@ -29,7 +29,10 @@ test('client and server error hooks never expose raw exceptions, stacks, or secr
   console.error = (...args) => diagnostics.push(args);
   try {
     for (const kind of ['client', 'server']) {
-      const source = (await readFile(new URL(`../src/hooks.${kind}.ts`, import.meta.url), 'utf8')).replace("from '$lib/errors'", `from '${errorsUrl}'`);
+      const source = (await readFile(new URL(`../src/hooks.${kind}.ts`, import.meta.url), 'utf8'))
+        .replace("from '$lib/errors'", `from '${errorsUrl}'`)
+        .replace("from '$lib/paraglide/server.js'", `from '${moduleUrl("export const paraglideMiddleware = (request, callback) => callback({ request, locale: 'en' });")}'`)
+        .replace("from '$lib/paraglide/runtime.js'", `from '${moduleUrl("export const getTextDirection = () => 'ltr';")}'`);
       const { handleError } = await import(moduleUrl(source));
       const result = handleError({ error: new Error('private-key-and-token-never-public'), status: 500, event: {}, message: 'unsafe original message' });
       assert.match(result.incidentId, /^[a-f0-9-]{36}$/);
@@ -45,7 +48,12 @@ test('client and server error hooks never expose raw exceptions, stacks, or secr
 
 test('server error responses retain their status and body and cannot be cached', async () => {
   const source = (await readFile(new URL('../src/hooks.server.ts', import.meta.url), 'utf8')).replace("from '$lib/errors'", `from '${errorsUrl}'`);
-  const { handle } = await import(moduleUrl(source));
+  const middlewareUrl = moduleUrl(`export const paraglideMiddleware = (request, callback) => callback({ request, locale: 'en' });`);
+  const runtimeUrl = moduleUrl(`export const getTextDirection = () => 'ltr';`);
+  const wrapped = source
+    .replace("from '$lib/paraglide/server.js'", `from '${middlewareUrl}'`)
+    .replace("from '$lib/paraglide/runtime.js'", `from '${runtimeUrl}'`);
+  const { handle } = await import(moduleUrl(wrapped));
   for (const status of [404, 500, 503]) {
     const result = await handle({ event: {}, resolve: async () => new Response('safe error page', { status, headers: { 'cache-control': 'public, max-age=3600', 'x-preserved': 'yes' } }) });
     assert.equal(result.status, status);

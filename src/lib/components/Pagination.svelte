@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '$lib/components/Icon.svelte';
+  import { m } from '$lib/paraglide/messages.js';
   import { getPagination } from '$lib/pagination.js';
 
   let { totalItems, pageSize, currentPage, onPageChange }: {
@@ -13,24 +14,24 @@
 </script>
 
 {#if totalItems > 0}
-  <nav class="pagination" aria-label="Tool list pages">
-    <p class="range" role="status">Showing {pagination.start}–{pagination.end} of {totalItems} {totalItems === 1 ? 'tool' : 'tools'}</p>
+  <nav class="pagination" aria-label={m.pagination_label()}>
+    <p class="range" role="status">{m.pagination_showing()} {pagination.start}–{pagination.end} {m.pagination_of()} {totalItems} {totalItems === 1 ? m.pagination_tool() : m.pagination_tools()}</p>
     <div class="page-controls">
-      <button class="clay-button direction" type="button" aria-label="Previous tool page" disabled={!pagination.hasPrevious} onclick={() => onPageChange(pagination.page - 1)}>
-        <Icon name="arrow-left" size={18} /><span>Previous</span>
+      <button class="clay-button direction" type="button" aria-label={m.pagination_previous_page()} disabled={!pagination.hasPrevious} onclick={() => onPageChange(pagination.page - 1)}>
+        <Icon name="arrow-left" size={18} /><span>{m.pagination_previous()}</span>
       </button>
       <div class="page-numbers">
         {#each pagination.pages as number, index (typeof number === 'number' ? number : `ellipsis-${index}`)}
           {#if number === 'ellipsis'}
             <span class="ellipsis" aria-hidden="true">…</span>
           {:else}
-            <button class="clay-button page-number" class:current={number === pagination.page} type="button" aria-label={`Page ${number}`} aria-current={number === pagination.page ? 'page' : undefined} onclick={() => onPageChange(number)}>{number}</button>
+            <button class="clay-button page-number" class:current={number === pagination.page} type="button" aria-label={`${m.pagination_page()} ${number}`} aria-current={number === pagination.page ? 'page' : undefined} onclick={() => onPageChange(number)}>{number}</button>
           {/if}
         {/each}
       </div>
-      <span class="compact-page">Page {pagination.page} of {pagination.totalPages}</span>
-      <button class="clay-button direction" type="button" aria-label="Next tool page" disabled={!pagination.hasNext} onclick={() => onPageChange(pagination.page + 1)}>
-        <span>Next</span><Icon name="arrow-right" size={18} />
+      <span class="compact-page">{m.pagination_page()} {pagination.page} {m.pagination_of()} {pagination.totalPages}</span>
+      <button class="clay-button direction" type="button" aria-label={m.pagination_next_page()} disabled={!pagination.hasNext} onclick={() => onPageChange(pagination.page + 1)}>
+        <span>{m.pagination_next()}</span><Icon name="arrow-right" size={18} />
       </button>
     </div>
   </nav>

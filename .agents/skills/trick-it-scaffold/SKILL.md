@@ -1,9 +1,9 @@
 ---
-name: open-tools-scaffold
-description: Scaffold a new independent browser tool, migrate it to the Open Tools v2 host-theme contract, publish its self-contained HTML release, or register/update its pinned source in the Open Tools catalog. Use for requests such as create a tool, scaffold another tool, add a tool repository, register a private tool, or release a new tool version.
+name: trick-it-scaffold
+description: Scaffold a new independent browser tool, migrate it to the trick-it v3 metadata/runtime contract, publish its self-contained HTML release, or register/update its pinned source in the trick-it catalog. Use for requests such as create a tool, scaffold another tool, add a tool repository, register a private tool, or release a new tool version.
 ---
 
-# Open Tools tool scaffolding
+# trick-it tool scaffolding
 
 Read the project recipe at [docs/scaffold-tool.md](../../../docs/scaffold-tool.md) **from the repository root**. Relative to this skill directory, that file is `../../../docs/scaffold-tool.md`. It contains copyable dependency-free HTML, Node builder, manifest and artifact-test examples; no scaffolding CLI is assumed.
 
@@ -16,9 +16,9 @@ Read the project recipe at [docs/scaffold-tool.md](../../../docs/scaffold-tool.m
 ## Build the tool
 
 - Start with the minimal recipe in the guide or the existing JSON Tools builder for larger dependency-bundled tools. Adapt behavior, labels and limitations to the requested operation; do not ship an unchanged counter under another name.
-- Release one self-contained UTF-8 HTML document, including inline scripts/styles/assets, plus `tool.manifest.json`. No external runtime requests, secrets, telemetry, CDN dependencies, unsafe evaluation, parent-DOM access, storage or clipboard permissions. Do not weaken CSP or add `allow-same-origin`.
-- Support the site's clay styling and both themes. Consume the root `--ot-*` tokens; add `[data-theme="dark"]` rules for any custom colors. The host injects the root theme and its validated, one-way theme receiver. Do not duplicate that receiver, introduce a competing theme toggle/preference, or reload and lose user input on theme changes. Never send user data to the parent.
-- Require `schemaVersion: 2` and `appearance: { theme: "host", protocolVersion: 1 }`. The metadata path is exactly `/<id>` without a trailing slash, even though the public route is `/<id>/`.
+- Release one self-contained UTF-8 HTML document, including inline scripts/styles/assets, plus `tool.manifest.json`. No direct iframe network requests, secrets, telemetry, unsafe JavaScript evaluation, parent-DOM access or ambient browser privileges. Public external assets must be declared with approved origin, exact size and SHA-256; fetch verified bytes through `window.trickIt.asset(id)` only after host consent. Declare supported capabilities with truthful reasons and use the host request broker; never call privileged parent APIs or add `allow-same-origin`. WASM compilation and blob workers are conditional grants, not blanket JavaScript eval or network access.
+- Support trick-it's clay styling, English/Indonesian presentation, and both themes. Use `document.documentElement.lang`/`window.trickIt.locale` and listen for `trick-it:localechange`; do not clear input on locale changes. Consume the root `--ot-*` tokens; add `[data-theme="dark"]` rules for any custom colors. The host injects the root theme and its validated, one-way theme receiver. Do not duplicate that receiver, introduce a competing theme toggle/preference, or reload and lose user input on theme changes. Never send user data to the parent.
+- Require `schemaVersion: 3`, `runtimeVersion: 1` and `appearance: { theme: "host", protocolVersion: 1 }`. Include icon, version, SEO, guide, permissions, assets and optional EN/ID metadata translations. Declare actual interface support in `locales` (default English only); set `["en", "id"]` only when the tool translates both interfaces. Read `docs/tool-contract-v3.md`, `docs/tool-runtime.md` and `docs/seo.md`. Legacy v2 tools remain supported without privileged capabilities. The metadata path is exactly `/<id>` without a trailing slash, even though the public route is `/<id>/`.
 - Respect reserved IDs and all current contract limits. Keep human-facing metadata truthful. `repository` must match the registered `https://github.com/owner/repository`; `bundle.file` is a safe relative `.html` path. Update SHA-256 from the **exact final HTML bytes** after each build, not before minification or newline changes. Never leave the placeholder digest in a release.
 - Keep the bundle below the 5 MiB hard limit and the stricter current 90,000 gzip-byte tool budget. Add input limits, errors that preserve user input, keyboard access, visible focus, 44px targets and reduced-motion support where applicable. Synchronous CPU-heavy code can freeze an iframe/tab; the sandbox is not a CPU isolation guarantee.
 
