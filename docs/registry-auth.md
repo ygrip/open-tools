@@ -2,6 +2,62 @@
 
 Open Tools resolves GitHub credentials **during registry sync/build**, separately for every repository. Registering a repository does not expose a token to that tool or its browser bundle. Public catalog metadata still includes the repository URL, even if its source is private.
 
+
+## Multi-owner CI and private tool permissions
+
+The host can register public repositories without authentication, or private
+repositories when an approved owner grants read access. GitHub Actions' default
+`GITHUB_TOKEN` only covers `trick-it`, not other private repositories. This
+explains the current CI 404s for the four private `ygrip` sources.
+
+**One global token is optional, not required.** The registry preflight,
+synchronizer and build all use the same repository-aware credential resolver:
+
+- For the four private `ygrip/*` sources, a fine-grained token selected for
+  those repositories with Contents: read can be supplied as `TOOLS_GITHUB_TOKEN`.
+- A different user or organization can use its own entry in
+  `auth.owners` with `tokenEnv`, or an override in `auth.repositories`.
+- For an expanding marketplace, prefer a GitHub App with Contents: read,
+  installed on each consenting user/org's selected repositories. Each
+  owner gets its own `installationId` and short-lived installation token.
+- Public sources do not need any credential, though owner approval and
+  an explicit immutable registration are still required.
+
+Example: register `alice/text-cleaner` through its own
+`config/tools/text-cleaner.json` pinned to a full 40-character SHA, then add
+`alice` to `trustedOwners` in `config/registry.json` and map its credential:
+
+```json
+{
+  "trustedOwners": ["ygrip", "alice", "acme"],
+  "discovery": false,
+  "toolDirectory": "config/tools",
+  "auth": {
+    "owners": {
+      "alice": { "tokenEnv": "TOOLS_PARTNER_TOKEN" },
+      "acme": {
+        "appIdEnv": "TOOLS_APP_ID",
+        "privateKeyEnv": "TOOLS_APP_PRIVATE_KEY",
+        "installationId": 123456
+      }
+    }
+  }
+}
+```
+
+The GitHub Actions workflow exposes the optional repository secrets
+`TOOLS_GITHUB_TOKEN`, `TOOLS_PARTNER_TOKEN`, `TOOLS_APP_ID` and
+`TOOLS_APP_PRIVATE_KEY` to all three build phases. For an additional
+PAT-backed owner, add its secret environment mapping to each workflow step.
+App-backed owners only need their installation configuration; reuse the same
+App credentials, with a distinct installation ID per approved owner.
+
+Set required secret values under **trick-it → Settings → Secrets and variables
+→ Actions**. The preflight now validates each source independently rather
+than demanding one global token. A 404 may mean missing private-repository
+permission, an invalid SHA or missing manifest. It fails closed and does not
+publish an incomplete catalog. Tokens never enter generated browser files.
+
 ## Credential precedence
 
 1. `auth.repositories["owner/repository"]`
