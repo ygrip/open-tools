@@ -2,6 +2,21 @@
 
 A static SvelteKit aggregator for independent browser tools. Each registered tool is a **versioned bundle plus a manifest contract**, not an imported source repository. Tool repositories may be private; their released browser bundles and catalog metadata are public.
 
+## Screenshots
+
+Full-page desktop captures at 1440px wide from the production preview.
+
+### Light mode
+
+![Open Tools homepage in light mode, with a clay toolbox illustration and bento-style tool catalog](docs/screenshots/open-tools-light.png)
+
+<details>
+<summary>Dark mode</summary>
+
+![Open Tools homepage in dark mode, with the same clay illustration and dark bento cards](docs/screenshots/open-tools-dark.png)
+
+</details>
+
 ## Run
 
 Requires Node.js 22+.
