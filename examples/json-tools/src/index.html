@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JSON Tools</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: ui-rounded, "SF Pro Rounded", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+      --ot-bg: #f8f2e8; --ot-surface: #fffaf1; --ot-text: #43372f; --ot-muted: #72635a;
+      --ot-border: #e2d5c4; --ot-accent: #f4a180; --ot-on-accent: #45261c;
+      --ot-shadow: rgba(119, 85, 59, .16); --ot-highlight: rgba(255, 255, 255, .85);
+      --editor-bg: #fffdf9; --mint-bg: #e1efdf; --mint-text: #395e4a;
+      --lilac-bg: #eee5f6; --lilac-text: #655080; --error: #a33e30;
+      color: var(--ot-text); background: var(--ot-bg); font-synthesis: none;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --ot-bg: #202729; --ot-surface: #2c3436; --ot-text: #f5ede4; --ot-muted: #c0b2a6;
+      --ot-border: #4e5755; --ot-accent: #eab18c; --ot-on-accent: #39241c;
+      --ot-shadow: rgba(0, 0, 0, .3); --ot-highlight: rgba(255, 255, 255, .07);
+      --editor-bg: #252e30; --mint-bg: #344b44; --mint-text: #c2decb;
+      --lilac-bg: #443e53; --lilac-text: #e0d0f1; --error: #ffb5a6;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) {
+        color-scheme: dark;
+        --ot-bg: #202729; --ot-surface: #2c3436; --ot-text: #f5ede4; --ot-muted: #c0b2a6;
+        --ot-border: #4e5755; --ot-accent: #eab18c; --ot-on-accent: #39241c;
+        --ot-shadow: rgba(0, 0, 0, .3); --ot-highlight: rgba(255, 255, 255, .07);
+        --editor-bg: #252e30; --mint-bg: #344b44; --mint-text: #c2decb;
+        --lilac-bg: #443e53; --lilac-text: #e0d0f1; --error: #ffb5a6;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: clamp(14px, 3vw, 28px); }
+    main { max-width: 1240px; margin: auto; }
+    svg { display: block; width: 20px; height: 20px; flex: none; }
+    .workspace-intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+    .intro-copy { min-width: 0; }
+    .eyebrow { display: flex; align-items: center; gap: 8px; color: var(--ot-muted); font-size: 12px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 8px; }
+    .eyebrow svg { width: 16px; height: 16px; }
+    h1 { font-size: clamp(24px, 3.5vw, 34px); line-height: 1.15; margin: 0 0 10px; letter-spacing: -.045em; }
+    p { color: var(--ot-muted); line-height: 1.65; margin: 0; }
+    .intro-copy > p:last-child { max-width: 56ch; font-size: 15px; }
+    .local-badge { flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 11px 14px; border: 1px solid var(--ot-border); border-radius: 18px; background: var(--mint-bg); color: var(--mint-text); font-size: 12px; font-weight: 700; box-shadow: inset 0 2px 1px var(--ot-highlight), 0 4px 0 var(--ot-shadow); }
+    .local-badge svg { width: 17px; height: 17px; }
+    .clay-card { border: 1px solid var(--ot-border); border-radius: 25px; background: var(--ot-surface); box-shadow: inset 0 2px 1px var(--ot-highlight), 0 6px 0 var(--ot-shadow), 0 12px 24px -18px var(--ot-shadow); }
+    label { display: block; font-size: 13px; font-weight: 750; margin-bottom: 9px; }
+    button, select, input, textarea { font: inherit; color: inherit; border: 1px solid var(--ot-border); }
+    button, select, input { min-height: 46px; padding: 11px 15px; }
+    button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 16px; background: var(--ot-surface); box-shadow: inset 0 2px 1px var(--ot-highlight), 0 4px 0 var(--ot-shadow); font-size: 13px; font-weight: 750; cursor: pointer; touch-action: manipulation; transition: transform 160ms cubic-bezier(.2,.8,.2,1); }
+    @media (hover: hover) and (pointer: fine) { button:hover:not(:disabled) { transform: translateY(-2px); } }
+    button:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 2px var(--ot-shadow), 0 1px 0 var(--ot-shadow); }
+    button:disabled { cursor: wait; opacity: .65; }
+    button svg { width: 17px; height: 17px; }
+    :focus-visible { outline: 3px solid var(--ot-text); outline-offset: 4px; }
+    .toolbar-card { padding: 20px; margin-bottom: 24px; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
+    .operation { flex: 1 1 220px; }
+    .query { flex: 1.5 1 260px; min-width: 0; }
+    select, input { width: 100%; background: var(--editor-bg); border-radius: 15px; box-shadow: inset 0 2px 4px var(--ot-shadow); font-size: 14px; }
+    select { cursor: pointer; }
+    input { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; padding-bottom: 1px; }
+    .primary { background: var(--ot-accent); color: var(--ot-on-accent); border-color: transparent; min-width: 98px; }
+    .example-button { background: var(--lilac-bg); color: var(--lilac-text); }
+    .editors { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; }
+    .editor { min-width: 0; padding: 16px; }
+    .editor-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; min-height: 46px; }
+    .editor-title { display: flex; align-items: center; gap: 10px; }
+    .step { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 12px; background: var(--lilac-bg); color: var(--lilac-text); font-size: 12px; font-weight: 800; box-shadow: inset 0 2px 1px var(--ot-highlight), 0 3px 0 var(--ot-shadow); }
+    .output-editor .step { background: var(--mint-bg); color: var(--mint-text); }
+    .editor-header label { font-size: 15px; margin: 0 0 3px; }
+    .editor-hint { color: var(--ot-muted); font-size: 12px; }
+    #select-output { padding-inline: 12px; min-height: 44px; border-radius: 14px; font-size: 12px; }
+    textarea { display: block; width: 100%; min-height: 300px; height: 40vh; resize: vertical; padding: 18px; border-radius: 17px; background: var(--editor-bg); box-shadow: inset 0 2px 6px var(--ot-shadow); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; line-height: 1.75; font-size: 14px; tab-size: 2; white-space: pre; }
+    textarea::placeholder { color: var(--ot-muted); opacity: 1; }
+    .note { font-size: 12px; line-height: 1.7; }
+    #query-help { padding-top: 16px; max-width: 80ch; }
+    .status-row { display: flex; align-items: flex-start; gap: 10px; margin: 22px 2px 15px; min-height: 26px; }
+    .status-row > svg { width: 18px; height: 18px; margin-top: 2px; color: var(--mint-text); }
+    #status { color: var(--ot-muted); font-size: 13px; overflow-wrap: anywhere; }
+    #status.error { color: var(--error); font-weight: 650; }
+    .fine-print { padding: 16px 18px; border: 1px dashed var(--ot-border); border-radius: 17px; }
+    .fine-print strong { color: var(--ot-text); }
+    [hidden] { display: none !important; }
+    @media (max-width: 780px) {
+      .workspace-intro { align-items: flex-start; gap: 16px; }
+      .local-badge { padding: 10px; }
+      .local-badge span { display: none; }
+      .toolbar-card { padding: 16px; }
+      .actions { width: 100%; }
+      .actions button { flex: 1; }
+      .editors { grid-template-columns: 1fr; gap: 20px; }
+      textarea { min-height: 240px; height: 34vh; }
+      .editor { padding: 14px; }
+    }
+    @media (max-width: 380px) {
+      .editor-header { flex-wrap: wrap; }
+      #select-output { margin-left: auto; }
+      .actions { gap: 8px; }
+      .actions button { padding-inline: 10px; }
+      .actions button svg { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      button { transition: none; }
+      button:hover:not(:disabled), button:active:not(:disabled) { transform: none; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header class="workspace-intro">
+    <div class="intro-copy">
+      <p class="eyebrow"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 4C5 4 6 9 3 12c3 3 2 8 5 8m8-16c3 0 2 5 5 8-3 3-2 8-5 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Your JSON workbench</p>
+      <h1>JSON Tools</h1>
+      <p>A little less tangled, a lot more readable. Format, find, and transform your data right here.</p>
+    </div>
+    <span class="local-badge" title="Your data stays in this browser frame"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="4" stroke="currentColor" stroke-width="1.8"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Browser-only processing</span></span>
+  </header>
+  <div id="tool-form">
+    <section class="toolbar-card clay-card" aria-label="Choose an operation">
+      <div class="toolbar">
+        <div class="operation">
+          <label for="operation">Operation</label>
+          <select id="operation" name="operation">
+            <option value="pretty">Pretty-print JSON</option>
+            <option value="query">JSONPath query</option>
+            <option value="json-to-xml">JSON to XML</option>
+            <option value="xml-to-json">XML to JSON</option>
+          </select>
+        </div>
+        <div class="query" id="query-field" hidden>
+          <label for="query">JSONPath expression</label>
+          <input id="query" value="$.items[*].name" spellcheck="false" autocomplete="off" aria-describedby="query-help" maxlength="2048">
+        </div>
+        <div class="actions">
+          <button type="button" id="run" class="primary"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 5 10 7-10 7z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Run</button>
+          <button type="button" id="example" class="example-button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Load example</button>
+          <button type="button" id="clear"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 4 5 5-10 11H5l-3-4zM9 10l7 7m-6 3h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Clear</button>
+        </div>
+      </div>
+      <p class="note" id="query-help" hidden>Try <code>$.items[*].name</code> to pick every item name. Property, index, slice, wildcard, and recursive selectors work here; script and filter evaluation stay off.</p>
+    </section>
+    <div class="editors">
+      <section class="editor clay-card" aria-labelledby="input-label">
+        <div class="editor-header">
+          <div class="editor-title"><span class="step" aria-hidden="true">01</span><div><label id="input-label" for="input">Input</label><span class="editor-hint">Your starting point</span></div></div>
+        </div>
+        <textarea id="input" spellcheck="false" placeholder="Paste JSON here" aria-describedby="limits" maxlength="1000000"></textarea>
+      </section>
+      <section class="editor output-editor clay-card" aria-labelledby="output-label">
+        <div class="editor-header">
+          <div class="editor-title"><span class="step" aria-hidden="true">02</span><div><label id="output-label" for="output">Output</label><span class="editor-hint">Ready for the next step</span></div></div>
+          <button id="select-output" type="button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M15 8V6a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3v7a3 3 0 0 0 3 3h2" stroke="currentColor" stroke-width="1.8"/></svg>Select output</button>
+        </div>
+        <textarea id="output" spellcheck="false" readonly placeholder="Your result will appear here. No mystery, just data."></textarea>
+      </section>
+    </div>
+  </div>
+  <div class="status-row"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="m8 12 3 3 5-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><p id="status" role="status" aria-live="polite">Paste your data, choose a task, and press Run. Just exploring? Load an example.</p></div>
+  <p class="note fine-print" id="limits"><strong>A few useful details.</strong> Your data stays in this frame. Input is limited to 1,000,000 characters. JSON to XML adds a &lt;root&gt; element; XML text and attribute values remain strings. Numbers use JavaScript floating-point precision; unsafe integers are rejected. Use strings for exact decimals and large integers.</p>
+</main>
+<script>/* BUNDLE_SCRIPT */</script>
+</body>
+</html>

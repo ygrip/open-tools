@@ -1,0 +1,46 @@
+name: Verify registry and bundles
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 2 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tool-registry-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm ci && npm test && npm run build
+        working-directory: examples/json-tools
+      - name: Fetch approved bundles
+        env:
+          TOOLS_GITHUB_TOKEN: ${{ secrets.TOOLS_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run registry:sync
+      - run: npm test && npm run check
+      - name: Build static aggregator
+        env:
+          TOOLS_GITHUB_TOKEN: ${{ secrets.TOOLS_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run build
+      - run: npm run performance:check
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: open-tools-site
+          path: build/

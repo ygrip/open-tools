@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" role="img" aria-labelledby="ot-favicon-title">
+  <title id="ot-favicon-title">Open Tools</title>
+  <defs><linearGradient id="ot-favicon-body" x1="10" y1="13" x2="39" y2="44" gradientUnits="userSpaceOnUse"><stop stop-color="#FFC67E"/><stop offset="1" stop-color="#EF813F"/></linearGradient></defs>
+  <path d="M16 16v-4c0-4 3-7 7-7h2c4 0 7 3 7 7v4h-5v-4c0-1-1-2-2-2h-2c-1 0-2 1-2 2v4z" fill="#D9753A"/>
+  <rect x="4" y="14" width="40" height="29" rx="11" fill="#C86334"/>
+  <rect x="4" y="12" width="40" height="29" rx="11" fill="url(#ot-favicon-body)"/>
+  <path d="M5 23c0-7 3-11 11-11h16c8 0 11 4 11 11z" fill="#FFD99D"/>
+  <rect x="20" y="20" width="8" height="8" rx="3" fill="#FFF2D3"/>
+  <path d="M15 30v1m18-1v1" stroke="#563429" stroke-width="3" stroke-linecap="round"/>
+  <path d="M21 34c2 2 4 2 6 0" stroke="#563429" stroke-width="2" stroke-linecap="round"/>
+</svg>

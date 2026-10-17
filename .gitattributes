@@ -1,0 +1,2 @@
+# Preserve upstream project-skill snapshots, including their trailing blank lines.
+.agents/skills/** whitespace=-blank-at-eof

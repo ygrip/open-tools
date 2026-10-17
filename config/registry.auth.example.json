@@ -1,0 +1,32 @@
+{
+  "trustedOwners": ["ygrip", "example-org"],
+  "topic": "open-tools",
+  "discovery": false,
+  "sources": [
+    {
+      "repository": "ygrip/json-tools",
+      "ref": "0000000000000000000000000000000000000000"
+    },
+    {
+      "repository": "example-org/private-tool",
+      "ref": "0000000000000000000000000000000000000000"
+    },
+    {
+      "repository": "example-org/another-private-tool",
+      "ref": "0000000000000000000000000000000000000000"
+    }
+  ],
+  "auth": {
+    "owners": {
+      "ygrip": { "tokenEnv": "TOOLS_YGRIP_TOKEN" },
+      "example-org": {
+        "appIdEnv": "TOOLS_APP_ID",
+        "privateKeyEnv": "TOOLS_APP_PRIVATE_KEY",
+        "installationId": 123456
+      }
+    },
+    "repositories": {
+      "example-org/private-tool": { "tokenEnv": "TOOLS_SPECIAL_TOKEN" }
+    }
+  }
+}

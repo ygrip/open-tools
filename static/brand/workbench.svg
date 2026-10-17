@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="520" viewBox="0 0 640 520" fill="none" role="img" aria-labelledby="ot-scene-title ot-scene-desc">
+  <title id="ot-scene-title">A little help from your toolbox</title>
+  <desc id="ot-scene-desc">A smiling orange clay toolbox waves beside mint data tiles, a lavender code card and a chunky magnifying glass.</desc>
+  <defs>
+    <linearGradient id="ot-scene-body" x1="232" y1="248" x2="470" y2="423" gradientUnits="userSpaceOnUse"><stop stop-color="#FFC37F"/><stop offset=".48" stop-color="#FFA15A"/><stop offset="1" stop-color="#E47B43"/></linearGradient>
+    <linearGradient id="ot-scene-lid" x1="225" y1="207" x2="442" y2="286" gradientUnits="userSpaceOnUse"><stop stop-color="#FFE9BC"/><stop offset=".5" stop-color="#FFD090"/><stop offset="1" stop-color="#F5A55C"/></linearGradient>
+    <linearGradient id="ot-scene-handle" x1="290" y1="144" x2="363" y2="223" gradientUnits="userSpaceOnUse"><stop stop-color="#FFD18C"/><stop offset="1" stop-color="#DC7D42"/></linearGradient>
+    <linearGradient id="ot-scene-mint" x1="53" y1="259" x2="176" y2="363" gradientUnits="userSpaceOnUse"><stop stop-color="#D6F1D9"/><stop offset=".5" stop-color="#B2DCC8"/><stop offset="1" stop-color="#80BAA8"/></linearGradient>
+    <linearGradient id="ot-scene-lilac" x1="427" y1="92" x2="532" y2="200" gradientUnits="userSpaceOnUse"><stop stop-color="#E7DDFC"/><stop offset=".5" stop-color="#C6B5EF"/><stop offset="1" stop-color="#A18ACA"/></linearGradient>
+    <linearGradient id="ot-scene-glass" x1="471" y1="328" x2="545" y2="409" gradientUnits="userSpaceOnUse"><stop stop-color="#E8F2EA"/><stop offset="1" stop-color="#B5D9D0"/></linearGradient>
+    <linearGradient id="ot-scene-cream" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFF5DF"/><stop offset="1" stop-color="#EBD8B9"/></linearGradient>
+    <linearGradient id="ot-scene-shadow" x1="88" y1="448" x2="561" y2="448" gradientUnits="userSpaceOnUse"><stop stop-color="#675045" stop-opacity="0"/><stop offset=".3" stop-color="#675045" stop-opacity=".13"/><stop offset=".7" stop-color="#675045" stop-opacity=".13"/><stop offset="1" stop-color="#675045" stop-opacity="0"/></linearGradient>
+  </defs>
+
+  <!-- Quiet atmosphere stays translucent on both host themes. -->
+  <path d="M139 213c-9-78 71-140 164-132 66-35 166-4 198 65 81 40 83 166 9 218-46 89-215 104-280 61-108 3-148-119-91-212z" fill="#E9CBA8" opacity=".1"/>
+  <ellipse cx="328" cy="456" rx="245" ry="22" fill="url(#ot-scene-shadow)"/>
+  <ellipse cx="330" cy="450" rx="145" ry="12" fill="#624437" opacity=".08"/>
+
+  <!-- A small code tile, lifted at the back of the workbench. -->
+  <g transform="rotate(12 482 150)">
+    <rect x="421" y="93" width="123" height="123" rx="31" fill="#8972B1" opacity=".42"/>
+    <rect x="421" y="86" width="123" height="123" rx="31" fill="url(#ot-scene-lilac)"/>
+    <path d="M436 116c1-9 7-15 17-16h46" stroke="#F7F0FF" stroke-width="5" stroke-linecap="round" opacity=".65"/>
+    <path d="M459 123c-10 0-11 7-11 14v5c0 4-3 7-8 8 5 1 8 4 8 8v6c0 7 1 13 11 13m47-54c10 0 11 7 11 14v5c0 4 3 7 8 8-5 1-8 4-8 8v6c0 7-1 13-11 13" stroke="#7C659F" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M459 121c-10 0-11 7-11 14v5c0 4-3 7-8 8 5 1 8 4 8 8v6c0 7 1 13 11 13m47-54c10 0 11 7 11 14v5c0 4 3 7 8 8-5 1-8 4-8 8v6c0 7-1 13-11 13" stroke="#FFF7EA" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="483" cy="148" r="4" fill="#927DB4"/>
+  </g>
+
+  <!-- Mint data tiles: soft layered blocks, not a second active UI. -->
+  <g transform="rotate(-12 133 333)">
+    <ellipse cx="125" cy="412" rx="68" ry="11" fill="#546B5B" opacity=".1"/>
+    <rect x="63" y="328" width="126" height="72" rx="22" fill="#70A68F"/>
+    <rect x="63" y="320" width="126" height="72" rx="22" fill="#9ECDB6"/>
+    <rect x="59" y="301" width="126" height="72" rx="22" fill="#82B59F"/>
+    <rect x="59" y="293" width="126" height="72" rx="22" fill="#B4DDC7"/>
+    <rect x="55" y="274" width="126" height="72" rx="22" fill="#9AC6B2"/>
+    <rect x="55" y="266" width="126" height="72" rx="22" fill="url(#ot-scene-mint)"/>
+    <path d="M68 287c2-5 6-8 13-8h52" stroke="#F1FFF0" stroke-width="4" stroke-linecap="round" opacity=".8"/>
+    <rect x="73" y="292" width="23" height="23" rx="8" fill="#F3F8DB"/>
+    <path d="m80 303 4 4 6-8" stroke="#659881" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M109 298h49m-49 13h31" stroke="#649C85" stroke-width="5" stroke-linecap="round" opacity=".7"/>
+    <path d="M78 352h33m-30 27h32" stroke="#E0F2DA" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+  </g>
+
+  <!-- Tiny warm limbs sit behind the toolbox body. -->
+  <path d="M231 300c-39 3-53-6-63-29" stroke="#D37F48" stroke-width="18" stroke-linecap="round"/>
+  <path d="M229 295c-37 3-48-6-57-28" stroke="#FFBE7A" stroke-width="17" stroke-linecap="round"/>
+  <path d="M174 275c-10 5-17 1-21-7l-8-17c-2-4 0-8 4-9 4-1 7 2 9 6l3 5-3-18c-1-5 2-8 6-8 5 0 7 4 8 9l3 14 3-8c2-5 5-7 9-5s4 6 2 10l-5 17c-2 5-5 9-10 11z" fill="#E5CCAB"/>
+  <path d="M174 270c-10 5-16 1-20-7l-7-15c-2-4 0-7 3-8s6 2 8 6l3 5-2-18c-1-4 1-7 5-7s6 3 7 8l3 14 3-8c2-4 5-6 8-4s4 5 2 9l-5 16c-1 4-4 7-8 9z" fill="url(#ot-scene-cream)"/>
+  <path d="M456 302c23 7 38 25 34 48" stroke="#D67D45" stroke-width="20" stroke-linecap="round"/>
+  <path d="M456 298c23 7 34 24 31 45" stroke="#FFB16B" stroke-width="17" stroke-linecap="round"/>
+
+  <!-- Handle with a genuine open center. -->
+  <path d="M280 211v-30c0-31 21-49 50-49h8c29 0 50 18 50 49v30h-27v-29c0-14-9-23-23-23h-8c-14 0-23 9-23 23v29z" fill="#BA683B"/>
+  <path d="M278 205v-29c0-31 21-49 50-49h8c29 0 50 18 50 49v29h-27v-28c0-14-9-23-23-23h-8c-14 0-23 9-23 23v28z" fill="url(#ot-scene-handle)"/>
+  <path d="M286 173c2-24 18-36 40-37h9" stroke="#FFE3AE" stroke-width="6" stroke-linecap="round" opacity=".8"/>
+  <path d="M369 174v21" stroke="#B66A3D" stroke-width="5" stroke-linecap="round" opacity=".22"/>
+
+  <!-- Little boots peek from the broad, rounded body. -->
+  <path d="m279 418-5 16m115-16 5 16" stroke="#BB7348" stroke-width="15" stroke-linecap="round"/>
+  <path d="M271 427c-17-1-29 5-30 13-1 9 9 13 25 12l25-2c8-1 10-7 7-13-4-7-14-10-27-10zm121 0c17-1 29 5 30 13 1 9-9 13-25 12l-25-2c-8-1-10-7-7-13 4-7 14-10 27-10z" fill="#D1BDA0"/>
+  <path d="M271 423c-17-1-29 5-30 13-1 9 9 13 25 12l25-2c8-1 10-7 7-13-4-7-14-10-27-10zm121 0c17-1 29 5 30 13 1 9-9 13-25 12l-25-2c-8-1-10-7-7-13 4-7 14-10 27-10z" fill="url(#ot-scene-cream)"/>
+  <path d="m252 434 13-3m128 0 15 4" stroke="#FFFAEC" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Main toolbox: separate bottom lip, rounded body and pillowy lid. -->
+  <rect x="210" y="215" width="256" height="211" rx="52" fill="#BC683C"/>
+  <rect x="208" y="204" width="256" height="211" rx="52" fill="url(#ot-scene-body)"/>
+  <path d="M209 264c0-39 16-61 53-61h149c36 0 52 23 52 61v21H209z" fill="url(#ot-scene-lid)"/>
+  <path d="M222 279h228" stroke="#CE864C" stroke-width="4" stroke-linecap="round" opacity=".45"/>
+  <path d="M226 245c4-16 15-26 38-26h112" stroke="#FFF4D8" stroke-width="7" stroke-linecap="round" opacity=".76"/>
+  <path d="M221 313v34c0 27 8 42 25 48" stroke="#FFD2A0" stroke-width="7" stroke-linecap="round" opacity=".6"/>
+  <path d="M444 310v42c0 24-9 38-25 46" stroke="#C76C3D" stroke-width="7" stroke-linecap="round" opacity=".18"/>
+  <rect x="314" y="265" width="43" height="44" rx="14" fill="#C1844C"/>
+  <rect x="314" y="260" width="43" height="43" rx="14" fill="url(#ot-scene-cream)"/>
+  <path d="M326 268h18" stroke="#FFFDF2" stroke-width="4" stroke-linecap="round"/>
+  <rect x="330" y="278" width="11" height="11" rx="4" fill="#DAB887"/>
+  <circle cx="239" cy="272" r="4" fill="#D79759"/>
+  <circle cx="432" cy="272" r="4" fill="#D79759"/>
+  <circle cx="238" cy="270" r="3" fill="#FFE2AB"/>
+  <circle cx="431" cy="270" r="3" fill="#FFE2AB"/>
+
+  <!-- Warm eyes, a curved smile, and soft clay cheeks. -->
+  <ellipse cx="284" cy="339" rx="9" ry="12" fill="#54392F"/>
+  <ellipse cx="388" cy="339" rx="9" ry="12" fill="#54392F"/>
+  <circle cx="282" cy="335" r="2.6" fill="#FFF2D7"/>
+  <circle cx="386" cy="335" r="2.6" fill="#FFF2D7"/>
+  <ellipse cx="267" cy="358" rx="16" ry="9" fill="#EA8068" opacity=".65"/>
+  <ellipse cx="405" cy="358" rx="16" ry="9" fill="#EA8068" opacity=".65"/>
+  <path d="M318 355c8 14 28 14 36 0" stroke="#754431" stroke-width="7" stroke-linecap="round"/>
+  <path d="M326 364c6 3 13 3 19 0" stroke="#A25A3D" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Lavender magnifier in the foreground, with an open pale lens. -->
+  <g transform="rotate(-13 507 382)">
+    <ellipse cx="519" cy="450" rx="57" ry="9" fill="#614F73" opacity=".1"/>
+    <path d="m526 408 29 35" stroke="#8971AE" stroke-width="24" stroke-linecap="round"/>
+    <path d="m525 402 29 35" stroke="#B49CDA" stroke-width="24" stroke-linecap="round"/>
+    <path d="m531 407 19 24" stroke="#D6C5F1" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="499" cy="371" r="49" fill="#927CAF"/>
+    <circle cx="499" cy="365" r="49" fill="url(#ot-scene-lilac)"/>
+    <circle cx="499" cy="365" r="33" fill="#8EAFAD"/>
+    <circle cx="499" cy="362" r="33" fill="url(#ot-scene-glass)"/>
+    <path d="M470 355c2-15 11-24 26-26" stroke="#F8F1FF" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+    <path d="m482 365 10-12m-5 24 22-27" stroke="#F4FFF5" stroke-width="5" stroke-linecap="round" opacity=".7"/>
+  </g>
+  <path d="M483 338c7-6 14-6 18-1 5 6 2 11-2 15l-10 10c-4 4-10 5-15 1-5-5-4-11 0-16z" fill="#DFCAA9"/>
+  <path d="M480 335c7-6 14-6 18-1 5 6 2 11-2 15l-10 10c-4 4-10 5-15 1-5-5-4-11 0-16z" fill="url(#ot-scene-cream)"/>
+
+  <!-- A few tactile punctuation marks keep the scene playful, not noisy. -->
+  <path d="M184 149v18m-9-9h18" stroke="#D9B17C" stroke-width="7" stroke-linecap="round"/>
+  <path d="M559 259v16m-8-8h16" stroke="#B6A1DA" stroke-width="6" stroke-linecap="round"/>
+  <path d="m129 201 9-12m-25 4 2-10m36 24 10-4" stroke="#D3B787" stroke-width="5" stroke-linecap="round"/>
+  <path d="m392 80 4 10 10 4-10 4-4 10-4-10-10-4 10-4z" fill="#DEC79A"/>
+  <circle cx="216" cy="104" r="6" fill="#A9CBB6"/>
+  <circle cx="569" cy="187" r="5" fill="#D9BC8F"/>
+  <circle cx="112" cy="431" r="5" fill="#B3A1CF"/>
+</svg>

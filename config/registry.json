@@ -1,0 +1,8 @@
+{
+  "trustedOwners": ["ygrip"],
+  "topic": "open-tools",
+  "discovery": false,
+  "sources": [
+    { "repository": "ygrip/json-tools", "local": "examples/json-tools" }
+  ]
+}
