@@ -1,6 +1,7 @@
 <script lang="ts">
   import { m } from '$lib/paraglide/messages.js';
   import Icon from './Icon.svelte';
+  import { base } from '$app/paths';
 
   const options = [
     { id: 'trakteer', href: 'https://trakteer.id/yunaz_gilang', tone: 'peach', title: m.support_trakteer, note: m.support_trakteer_note },
@@ -21,7 +22,7 @@
       {#each options as option (option.id)}
         <li>
           <a class={`support-option ${option.tone}`} href={option.href} target="_blank" rel="noopener noreferrer">
-            <span class="support-icon"><Icon name="heart" size={20} /></span>
+            <span class="support-icon"><img src={`${base}/brand/support-${option.id}.svg`} alt="" width="28" height="28" decoding="async" /></span>
             <span class="support-text"><strong>{option.title()}</strong><small>{option.note()}</small></span>
             <Icon name="external" size={16} />
           </a>
