@@ -119,9 +119,12 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
   }
   function start() {
     if (!document.body) return;
-    new ResizeObserver(schedule).observe(document.body);
-    new ResizeObserver(schedule).observe(document.documentElement);
-    new MutationObserver(schedule).observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
+    if (typeof ResizeObserver === 'function') {
+      const observer = new ResizeObserver(schedule);
+      observer.observe(document.body);
+      observer.observe(document.documentElement);
+    }
+    new MutationObserver(schedule).observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true });
     addEventListener('resize', schedule);
     schedule();
   }
