@@ -3,7 +3,7 @@
   "search_label": "Search tools",
   "hero_eyebrow": "A little less busywork",
   "hero_description": "Untangle your data. Tidy up a task. Get on with the good stuff. Your next shortcut is right here.",
-  "hero_proof": "Thoughtful little utilities. One happy home.",
+  "hero_proof": "{count} handy tools, ready when you need them.",
   "benefit_private": "Your data stays yours",
   "benefit_private_desc": "Our first tools work right in your browser.",
   "benefit_setup": "Skip the setup",
@@ -55,7 +55,7 @@
   "how_title_2": "another learning curve.",
   "handy_tool": "handy tool",
   "handy_tools": "handy tools",
-  "count_and_counting": "& counting",
+  "count_and_counting": "available",
   "tools_found": "tools found",
   "open_tool": "Open",
   "json_intro": "Messy JSON? Make it readable, find just the bits you need, or turn it into XML. All in one tidy spot.",
@@ -68,7 +68,7 @@
   "privacy_analytics_title": "Analytics",
   "privacy_analytics_text": "No analytics requirement is built into the trick-it shell. If analytics are added later, this policy should be updated before collection begins.",
   "privacy_links_title": "Third-party links",
-  "privacy_links_text": "The catalog links to source repositories. A tool may ask to download declared public assets from the hosts listed in its guide. Those hosts receive ordinary network information such as your IP address, but the platform does not attach your tool input or credentials. Offline files are stored in your browser; clear site data to remove them.",
+  "privacy_links_text": "The catalog links to source repositories. A tool may ask to download declared public assets from the hosts listed in its guide. Those hosts receive ordinary network information such as your IP address, but the platform does not attach your tool input or credentials. Offline files are stored in your browser; clear site data to remove them. SEO Checker sends the URL you approve to Google PageSpeed Insights, which visits that page. Use public links only. The host does not store audit responses. Protected online features may use Cloudflare Turnstile to check browser and network signals. Tokens are verified by the host; local-only tools do not load the challenge.",
   "terms_description": "Terms policy for trick-it.",
   "terms_title": "Terms of Use",
   "terms_use_title": "Use of the tools",
@@ -226,5 +226,7 @@
   "pwa_install_title": "Keep your toolbox handy",
   "pwa_install_description": "Add trick-it to your device for quick access and offline-ready tools.",
   "pwa_later": "Not now",
-  "pwa_close": "Got it"
+  "pwa_close": "Got it",
+  "hero_proof_one": "{count} handy tool, ready when you need it.",
+  "hero_proof_empty": "New tools are on the way. Check back soon."
 }

@@ -1,5 +1,5 @@
-export const reservedIds = new Set(['policy', 'privacy', 'terms', 'bundles', 'icons', 'brand', 'illustrations', 'index', '404', '500', '503', '_app', 'offline', 'manifest', 'manifest-webmanifest', 'service-worker', 'pwa', 'id', 'og', 'robots', 'sitemap']);
-export const permissionNames = new Set(['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'external-assets', 'wasm', 'workers']);
+export const reservedIds = new Set(['api', 'policy', 'privacy', 'terms', 'bundles', 'icons', 'brand', 'illustrations', 'index', '404', '500', '503', '_app', 'offline', 'manifest', 'manifest-webmanifest', 'service-worker', 'pwa', 'id', 'og', 'robots', 'sitemap']);
+export const permissionNames = new Set(['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'external-assets', 'wasm', 'workers', 'services']);
 export const iconNames = new Set(['braces', 'toolbox', 'grid', 'sparkles', 'bolt', 'heart', 'filter', 'lock', 'shield', 'search']);
 export const MAX_ASSET_BYTES = 64 * 1024 * 1024;
 export const MAX_TOTAL_ASSET_BYTES = 128 * 1024 * 1024;
@@ -84,6 +84,19 @@ export function validateManifest(manifest) {
     grantedNames.add(entry.name);
     return { name: entry.name, reason: text(entry.reason, 240, 'permission reason'), required: entry.required };
   });
+  const serviceInput = manifest.services ?? [];
+  if (!Array.isArray(serviceInput) || serviceInput.length > 8 || (!modern && serviceInput.length)) throw new Error('invalid services');
+  if (serviceInput.length && !grantedNames.has('services')) throw new Error('services require services permission');
+  const serviceIds = new Set();
+  const services = serviceInput.map(entry => {
+    object(entry, 'service');
+    if (Object.keys(entry).some(key => !['id', 'handler', 'rateLimit', 'turnstile'].includes(key)) || typeof entry.id !== 'string' || !safeId.test(entry.id) || entry.id.length > 32 || serviceIds.has(entry.id) || entry.handler !== 'pagespeed-seo' || typeof entry.turnstile !== 'boolean') throw new Error('invalid service');
+    object(entry.rateLimit, 'service rate limit');
+    const { limit, periodSeconds } = entry.rateLimit;
+    if (Object.keys(entry.rateLimit).some(key => !['limit', 'periodSeconds'].includes(key)) || !Number.isInteger(limit) || limit < 1 || limit > 60 || ![10, 60].includes(periodSeconds)) throw new Error('invalid service rate limit');
+    serviceIds.add(entry.id);
+    return { id: entry.id, handler: entry.handler, rateLimit: { limit, periodSeconds }, turnstile: entry.turnstile };
+  });
   const assetIds = new Set();
   let assetBytes = 0;
   const assets = assetInput.map((entry) => {
@@ -120,7 +133,7 @@ export function validateManifest(manifest) {
   return {
     schemaVersion: manifest.schemaVersion, runtimeVersion: 1, locales: [...locales], appearance: { theme: 'host', protocolVersion: 1 },
     id: manifest.id, name, description, path: manifest.path, category: manifest.category, repository: manifest.repository,
-    version: manifest.version, status: manifest.status, capabilities, icon, seo: toolSeo, guide: toolGuide, permissions, assets, translations,
+    version: manifest.version, status: manifest.status, capabilities, icon, seo: toolSeo, guide: toolGuide, permissions, assets, services, translations,
     bundle: { format: 'html', file: bundle.file, sha256: bundle.sha256 }
   };
 }

@@ -4,7 +4,31 @@
   "compatibility_date": "2026-05-01",
   "assets": {
     "directory": "./build",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*"
+    ]
   },
-  "routes": [{ "pattern": "tools.readynaz.com", "custom_domain": true }]
+  "routes": [
+    {
+      "pattern": "tools.readynaz.com",
+      "custom_domain": true
+    }
+  ],
+  "main": "worker/index.mjs",
+  "ratelimits": [
+    {
+      "name": "SERVICE_ATTEMPT_LIMITER",
+      "namespace_id": "2076180137",
+      "simple": {
+        "limit": 20,
+        "period": 60
+      }
+    }
+  ],
+  "vars": {
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAFZv39WG9GdtPW3H",
+    "TURNSTILE_HOSTNAMES": "tools.readynaz.com"
+  }
 }

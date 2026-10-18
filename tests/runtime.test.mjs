@@ -5,7 +5,7 @@ import ts from 'typescript';
 
 const source = await readFile(new URL('../src/lib/runtime/core.ts', import.meta.url), 'utf8');
 const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
-const { sha256, loadBundle, loadAsset, assetRequestUrl, parseRuntimeRequest } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+const { sha256, loadBundle, loadAsset, assetRequestUrl, parseRuntimeRequest, runService } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
 const html = '<!doctype html><title>Safe tool</title>';
 const htmlHash = await sha256(new TextEncoder().encode(html));
 const tool = { schemaVersion: 3, id: 'fixture', name: 'Fixture', version: '1.0.0', bundle: { sha256: htmlHash }, permissions: [], assets: [] };
@@ -106,4 +106,28 @@ test('download payloads are bounded and cannot contain paths or executable host 
   assert.equal(parse({ ...payload, filename: '../escape' }).error, 'invalid-request');
   assert.equal(parse({ ...payload, bytes: new ArrayBuffer(16 * 1024 * 1024 + 1) }).error, 'invalid-request');
   assert.equal(parse({ ...payload, mime: 'application/javascript' }).error, 'invalid-request');
+});
+
+test('SEO audit broker requires a grant and validates its narrow payload', () => {
+  const frame = {}; const token = 'secure-session';
+  const seoTool = { ...tool, services: [{ id: 'audit', handler: 'pagespeed-seo' }], permissions: [{ name: 'services', required: true, reason: 'Audit a public page with Google' }] };
+  const request = { type: 'trick-it:request', version: 1, token, id: 'seo-1', operation: 'services', payload: { feature: 'audit', input: { url: 'https://example.com', strategy: 'mobile', locale: 'id' } } };
+  const parse = (payload, grants = ['services']) => parseRuntimeRequest({ source: frame, data: { ...request, payload } }, frame, token, seoTool, grants);
+  assert.equal(parse(request.payload).error, undefined);
+  assert.equal(parse(request.payload, []).error, 'denied');
+  for (const payload of [{ ...request.payload, endpoint: 'https://evil.example' }, { ...request.payload, feature: 'missing' }, { ...request.payload, input: { url: 'file:///etc/passwd' } }]) assert.equal(parse(payload).error, 'invalid-request');
+});
+
+
+test('SEO service client preserves zero scores, handles quota and aborts stale work', async () => {
+  const report = { score: 0, audits: [{ id: 'document-title', score: 0 }] };
+  const payload = { url: 'https://example.com/', strategy: 'mobile', locale: 'en' };
+  assert.equal((await runService('/api/tools/seo-checker/audit', payload, controller().signal, async (url, options) => {
+    assert.equal(url, '/api/tools/seo-checker/audit'); assert.equal(options.credentials, 'omit'); assert.equal(options.redirect, 'error');
+    assert.deepEqual(JSON.parse(options.body), payload); return response(report);
+  })).score, 0);
+  await assert.rejects(runService('/api/tools/seo-checker/audit', payload, controller().signal, async () => new Response('secret', { status: 429 })), error => error.code === 'quota');
+  await assert.rejects(runService('/api/tools/seo-checker/audit', payload, controller().signal, async () => response(null)), error => error.code === 'request');
+  const abort = controller(); abort.abort();
+  await assert.rejects(runService('/api/tools/seo-checker/audit', payload, abort.signal), error => error.code === 'aborted');
 });

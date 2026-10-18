@@ -3,7 +3,8 @@
   import { base } from '$app/paths';
   import { sandboxDocument, themeMessageType } from '$lib/registry/sandbox';
   import { documentTheme } from '$lib/theme';
-  import { loadAsset, loadBundle, parseRuntimeRequest, RuntimeFailure, type RuntimeAsset, type RuntimeRequest, type RuntimeTool, type PermissionName, type CacheWarning } from '$lib/runtime/core';
+  import { loadAsset, loadBundle, runService, parseRuntimeRequest, RuntimeFailure, type RuntimeAsset, type RuntimeRequest, type RuntimeTool, type PermissionName, type CacheWarning } from '$lib/runtime/core';
+  import ServiceChallenge from './ServiceChallenge.svelte';
   import { runtimeStrings } from '$lib/runtime/strings';
 
   let { tool, locale = 'en' }: { tool: RuntimeTool; locale?: string } = $props();
@@ -11,7 +12,7 @@
   const frameLocale = $derived(tool.locales?.includes(locale) ? locale : tool.locales?.[0] ?? 'en');
   const permissions = $derived(tool.permissions ?? []);
   const assets = $derived(tool.assets ?? []);
-  const release = $derived(JSON.stringify([tool.id, tool.version, tool.bundle.sha256, tool.permissions, tool.assets]));
+  const release = $derived(JSON.stringify([tool.id, tool.version, tool.bundle.sha256, tool.permissions, tool.assets, tool.services]));
   let mounted = $state(false);
   let frame = $state<HTMLIFrameElement | null>(null);
   let frameDocument = $state('');
@@ -26,6 +27,10 @@
   let recoveredAsset = $state(false);
   let progress = $state<{ id: string; bytes: number; total: number } | null>(null);
   let pending = $state<RuntimeRequest | null>(null);
+  let verificationToken = $state('');
+  const pendingService = $derived(pending?.operation === 'services' ? tool.services?.find(service => service.id === (pending?.payload as { feature?: string })?.feature) : undefined);
+  const pendingInput = $derived(pendingService ? (pending?.payload as { input: { url: string; strategy: string } }).input : undefined);
+  const serviceEndpoint = (feature: string) => `${base}/api/tools/${tool.id}/${feature}`;
   let operationDialog = $state<HTMLDialogElement | null>(null);
   let loading = $state(false);
   let timedOut = $state(false);
@@ -160,6 +165,10 @@
   async function approvePending() {
     const request = pending;
     if (!request) return;
+    const service = pendingService;
+    if (request.operation === 'services' && (!service || service.turnstile && !verificationToken)) return;
+    const tokenForAction = verificationToken;
+    verificationToken = '';
     const current = generation;
     pending = null;
     brokerBusy = true;
@@ -178,6 +187,8 @@
           ({ coords }) => resolve({ latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy }),
           () => reject(new RuntimeFailure('denied')), { timeout: 10_000, maximumAge: 0, enableHighAccuracy: false }
         ));
+      } else if (request.operation === 'services') {
+        value = await runService(serviceEndpoint(service!.id), { version: tool.version, sha256: tool.bundle.sha256, input: (request.payload as { input: unknown }).input, ...(service!.turnstile ? { turnstileToken: tokenForAction } : {}) }, controller!.signal);
       } else if (request.operation === 'downloads') {
         const data = request.payload as { bytes: ArrayBuffer; filename: string; mime: string };
         const url = URL.createObjectURL(new Blob([data.bytes], { type: data.mime }));
@@ -236,7 +247,7 @@
         reply(request, false, undefined, assetFailure.code);
       } finally { if (current === generation) { progress = null; inFlight.delete(request.id); } }
     } else if (pending || brokerBusy) reply(request, false, undefined, 'busy');
-    else { inFlight.add(request.id); pending = request; }
+    else { verificationToken = ''; inFlight.add(request.id); pending = request; }
   }
 
   onMount(() => {
@@ -314,9 +325,10 @@
     <h2 id="runtime-operation-title">{text.confirm}</h2>
     <p><strong>{tool.name}: {text.labels[pending.operation as keyof typeof text.labels]}</strong></p>
     <p>{text.confirmHelp}</p>
+    {#if pendingService && pendingInput}<p>{text.seoHelp}</p><pre>{pendingInput.url}</pre><p>{pendingInput.strategy === 'mobile' ? text.seoMobile : text.seoDesktop} · {text.serviceLimit}: {pendingService.rateLimit.limit} / {pendingService.rateLimit.periodSeconds}s</p>{#if pendingService.turnstile}<ServiceChallenge endpoint={serviceEndpoint(pendingService.id)} version={tool.version} sha256={tool.bundle.sha256} {locale} onToken={(token) => verificationToken = token} />{/if}{/if}
     {#if pending.operation === 'clipboard-write'}<pre>{(pending.payload as string).slice(0, 240)}</pre>{/if}
     {#if pending.operation === 'downloads'}<p>{(pending.payload as { filename: string }).filename} · {(pending.payload as { mime: string }).mime} · {((pending.payload as { bytes: ArrayBuffer }).bytes.byteLength / 1024).toFixed(1)} KiB</p>{/if}
-    <div class="dialog-actions"><button class="clay-button" type="button" onclick={denyPending}>{text.deny}</button><button class="clay-button primary" type="button" onclick={approvePending}>{text.allow}</button></div>
+    <div class="dialog-actions"><button class="clay-button" type="button" onclick={denyPending}>{text.deny}</button><button class="clay-button primary" type="button" disabled={pendingService?.turnstile && !verificationToken} onclick={approvePending}>{text.allow}</button></div>
   {/if}
 </dialog>
 

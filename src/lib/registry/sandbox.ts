@@ -62,7 +62,7 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
   if (permissions.includes('workers')) policy = policy.replace("worker-src 'none'", 'worker-src blob:');
   if (permissions.includes('workers') || (permissions.includes('external-assets') && options.scriptAssets)) policy = policy.replace("script-src 'unsafe-inline'", "script-src 'unsafe-inline' blob:");
   const token = /^[a-zA-Z0-9_-]{16,128}$/.test(options.token ?? '') ? options.token! : '';
-  const config = JSON.stringify({ token, permissions: permissions.filter((name) => ['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'external-assets', 'wasm', 'workers'].includes(name)) }).replaceAll('<', '\\u003c');
+  const config = JSON.stringify({ token, permissions: permissions.filter((name) => ['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'external-assets', 'wasm', 'workers', 'services'].includes(name)) }).replaceAll('<', '\\u003c');
   const sdk = `(() => {
     const config = ${config};
     const pending = new Map(); let sequence = 0;
@@ -76,7 +76,7 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
       if (!config.token || data?.type !== 'trick-it:response' || data.version !== 1 || data.token !== config.token || typeof data.id !== 'string') return;
       const request = pending.get(data.id); if (!request) return;
       pending.delete(data.id); clearTimeout(request.timer);
-      if (data.ok === true) request.resolve(data.value); else request.reject(new Error('The requested capability was denied or could not complete.'));
+      if (data.ok === true) request.resolve(data.value); else request.reject(Object.assign(new Error('The requested capability was denied or could not complete.'), { code: typeof data.error === 'string' ? data.error : 'request' }));
     });
     function request(operation, payload) {
       if (!config.token || (operation !== 'asset' && !config.permissions.includes(operation)) || (operation === 'asset' && !config.permissions.includes('external-assets'))) return Promise.reject(new Error('Permission not granted.'));

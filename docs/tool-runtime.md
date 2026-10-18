@@ -57,6 +57,8 @@ async function copyResult() {
 
 The example's `showStatus`/`showError` are tool-owned text announcements: implement them with `textContent` and a live region, not untrusted HTML. Never log clipboard contents, precise location, private input or raw browser error objects.
 
+Use `trickIt.request('services', { feature: 'audit', input: { url, strategy: 'mobile', locale: 'en' } })` for a declared [protected online feature](protected-services.md). The host manages the per-action confirmation and Turnstile token. The tool receives only the result; no secret, token or network access is granted. Deployment policy controls per-feature rates and verification.
+
 Other supported broker operations:
 
 ```js

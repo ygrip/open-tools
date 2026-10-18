@@ -100,6 +100,9 @@ To create a different tool, follow [Scaffold and register a tool](docs/scaffold-
 
 Allowed categories: `media`, `developer`, `data`, `productivity`, `other`. Status: `stable`, `beta`, `experimental`. IDs use lowercase letters/numbers separated by hyphens; paths must equal `/<id>`. Increment the tool version when releasing a new bundle, then explicitly update the pinned registration. No private package registry is required.
 
+
+See [protected Worker-backed features](docs/protected-services.md) to configure per-tool request limits and Turnstile in the manifest. Local tools remain permission-free.
+
 ## Per-tool marketplace registrations
 
 **New production tools do not belong in `examples/`.** Each standalone tool repository owns its HTML, manifest, tests and release documentation. Register an immutable source through one small file in `config/tools/` (for example `id-generator.json`), rather than editing the shared `config/registry.json` sources array:

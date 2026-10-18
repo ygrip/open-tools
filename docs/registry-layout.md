@@ -22,6 +22,8 @@ To register a new production tool, **add only** `config/tools/<id>.json`:
 
 The filename must equal the manifest ID. `ref` must be the complete 40-character lowercase commit SHA. There is no copied HTML, release Markdown or tool manifest in trick-it. The tool repository owns source, documentation and release assets. Each registration can be added or updated in an independent PR without modifying a shared `sources` array.
 
+The sync combines validated manifests into `src/lib/registry/generated.json` for the app, route generation and metadata. This file is ignored build output, just like `static/bundles/`; do not edit or commit it. A combined output is useful at runtime, while independent `config/tools/<id>.json` files keep source changes separate and avoid generated-file merge conflicts. CI regenerates the complete catalog from the merged registrations. Worker service policies and generated Wrangler configuration follow the same rule.
+
 ## Existing local development fixture
 
 `config/tools/json-tools.json` now pins the standalone JSON Tools v0.3.0 release. The local mirror was deleted after verifying the exact HTML and manifest against the new source commit. All production entries use immutable remote commits; local development fixtures, if intentionally used, still undergo digest checks.
