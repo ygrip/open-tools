@@ -26,7 +26,7 @@
   </header>
   <section class="tool-intro" aria-labelledby="tool-name">
     <span class="clay-icon peach"><Icon name={tool.icon} size={30} /></span>
-    <div><p class="eyebrow">trick-it · {m.tool_version()} {tool.version}</p><h1 id="tool-name">{tool.name}</h1><p>{tool.description}</p></div>
+    <div><p class="eyebrow">trick-it</p><h1 id="tool-name">{tool.name}</h1><p>{tool.description}</p></div>
   </section>
   <ToolRuntime {tool} locale={getLocale()} />
   <aside class="workspace-note surface" aria-label={m.tool_policy_link()}>
