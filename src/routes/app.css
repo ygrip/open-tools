@@ -157,7 +157,7 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
 .chips button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; border-radius: 13px; border: 1px solid transparent; background: transparent; color: var(--muted); padding: 8px 14px; font-size: 12px; font-weight: 850; }
 .chips button.active { background: var(--peach); color: var(--text); border-color: var(--line); box-shadow: inset 1px 2px 2px var(--highlight), 0 2px 0 var(--line); }
 .tool-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
-.tool-card { content-visibility: auto; contain-intrinsic-size: auto 335px; padding: 28px; display: flex; flex-direction: column; min-height: 335px; transition: transform var(--duration-fast) var(--ease-smooth-out); }
+.tool-card { padding: 28px; display: flex; flex-direction: column; min-height: 335px; transition: transform var(--duration-fast) var(--ease-smooth-out); }
 .tool-grid.single-result .tool-card:first-child { grid-column: span 2; }
 .tool-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; gap: 12px; }
 .tool-card-top .clay-icon { width: 65px; height: 65px; border-radius: 21px; }
