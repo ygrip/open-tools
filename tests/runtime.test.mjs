@@ -98,11 +98,25 @@ test('broker rejects wrong windows, wrong tokens, undeclared and ungranted capab
   assert.equal(parseRuntimeRequest(event('clipboard-write', 'text'), frame, token, fixture, ['clipboard-write']).error, undefined);
   assert.equal(parseRuntimeRequest(event('camera'), frame, token, fixture, ['camera']).error, 'unsupported');
 });
+test('camera capture requires a grant and image share is PNG-only', () => {
+  const frame = {}; const fixture = { ...tool, permissions: [{ name: 'camera-capture' }, { name: 'share-image' }] };
+  const parse = (operation, payload, grants = ['camera-capture', 'share-image']) =>
+    parseRuntimeRequest({ source: frame, data: { type: 'trick-it:request', version: 1, token: 'channel', id: '1', operation, ...(payload === undefined ? {} : { payload }) } }, frame, 'channel', fixture, grants);
+  assert.equal(parse('camera-capture').error, undefined);
+  assert.equal(parse('camera-capture', { watch: true }).error, 'invalid-request');
+  assert.equal(parse('camera-capture', undefined, []).error, 'denied');
+  assert.equal(parse('share-image', { filename: 'qr.png', mime: 'image/png', bytes: new ArrayBuffer(16) }).error, undefined);
+  assert.equal(parse('share-image', { filename: 'qr.svg', mime: 'image/svg+xml', bytes: new ArrayBuffer(16) }).error, 'invalid-request');
+});
+
 test('download payloads are bounded and cannot contain paths or executable host actions', () => {
   const frame = {}; const fixture = { ...tool, permissions: [{ name: 'downloads' }] };
   const parse = (payload) => parseRuntimeRequest({ source: frame, data: { type: 'trick-it:request', version: 1, token: 'channel', id: '1', operation: 'downloads', payload } }, frame, 'channel', fixture, ['downloads']);
   const payload = { bytes: new ArrayBuffer(8), filename: 'result.json', mime: 'application/json' };
   assert.equal(parse(payload).error, undefined);
+  assert.equal(parse({ ...payload, filename: 'cutout.png', mime: 'image/png' }).error, undefined);
+  assert.equal(parse({ ...payload, filename: 'qr.png', mime: 'image/png' }).error, undefined);
+  assert.equal(parse({ ...payload, filename: 'qr.svg', mime: 'image/svg+xml' }).error, undefined);
   assert.equal(parse({ ...payload, filename: '../escape' }).error, 'invalid-request');
   assert.equal(parse({ ...payload, bytes: new ArrayBuffer(16 * 1024 * 1024 + 1) }).error, 'invalid-request');
   assert.equal(parse({ ...payload, mime: 'application/javascript' }).error, 'invalid-request');
