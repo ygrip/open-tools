@@ -1,5 +1,15 @@
 import { expect, test } from '@playwright/test';
 
+test('support cards display each platform logo from local assets', async ({ page }) => {
+  await page.goto('/');
+  for (const platform of ['trakteer', 'kofi', 'patreon']) {
+    const logo = page.locator(`.support-option .support-icon img[src$="/brand/support-${platform}.svg"]`);
+    await expect(logo).toHaveCount(1);
+    await expect(logo).toBeVisible();
+    await expect.poll(() => logo.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  }
+});
+
 test('tool theme follows the host without resetting input or output', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/json-tools');
