@@ -91,5 +91,43 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
     }
     Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, asset: id => request('asset', { id }), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
   })();`;
-  return `<!doctype html><html lang="${locale}" data-theme="${theme}" style="color-scheme:${theme}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}</style><script>${themeBootstrap}${sdk}</script></head><body>${html}</body></html>`;
+  // The parent cannot measure an opaque sandbox. Send only the height of the
+  // tool's rendered document, never DOM/content, through the session channel.
+  const resizeBootstrap = `
+(() => {
+  const token = ${JSON.stringify(token)};
+  if (!token) return;
+  let scheduled = false, lastHeight = -1;
+  function measure() {
+    scheduled = false;
+    const body = document.body, root = document.documentElement;
+    if (!body || !root) return;
+    const rect = body.getBoundingClientRect();
+    const margin = Math.max(0, parseFloat(getComputedStyle(body).marginBottom) || 0);
+    // Unlike root.scrollHeight, body content can shrink when the frame is tall.
+    // Consider root overflow only when it actually extends past the viewport.
+    const overflow = root.scrollHeight > innerHeight + 1 ? root.scrollHeight : 0;
+    const height = Math.ceil(Math.max(rect.bottom + margin, body.scrollHeight + Math.max(0, rect.top) + margin, overflow));
+    if (!Number.isSafeInteger(height) || height < 0 || height > 100000 || Math.abs(height - lastHeight) < 2) return;
+    lastHeight = height;
+    parent.postMessage({ type: 'trick-it:resize', version: 1, token, height }, '*');
+  }
+  function schedule() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(measure);
+  }
+  function start() {
+    if (!document.body) return;
+    new ResizeObserver(schedule).observe(document.body);
+    new ResizeObserver(schedule).observe(document.documentElement);
+    new MutationObserver(schedule).observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
+    addEventListener('resize', schedule);
+    schedule();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
+})();
+`;
+  return `<!doctype html><html lang="${locale}" data-theme="${theme}" style="color-scheme:${theme}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}</style><script>${themeBootstrap}${sdk}</script><script>${resizeBootstrap}</script></head><body>${html}</body></html>`;
 }
