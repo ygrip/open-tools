@@ -103,6 +103,8 @@ test('download payloads are bounded and cannot contain paths or executable host 
   const parse = (payload) => parseRuntimeRequest({ source: frame, data: { type: 'trick-it:request', version: 1, token: 'channel', id: '1', operation: 'downloads', payload } }, frame, 'channel', fixture, ['downloads']);
   const payload = { bytes: new ArrayBuffer(8), filename: 'result.json', mime: 'application/json' };
   assert.equal(parse(payload).error, undefined);
+  assert.equal(parse({ ...payload, filename: 'cutout.png', mime: 'image/png' }).error, undefined);
+  assert.equal(parse({ ...payload, mime: 'image/svg+xml' }).error, 'invalid-request');
   assert.equal(parse({ ...payload, filename: '../escape' }).error, 'invalid-request');
   assert.equal(parse({ ...payload, bytes: new ArrayBuffer(16 * 1024 * 1024 + 1) }).error, 'invalid-request');
   assert.equal(parse({ ...payload, mime: 'application/javascript' }).error, 'invalid-request');

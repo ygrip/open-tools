@@ -71,7 +71,7 @@ await window.trickIt.request('downloads', {
 });
 ```
 
-Do not request these sequentially at startup; the snippet only documents their payloads. Clipboard text is capped at 1 MiB. Downloads are capped at 16 MiB, use a simple filename of at most 120 characters without path separators, and accept the supported MIME types `text/plain`, `text/csv`, `text/html`, `application/json`, `application/octet-stream` and `application/pdf`. Downloads never accept arbitrary remote URLs. Location results contain only the host's bounded position data; do not assume a native `GeolocationPosition` object crosses the bridge.
+Do not request these sequentially at startup; the snippet only documents their payloads. Clipboard text is capped at 1 MiB. Downloads are capped at 16 MiB, use a simple filename of at most 120 characters without path separators, and accept the supported MIME types `text/plain`, `text/csv`, `text/html`, `application/json`, `application/octet-stream`, `application/pdf` and `image/png`. Downloads never accept arbitrary remote URLs. Location results contain only the host's bounded position data; do not assume a native `GeolocationPosition` object crosses the bridge.
 
 User cancellation, denial, an unsupported API, an insecure context, a concurrent request, revocation or navigation can reject a promise. Catch failures, announce a friendly explanation and preserve user work. The host does not display raw exception details or pretend that platform approval overrides browser/OS policy. Camera/microphone and direct network access are not supported capabilities.
 

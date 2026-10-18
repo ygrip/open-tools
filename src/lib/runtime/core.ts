@@ -163,7 +163,7 @@ export function parseRuntimeRequest(event: Pick<MessageEvent, 'source' | 'data'>
   }
   if (request.operation === 'downloads') {
     const data = request.payload as { filename?: unknown; bytes?: unknown; mime?: unknown } | undefined;
-    if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).some((key) => !['bytes', 'filename', 'mime'].includes(key)) || typeof data.filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_. -]{0,119}$/.test(data.filename) || !(data.bytes instanceof ArrayBuffer) || data.bytes.byteLength > 16 * 1024 * 1024 || typeof data.mime !== 'string' || !/^(?:text\/(?:plain|csv|html)|application\/(?:json|octet-stream|pdf))$/.test(data.mime)) return { request, error: 'invalid-request' };
+    if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).some((key) => !['bytes', 'filename', 'mime'].includes(key)) || typeof data.filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_. -]{0,119}$/.test(data.filename) || !(data.bytes instanceof ArrayBuffer) || data.bytes.byteLength > 16 * 1024 * 1024 || typeof data.mime !== 'string' || !/^(?:text\/(?:plain|csv|html)|application\/(?:json|octet-stream|pdf)|image\/png)$/.test(data.mime)) return { request, error: 'invalid-request' };
   }
   return { request };
 }
