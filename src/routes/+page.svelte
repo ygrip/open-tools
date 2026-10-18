@@ -15,7 +15,7 @@
   import { getPagination } from '$lib/pagination.js';
   import { categories, tools } from '$lib/registry/tools';
   import ToolArt from '$lib/components/ToolArt.svelte';
-  import { readRecentTools, clearRecentTools, readToolSort, saveToolSort, sortTools, toolSorts, type ToolSort } from '$lib/recent';
+  import { readRecentEntries, relativeTime, clearRecentTools, readToolSort, saveToolSort, sortTools, toolSorts, type ToolSort } from '$lib/recent';
 
   const pageSize = 6;
   let currentPage = $state(1);
@@ -27,10 +27,10 @@
   const categoryNames: Record<string, string> = { all: m.category_all(), data: m.category_data(), developer: m.category_developer(), media: m.category_media(), productivity: m.category_productivity(), other: m.category_other() };
   const catalog = $derived(tools.map((tool) => localizedTool(tool, getLocale())));
   // Browser-only preferences: hydrated after mount so prerendered HTML stays deterministic.
-  let recentIds = $state<string[]>([]);
+  let recentEntries = $state<{ id: string; at?: number }[]>([]);
   let sortOrder = $state<ToolSort>('az');
   const sortNames: Record<ToolSort, string> = { az: m.sort_az(), za: m.sort_za(), newest: m.sort_newest(), oldest: m.sort_oldest() };
-  const recentTools = $derived(recentIds.map((id) => catalog.find((tool) => tool.id === id)).filter((tool) => tool !== undefined));
+  const recentTools = $derived(recentEntries.flatMap((entry) => { const tool = catalog.find((item) => item.id === entry.id); return tool ? [{ tool, when: relativeTime(entry.at, getLocale()) }] : []; }));
   const filteredTools = $derived(sortTools(catalog, sortOrder, getLocale()).filter((tool) =>
     (selectedCategory === 'all' || tool.category === selectedCategory) &&
     [tool.name, tool.description, ...tool.capabilities].join(' ').toLowerCase().includes(query.trim().toLowerCase())
@@ -47,7 +47,7 @@
 
   function clearRecent() {
     clearRecentTools();
-    recentIds = [];
+    recentEntries = [];
   }
 
   function selectCategory(category: string) {
@@ -75,7 +75,7 @@
   }
 
   onMount(() => {
-    recentIds = readRecentTools();
+    recentEntries = readRecentEntries();
     sortOrder = readToolSort();
     function shortcut(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
@@ -119,11 +119,26 @@
     </section>
 
     {#if recentTools.length}
-      <section class="recent-section" aria-labelledby="recent-title">
-        <div class="recent-heading"><div><p class="eyebrow">{m.recent_eyebrow()}</p><h2 id="recent-title">{m.recent_heading()}</h2></div><button class="clay-button small" type="button" onclick={clearRecent} aria-label={m.recent_clear()}><Icon name="x" size={16} /></button></div>
+      <section class="recent-section surface" aria-labelledby="recent-title">
+        <div class="recent-heading">
+          <span class="recent-orb" aria-hidden="true"><Icon name="bolt" size={22} /></span>
+          <div><p class="eyebrow">{m.recent_eyebrow()}</p><h2 id="recent-title">{m.recent_heading()}</h2></div>
+          <button class="clay-button small recent-clear" type="button" onclick={clearRecent} aria-label={m.recent_clear()} title={m.recent_clear()}><Icon name="x" size={16} /></button>
+        </div>
         <ul class="recent-list">
-          {#each recentTools as tool (tool.id)}
-            <li><a class="recent-card surface" href={localizedPath(`${tool.path}/`)}><ToolArt id={tool.id} icon={tool.icon} size={44} /><span>{tool.name}</span></a></li>
+          {#each recentTools as { tool, when }, index (tool.id)}
+            <li style:--delay={`${index * 50}ms`}>
+              <a class="recent-card" href={localizedPath(`${tool.path}/`)}>
+                <span class="recent-art"><ToolArt id={tool.id} icon={tool.icon} size={56} /></span>
+                <span class="recent-copy">
+                  <strong>{tool.name}</strong>
+                  <small>{categoryNames[tool.category] ?? tool.category}</small>
+                  {#if when}<span class="recent-when">{when}</span>{/if}
+                </span>
+                <span class="recent-go" aria-hidden="true"><Icon name="arrow-right" size={16} /></span>
+                <span class="sr-only">{m.recent_open()}</span>
+              </a>
+            </li>
           {/each}
         </ul>
       </section>

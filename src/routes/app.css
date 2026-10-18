@@ -161,15 +161,33 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
 .sort-control select { min-height: 42px; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 12px; font-weight: 850; padding-right: 6px; cursor: pointer; }
 .sort-control:focus-within { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
 .sort-control select:focus { outline: none; }
-.recent-section { margin: 8px 0 36px; }
-.recent-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-.recent-heading h2 { font-size: clamp(24px, 3vw, 32px); letter-spacing: -.04em; }
-.recent-heading .clay-button { width: 44px; padding: 0; }
-.recent-list { display: flex; gap: 12px; margin: 0; padding: 4px 2px 10px; list-style: none; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
-.recent-list::-webkit-scrollbar { display: none; }
-.recent-list li { flex: 0 0 auto; scroll-snap-align: start; }
-.recent-card { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 10px 18px 10px 10px; border-radius: 20px; font-weight: 850; font-size: 14px; white-space: nowrap; transition: transform var(--duration-quick) var(--ease-smooth-out); }
-.recent-card:hover { transform: translateY(-2px); color: var(--accent-strong); }
+.recent-section { position: relative; margin: 8px 0 36px; padding: 22px; overflow: hidden; background: radial-gradient(120% 140% at 0% 0%, var(--peach) 0%, transparent 46%), radial-gradient(120% 140% at 100% 100%, var(--mint) 0%, transparent 42%), var(--surface); }
+.recent-heading { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.recent-heading > div { flex: 1; min-width: 0; }
+.recent-heading h2 { font-size: clamp(22px, 3vw, 30px); letter-spacing: -.04em; line-height: 1.15; }
+.recent-orb { flex: 0 0 48px; height: 48px; border-radius: 17px; display: grid; place-items: center; background: var(--butter); color: var(--accent-strong); box-shadow: 0 4px 0 var(--line), inset 2px 3px 2px var(--highlight); }
+.recent-clear { width: 44px; padding: 0; flex-shrink: 0; }
+.recent-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.recent-list li { min-width: 0; animation: recent-in var(--duration-slow) var(--ease-smooth-out) both; animation-delay: var(--delay); }
+.recent-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; height: 100%; padding: 14px; border: 1px solid var(--line); border-radius: 24px; background: color-mix(in srgb, var(--surface-strong) 88%, transparent); box-shadow: 0 5px 0 -1px var(--line), inset 2px 3px 2px var(--highlight); transition: transform var(--duration-quick) var(--ease-smooth-out), box-shadow var(--duration-quick) var(--ease-smooth-out); }
+.recent-card:hover { transform: translateY(-3px); box-shadow: 0 8px 0 -1px var(--line), 0 16px 24px -16px var(--shadow), inset 2px 3px 2px var(--highlight); }
+.recent-card:active { transform: translateY(2px); box-shadow: 0 2px 0 -1px var(--line), inset 2px 3px 2px var(--highlight); }
+.recent-art { display: grid; place-items: center; }
+.recent-copy { width: 100%; min-width: 0; display: grid; gap: 3px; }
+.recent-copy strong { font-size: 15px; font-weight: 900; line-height: 1.25; letter-spacing: -.01em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.recent-copy small { color: var(--muted); font-size: 12px; font-weight: 750; line-height: 1.35; }
+.recent-when { justify-self: start; margin-top: 4px; padding: 2px 8px; border-radius: 99px; background: var(--bg); border: 1px solid var(--line); color: var(--text-secondary); font-size: 11px; font-weight: 800; }
+.recent-go { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 11px; display: grid; place-items: center; background: var(--peach); color: var(--accent-strong); box-shadow: 0 3px 0 var(--line), inset 1px 2px 2px var(--highlight); transition: transform var(--duration-quick) var(--ease-smooth-out); }
+.recent-card:hover .recent-go { transform: translateX(3px); }
+.recent-card:hover strong { color: var(--accent-strong); }
+@keyframes recent-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .recent-list li { animation: none; } }
+@media (max-width: 560px) {
+  .recent-section { padding: 16px; }
+  .recent-list { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 10px; }
+  .recent-list::-webkit-scrollbar { display: none; }
+  .recent-list li { flex: 0 0 152px; scroll-snap-align: start; }
+}
 .chips button.active { background: var(--peach); color: var(--text); border-color: var(--line); box-shadow: inset 1px 2px 2px var(--highlight), 0 2px 0 var(--line); }
 .tool-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .tool-card { padding: 28px; display: flex; flex-direction: column; min-height: 335px; transition: transform var(--duration-fast) var(--ease-smooth-out); }
