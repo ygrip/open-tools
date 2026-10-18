@@ -29,3 +29,7 @@ static/sitemap.xml
 
 # Generated from validated service metadata
 .wrangler.services.json
+
+# Rebuilt from independent pinned tool registrations
+src/lib/registry/generated.json
+worker/generated-services.json

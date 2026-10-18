@@ -16,7 +16,8 @@
     "performance:check": "node scripts/check-performance.mjs",
     "prepare": "svelte-kit sync || echo ''",
     "i18n:compile": "paraglide-js compile --project ./project.inlang",
-    "services:generate": "node scripts/generate-services.mjs"
+    "services:generate": "node scripts/generate-services.mjs",
+    "pretest": "npm run services:generate"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

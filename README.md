@@ -100,7 +100,6 @@ To create a different tool, follow [Scaffold and register a tool](docs/scaffold-
 
 Allowed categories: `media`, `developer`, `data`, `productivity`, `other`. Status: `stable`, `beta`, `experimental`. IDs use lowercase letters/numbers separated by hyphens; paths must equal `/<id>`. Increment the tool version when releasing a new bundle, then explicitly update the pinned registration. No private package registry is required.
 
-`/seo-checker/` provides a Google Lighthouse SEO score, failed-check evidence, and practical English/Indonesian suggestions for a public URL. It uses the consented, Turnstile-protected `services/audit` host feature, with mobile/desktop selection and separate manual checks. This is an online technical audit, not a ranking prediction. See [deployment, privacy and PageSpeed quota setup](docs/seo-audit.md).
 
 See [protected Worker-backed features](docs/protected-services.md) to configure per-tool request limits and Turnstile in the manifest. Local tools remain permission-free.
 
