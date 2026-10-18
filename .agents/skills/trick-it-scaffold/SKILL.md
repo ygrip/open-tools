@@ -13,6 +13,16 @@ Read the project recipe at [docs/scaffold-tool.md](../../../docs/scaffold-tool.m
 2. Inspect the current `src/lib/registry/contract.js`, `src/lib/registry/sandbox.ts`, `config/registry.json`, `config/tools/`, `scripts/lib/registrations.mjs`, `scripts/lib/bundles.mjs` and relevant authentication docs. The implementation is authoritative if the recipe has drifted.
 3. Keep the tool independently buildable in its own repository. Keep new production tool HTML, manifest, README and tests in its own repository. Use `examples/<id>` only for an intentional local development fixture; never create a production mirror by default. Do not import the tool's source/framework into the host or add a runtime API dependency.
 
+## Mandatory shared-UI gate (new and existing tools)
+
+Read [docs/tool-ui-checklist.md](../../../docs/tool-ui-checklist.md) and the `trickIt.ui` section of [docs/tool-runtime.md](../../../docs/tool-runtime.md) before implementation. **This is required, not a styling suggestion.**
+
+- Inventory applicable interactions in the source and rendered tool. Use the provided `ui.fileInput` for file selection/drop/previews, `ui.status` for async job states, `ui.loader` for deferred/external assets and engine initialization, `ui.toast` for transient notices, and host-rendered `ui.info`/`ui.confirm` for popups. `loader.asset(id)` receives verified bytes and real progress; initialization is a separate phase. Do not invent progress percentages.
+- When an existing tool does not conform, **modify it in its own repository before release**. Merely recoloring custom controls, adding unused SDK calls, or patching only the host does not complete a migration. Preserve file limits, operations, accessibility, input/output and cancellation; remove redundant hosted markup/styles/listeners.
+- Use native/minimal standalone fallbacks only when the relevant shared API is absent, never as a bypass after a capability denial. Do not copy the shared kit into the tool or show both pickers. Unsupported text-only-dialog interactions become inline panels; extend and test the host kit first if a genuinely missing shared component is necessary.
+- Require behavioral evidence for every applicable component (selection/drop/refusal, real loading/progress/error/retry, parent-centred dialog/focus, toast). Test locale/theme preservation, 320–375px layouts and remembered permission grant/denial/reset. Mark a component not applicable only when its interaction does not exist; do not add artificial loaders to synchronous tools.
+- **Before any push or re-pin**, update the runtime/scaffold documentation and this skill when APIs or rules change, complete the checklist, and fix every nonconforming hosted interaction. Keep blocked/untested work open. Registry validation does not prove visual or behavioral compliance.
+
 ## Build the tool
 
 - Start with the minimal recipe in the guide or the existing JSON Tools builder for larger dependency-bundled tools. Adapt behavior, labels and limitations to the requested operation; do not ship an unchanged counter under another name.
@@ -24,7 +34,7 @@ Read the project recipe at [docs/scaffold-tool.md](../../../docs/scaffold-tool.m
 
 ## Verify and publish
 
-1. Run the tool's functional tests and build. Test empty/invalid/large/Unicode inputs as appropriate; artifact checksum smoke tests alone are insufficient. Review the actual HTML for external loads and credential/private-sample leakage.
+1. Complete the [shared-UI release gate](../../../docs/tool-ui-checklist.md), including migration of existing nonconforming controls and current skill/API documentation. Run the tool's functional tests and build. Test empty/invalid/large/Unicode inputs as appropriate; artifact checksum smoke tests alone are insufficient. Review the actual HTML for external loads and credential/private-sample leakage.
 2. For a standalone release, add `config/tools/<id>.json` with its pinned commit SHA and an `added` UTC timestamp (see `docs/registry-layout.md`), add the tool's distinct clay icon (`scripts/assets/tool-icons/<id>.png` + `static/icons/tools/<id>.webp`), and run `npm run registry:sync`. Keep any temporary local fixture unregistered in production. Test the actual host iframe in both themes, including a live theme change that preserves input/output, mobile layout and keyboard/error states. Add targeted browser regression coverage.
 3. Run host `npm test`, `npm run check`, `npm run build`, `npm run performance:check` and `npm run test:e2e`. Install Playwright Chromium only if needed. Report exactly which checks ran and their results; do not imply static review is runtime verification.
 4. Before any commit, configure **both author and committer** as `ygrip <yunaz.gilang@gmail.com>`; explicitly verify the resulting commit identity. Do not inherit a corporate global identity. Commit source, manifest, release HTML and dependency lockfile (if any) in the same standalone source commit. Never commit `node_modules`, credentials or real private samples. Do not push or rewrite history without authorization.

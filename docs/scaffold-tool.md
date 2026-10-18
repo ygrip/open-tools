@@ -4,6 +4,14 @@ Start with a standalone tool repository. The example shown here can be built as 
 
 Use Node.js 22+. Each release contains one self-contained UTF-8 HTML document and `tool.manifest.json`. Source can be private; published browser code and repository provenance are public.
 
+## Required: shared UI, including existing tools
+
+New scaffolds and releases of existing tools **must use the host-provided `trickIt.ui` components for every applicable interaction**. Follow the [shared-UI release checklist](tool-ui-checklist.md) before implementation and before any push/re-pin. Use `ui.fileInput` for selection/drop/previews, `ui.status` for async job states, `ui.loader` for resource downloads/setup, `ui.toast` for transient notices, and host-centred `ui.info`/`ui.confirm` for popups. The [runtime guide](tool-runtime.md#shared-clay-ui-trickitui) defines the APIs.
+
+If an existing tool uses a competing hosted implementation, modify that tool's source, tests and release artifact; merely restyling it or adding an unused SDK call is not compliance. Minimal native/inline fallbacks are permitted only when the relevant shared API is absent. Never bypass remembered denial with direct browser/network access. Domain-specific editors, charts, persistent validation and result output remain tool-owned; do not add irrelevant UI just to call every API.
+
+The counter below demonstrates a real shared toast on Clear; it has no files, popup or asynchronous work, so those components are not applicable. For a tool with optional model resources, use `const loading = trickIt.ui.loader(target); const resource = await loading.asset('model');` and show engine initialization separately before declaring readiness. Update the API docs and scaffold skill whenever extending the kit.
+
 ## 1. Create the local scaffold
 
 ```sh
@@ -135,6 +143,8 @@ Create `examples/text-counter/src/index.html`:
       input.value = '';
       update();
       input.focus();
+      // Hosted: use the provided UI. Standalone: clearing still works without it.
+      if (window.trickIt?.ui) void window.trickIt.ui.toast('Text cleared', { tone: 'success' });
     });
   </script>
 </body>
@@ -191,6 +201,7 @@ test('release contains the expected HTML and matching theme-aware v3 manifest', 
   assert.match(html, /<!doctype html/i);
   assert.match(html, /id="text"/);
   assert.match(html, /data-theme="dark"/);
+  assert.match(html, /window\.trickIt\.ui\.toast\(/);
 });
 ```
 
@@ -231,7 +242,7 @@ npm run test:e2e
 
 Playwright requires Chromium (`npx playwright install chromium` on a fresh setup). Registry sync validates the complete contract, repository identity, uniqueness, checksum, UTF-8 and size; it does not execute the tool's build. Current performance policy also caps each compressed tool at 90,000 gzip bytes, below the 5 MiB hard acceptance limit.
 
-For deferred models, scripts, workers and browser capabilities, read [the v3 contract](tool-contract-v3.md) and [runtime/consent guide](tool-runtime.md). Assets need approved `trustedAssetOrigins`, exact byte sizes and SHA-256. The host downloads and verifies them only after consent; the iframe still cannot fetch arbitrary URLs. Use `window.trickIt.asset(id)` for verified bytes and `request(permission, payload)` for brokered capabilities. Do not bundle credentials or add `allow-same-origin`. New tools should declare translated metadata and respond to `trick-it:localechange` without clearing input. See [SEO configuration](seo.md) for automatic social cards and production canonical URLs.
+For deferred models, scripts, workers and browser capabilities, read [the v3 contract](tool-contract-v3.md) and [runtime/consent guide](tool-runtime.md). Assets need approved `trustedAssetOrigins`, exact byte sizes and SHA-256. The host downloads and verifies them only after consent; the iframe still cannot fetch arbitrary URLs. Use `trickIt.ui.loader(target).asset(id)` for visible verified-resource loading (or `trickIt.asset(id, { onProgress })` when integrating a shared loader already in use), and `request(permission, payload)` for brokered capabilities. Do not bundle credentials or add `allow-same-origin`. New tools should declare translated metadata and respond to `trick-it:localechange` without clearing input. See [SEO configuration](seo.md) for automatic social cards and production canonical URLs.
 
 Contract reminders:
 
@@ -242,6 +253,8 @@ Contract reminders:
 - Repository: exact `https://github.com/owner/repository` provenance matching the configured source. Bundle: safe relative `.html` path, lowercase 64-character SHA-256. Schema v1 is rejected; declaring v2 does not replace visual/security review.
 
 ## 4. Publish the standalone repository
+
+**Do not push yet:** complete the [shared-UI release gate](tool-ui-checklist.md), fix existing nonconforming UI in the tool repository, and ensure the scaffold skill and runtime docs match the provided APIs. Source checks alone do not replace behavioral tests.
 
 Create an **empty** private GitHub repository for the tool first; do not initialize it with competing files. Choose a fresh sibling directory; never overwrite an existing checkout. From Open Tools:
 

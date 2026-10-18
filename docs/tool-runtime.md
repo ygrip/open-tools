@@ -39,7 +39,7 @@ Theme updates require no custom receiver if styles use the host tokens. Do not r
 
 ## Shared clay UI (`trickIt.ui`)
 
-The host injects a small claymorphism kit into every sandbox. It needs no permission, uses the `--ot-*` tokens and `ti-` class prefix (restyle freely), follows the host language, and respects reduced motion. Prefer it over hand-rolled equivalents so every tool looks and behaves the same.
+The host injects a small claymorphism kit into every sandbox. It needs no permission, uses the `--ot-*` tokens and `ti-` class prefix (restyle freely), follows the host language, and respects reduced motion. **Use it for every applicable hosted interaction; hand-rolled equivalents are not release-compliant.** This applies to new scaffolds and existing-tool migrations. Follow the [shared-UI release gate](tool-ui-checklist.md): replace competing implementations in the tool repository, retain only API-absence fallbacks, and prove the rendered behavior with tests before pushing. Domain-specific editors/results and persistent input validation remain tool-owned.
 
 ```js
 const { ui } = window.trickIt;

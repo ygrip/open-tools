@@ -24,5 +24,7 @@ test('copyable scaffold works in the actual opaque sandbox and preserves text ac
   await expect(input).toHaveValue('');
   await expect(input).toBeFocused();
   await expect(frame.locator('#count')).toHaveText('0 Unicode code points');
+  // Clearing must consume the injected shared kit, not a custom notice.
+  await expect(frame.locator('.ti-toast')).toHaveText('Text cleared');
   expect(requests.filter((url) => /^https?:/.test(url))).toEqual([]);
 });

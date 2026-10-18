@@ -64,6 +64,10 @@ The manifest does not prescribe a frame height. The platform owns the available 
 
 Avoid wrapping entire tools in viewport-height scroll panes. Tool-specific bounded editors, menus, and tables may still scroll where appropriate. See [tool-owned workspace layout](tool-runtime.md#tool-owned-workspace-layout) for implementation guidance.
 
+## Shared UI release requirement
+
+New and updated tools must consume the provided `trickIt.ui` components wherever their features apply: file inputs/drop/previews, job status, asset loaders, toasts and host-centred information/confirmation popups. Follow the [shared-UI release gate](tool-ui-checklist.md); migrate nonconforming existing controls in the tool repository before publishing. This is a behavioral release requirement, not a new manifest field. Registry schema/checksum validation alone does not certify it. See the [runtime API](tool-runtime.md#shared-clay-ui-trickitui).
+
 ## Capability declarations
 
 A descriptor has exactly the public shape below. Unknown fields are not published.
@@ -78,12 +82,12 @@ A descriptor has exactly the public shape below. Unknown fields are not publishe
 
 Supported permission names:
 
-- `clipboard-read` and `clipboard-write`: host-mediated text access with a fresh host confirmation.
+- `clipboard-read` and `clipboard-write`: host-mediated text access with a remembered first-use permission decision.
 - `geolocation`: host-routed position access. The host shows the browser/OS prompt when needed, guidance when the site is blocked, a preview, and a precise/approximate choice before anything reaches the tool.
 - `services`: invoke only features declared in the optional `services` array through the host broker. Each declares an allowlisted handler, a per-feature native rate limit and a Turnstile requirement. The Worker enforces the generated policy; see [protected services](protected-services.md).
 - `downloads`: a confirmed host download of bounded bytes, including PNG and SVG; never a remote URL.
 - `camera-capture`: a one-shot host camera preview that captures a bounded PNG only after user approval; the opaque iframe never gets the camera stream.
-- `share-image`: native share sheet for a generated PNG only, with per-action approval and browser fallback.
+- `share-image`: native share sheet for a generated PNG only, with a remembered first-use permission decision and browser fallback.
 - `external-assets`: allow declared, pinned public resources to be downloaded and cached locally.
 - `wasm` and `workers`: permit isolated WebAssembly compilation and/or tool-created blob workers through conditional CSP. These are platform policy capabilities, not browser permission names.
 
@@ -132,7 +136,7 @@ Existing ID/path/category/status/repository rules still apply. Names are limited
 
 The bootstrap remains a self-contained UTF-8 HTML file of at most 5 MiB and is subject to the stricter configured gzip budget. Build it, update its SHA-256 from the exact final bytes, and commit the artifact and manifest together. Preserve the tool repository provenance even when the platform display brand changes. Keep credentials build-only.
 
-The host publishes `/bundles/<id>/<html-sha256>.json` containing `{ id, version, sha256, html }`. The browser checks the envelope's release identity and recomputes the HTML SHA-256 before embedding. A version query distinguishes metadata-only releases with unchanged HTML bytes; resource cache keys use the pinned resource digest. Permission grants do not carry over to a different release.
+The host publishes `/bundles/<id>/<html-sha256>.json` containing `{ id, version, sha256, html }`. The browser checks the envelope's release identity and recomputes the HTML SHA-256 before embedding. A version query distinguishes metadata-only releases with unchanged HTML bytes; resource cache keys use the pinned resource digest. Permission decisions are remembered per tool across releases; a newly declared permission still needs its own decision. Reset access clears those decisions and aborts the old runtime.
 
 Tool version strings are limited to 80 characters. For a new release, bump the version, rebuild/test, publish the source commit, and update the full pinned source SHA in the registry. Branch names, tags and short SHAs remain invalid. Deploy the complete static output atomically. Do not silently reload an active tool when a platform update becomes available: let the user preserve work and accept the update.
 
