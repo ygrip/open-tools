@@ -10,6 +10,179 @@
       "theme": "host",
       "protocolVersion": 1
     },
+    "id": "encoder-decoder",
+    "name": "Encoder / Decoder",
+    "description": "Encode and decode Base64, Base64URL, URL components, HTML entities, UTF-8 hex and Unicode escapes locally.",
+    "path": "/encoder-decoder",
+    "category": "developer",
+    "repository": "https://github.com/ygrip/encoder-decoder",
+    "version": "0.1.0",
+    "status": "beta",
+    "capabilities": [
+      "base64",
+      "base64url",
+      "url-encoding",
+      "html-entities",
+      "hex",
+      "unicode",
+      "text-conversion"
+    ],
+    "icon": "braces",
+    "seo": {
+      "title": "Base64, URL, Hex and HTML Encoder / Decoder",
+      "description": "Encode and decode text using Base64, Base64URL, URL components, HTML entities, hexadecimal UTF-8 bytes and Unicode escapes entirely in your browser.",
+      "keywords": [
+        "Base64 decoder",
+        "Base64URL",
+        "URL encoder",
+        "HTML escape",
+        "Hex decoder",
+        "Unicode escape"
+      ],
+      "robots": "index"
+    },
+    "guide": {
+      "summary": "All processing happens locally in an isolated browser frame. No network requests or special permissions are needed. This tool handles text, not raw binary files or encryption.",
+      "steps": [
+        "Choose Base64, Base64URL, URL component, HTML entities, Hex (UTF-8), or Unicode escapes.",
+        "Choose Encode or Decode. Paste text, or load an example.",
+        "Press Convert. Decoding malformed data or non-UTF-8 bytes produces an error without erasing the input.",
+        "Select output to copy manually, or use output as input to reverse the conversion."
+      ]
+    },
+    "permissions": [],
+    "assets": [],
+    "services": [],
+    "translations": {
+      "id": {
+        "name": "Encoder / Decoder",
+        "description": "Encode dan decode Base64, Base64URL, komponen URL, entitas HTML, hex UTF-8, dan escape Unicode secara lokal.",
+        "guide": {
+          "summary": "Semua proses berlangsung lokal di dalam browser yang terisolasi. Tidak perlu akses jaringan atau izin khusus. Alat ini mengolah teks, bukan file biner atau enkripsi.",
+          "steps": [
+            "Pilih Base64, Base64URL, komponen URL, entitas HTML, Hex (UTF-8), atau Unicode escapes.",
+            "Pilih Encode atau Decode. Tempel teks atau muat contoh.",
+            "Tekan Konversi. Data salah format atau byte non-UTF-8 memunculkan galat tanpa menghapus input.",
+            "Pilih hasil untuk disalin secara manual, atau pakai hasil sebagai input untuk membalik konversi."
+          ]
+        },
+        "seo": {
+          "title": "Encoder / Decoder Base64, URL, Hex, dan HTML",
+          "description": "Encode dan decode teks Base64, Base64URL, komponen URL, entitas HTML, hex UTF-8, dan escape Unicode langsung di browser.",
+          "keywords": [
+            "decoder Base64",
+            "Base64URL",
+            "encoder URL",
+            "escape HTML",
+            "hex",
+            "Unicode"
+          ],
+          "robots": "index"
+        }
+      }
+    },
+    "bundle": {
+      "format": "html",
+      "file": "dist/index.html",
+      "sha256": "e4d24b5e179c3a3f6add7665afa58fdba32df5ffdcef447e42fb982cd8e60247"
+    }
+  },
+  {
+    "schemaVersion": 3,
+    "runtimeVersion": 1,
+    "locales": [
+      "en",
+      "id"
+    ],
+    "appearance": {
+      "theme": "host",
+      "protocolVersion": 1
+    },
+    "id": "id-generator",
+    "name": "ID Generator",
+    "description": "Generate UUID v4, UUID v7, ULID, Nano ID, and custom identifiers directly in your browser.",
+    "path": "/id-generator",
+    "category": "developer",
+    "repository": "https://github.com/ygrip/id-generator",
+    "version": "0.1.0",
+    "status": "experimental",
+    "capabilities": [
+      "uuid-v4",
+      "uuid-v7",
+      "ulid",
+      "nanoid",
+      "random-id",
+      "batch-generation"
+    ],
+    "icon": "grid",
+    "seo": {
+      "title": "UUID, ULID and Nano ID Generator",
+      "description": "Generate UUIDv4, UUIDv7, monotonic ULIDs, Nano IDs and custom identifiers locally, with batch and CSV output.",
+      "keywords": [
+        "UUID",
+        "UUIDv7",
+        "ULID",
+        "Nano ID",
+        "random IDs",
+        "ID generator"
+      ],
+      "robots": "index"
+    },
+    "guide": {
+      "summary": "Uses browser cryptographic randomness with no network calls, accounts, or additional permissions. Short custom IDs can collide; time-based IDs expose their timestamps.",
+      "steps": [
+        "Pick UUIDv4 (random), UUIDv7 (time-ordered), ULID (sortable), Nano ID, or Custom ID.",
+        "Choose a batch size from 1 to 500; adjust the length, alphabet, and prefix when relevant.",
+        "Generate IDs, optionally switch to CSV output, and select the text to copy with Ctrl+C or Command+C."
+      ]
+    },
+    "permissions": [],
+    "assets": [],
+    "services": [],
+    "translations": {
+      "id": {
+        "name": "Pembuat ID",
+        "description": "Buat UUID v4, UUID v7, ULID, Nano ID, dan pengenal kustom langsung di peramban.",
+        "guide": {
+          "summary": "Menggunakan pengacak kriptografis di peramban tanpa jaringan, akun, atau izin tambahan. ID pendek dapat bertabrakan; ID berbasis waktu memuat informasi waktu.",
+          "steps": [
+            "Pilih UUIDv4 (acak), UUIDv7 (urut waktu), ULID (dapat diurutkan), Nano ID, atau ID kustom.",
+            "Tentukan jumlah 1–500; atur panjang, karakter, dan awalan jika diperlukan.",
+            "Buat ID, pilih tampilan CSV jika dibutuhkan, lalu pilih hasil untuk disalin menggunakan Ctrl+C atau Command+C."
+          ]
+        },
+        "seo": {
+          "title": "Pembuat UUID, ULID, dan Nano ID",
+          "description": "Buat UUIDv4, UUIDv7, ULID berurutan, Nano ID, serta ID kustom secara lokal, termasuk hasil batch dan CSV.",
+          "keywords": [
+            "UUID",
+            "UUIDv7",
+            "ULID",
+            "Nano ID",
+            "ID acak",
+            "pembuat ID"
+          ],
+          "robots": "index"
+        }
+      }
+    },
+    "bundle": {
+      "format": "html",
+      "file": "dist/index.html",
+      "sha256": "769eb9684060b2b4a31608fc9601efac9cde3aaf3d9f19365be72e784ad66408"
+    }
+  },
+  {
+    "schemaVersion": 3,
+    "runtimeVersion": 1,
+    "locales": [
+      "en",
+      "id"
+    ],
+    "appearance": {
+      "theme": "host",
+      "protocolVersion": 1
+    },
     "id": "json-tools",
     "name": "JSON Tools",
     "description": "Pretty-print JSON, query with JSONPath, and convert JSON to XML or XML to JSON in your browser.",
@@ -48,6 +221,7 @@
     },
     "permissions": [],
     "assets": [],
+    "services": [],
     "translations": {
       "id": {
         "name": "Alat JSON",
@@ -78,6 +252,285 @@
       "format": "html",
       "file": "dist/index.html",
       "sha256": "b0f816c15ce8c0a6f57cd4106645ad85238350dd55350ce4e1aef05ff6b5d7c0"
+    }
+  },
+  {
+    "schemaVersion": 3,
+    "runtimeVersion": 1,
+    "locales": [
+      "en",
+      "id"
+    ],
+    "appearance": {
+      "theme": "host",
+      "protocolVersion": 1
+    },
+    "id": "jwt-tools",
+    "name": "JWT Trust Lab",
+    "description": "Inspect JWTs, verify HMAC signatures and simulate issuer, audience and expiration policies locally.",
+    "path": "/jwt-tools",
+    "category": "developer",
+    "repository": "https://github.com/ygrip/jwt-tools",
+    "version": "0.1.0",
+    "status": "beta",
+    "capabilities": [
+      "jwt-inspection",
+      "hmac-verification",
+      "security-audit",
+      "policy-simulation",
+      "token-timeline"
+    ],
+    "icon": "shield",
+    "seo": {
+      "title": "JWT Trust Lab | Inspect and Verify JWTs",
+      "description": "Inspect JWTs privately, verify HS256/HS384/HS512 signatures, audit claims, and simulate token expiry, issuer and audience policies in your browser.",
+      "keywords": [
+        "JWT decoder",
+        "JWT verifier",
+        "JWT inspector",
+        "HS256",
+        "token expiry",
+        "JWT security"
+      ],
+      "robots": "index"
+    },
+    "guide": {
+      "summary": "Decode locally, verify HMAC explicitly, and simulate the issuer, audience and time checks your API expects.",
+      "steps": [
+        "Paste a three-part JWT or load the safe synthetic demo.",
+        "Inspect the protected header, claims and lifecycle without assuming authenticity.",
+        "Set expected issuer and audience, time tolerance, and simulated clock offset.",
+        "Choose the expected HS256, HS384 or HS512 algorithm, enter an HMAC secret and verify the signature.",
+        "Compare the independent signature and claim-policy findings. No token or secret is stored or sent."
+      ]
+    },
+    "permissions": [],
+    "assets": [],
+    "services": [],
+    "translations": {
+      "id": {
+        "name": "Lab Kepercayaan JWT",
+        "description": "Periksa JWT, verifikasi tanda tangan HMAC, dan simulasikan kebijakan penerbit, audiens serta kedaluwarsa secara lokal.",
+        "guide": {
+          "summary": "Dekode secara lokal, verifikasi HMAC, lalu simulasikan pemeriksaan penerbit, audiens dan waktu sesuai API.",
+          "steps": [
+            "Tempel JWT tiga bagian atau muat contoh aman.",
+            "Periksa header, klaim dan masa berlaku tanpa menganggap token sudah terautentikasi.",
+            "Atur penerbit, audiens, toleransi waktu dan pergeseran waktu simulasi.",
+            "Pilih algoritma HS256, HS384 atau HS512, lalu verifikasi dengan rahasia HMAC secara lokal.",
+            "Bandingkan hasil tanda tangan dan pemeriksaan kebijakan secara terpisah. Token dan rahasia tidak disimpan atau dikirim."
+          ]
+        },
+        "seo": {
+          "title": "Lab JWT | Periksa, Verifikasi, dan Simulasikan Token",
+          "description": "Periksa JWT secara privat, verifikasi HS256/HS384/HS512, audit klaim, dan simulasikan kebijakan kedaluwarsa, penerbit dan audiens.",
+          "keywords": [
+            "dekode JWT",
+            "verifikasi JWT",
+            "keamanan JWT",
+            "masa berlaku token"
+          ],
+          "robots": "index"
+        }
+      }
+    },
+    "bundle": {
+      "format": "html",
+      "file": "dist/index.html",
+      "sha256": "9e6ae88cd87da9796e4145cc44ab10541eda314295ed8455ff8dad24954e5c35"
+    }
+  },
+  {
+    "schemaVersion": 3,
+    "runtimeVersion": 1,
+    "locales": [
+      "en",
+      "id"
+    ],
+    "appearance": {
+      "theme": "host",
+      "protocolVersion": 1
+    },
+    "id": "seo-checker",
+    "name": "SEO Checker",
+    "description": "Score a public page with Lighthouse SEO audits and get practical improvement steps.",
+    "path": "/seo-checker",
+    "category": "developer",
+    "repository": "https://github.com/ygrip/seo-checker",
+    "version": "0.2.0",
+    "status": "beta",
+    "capabilities": [
+      "seo",
+      "lighthouse",
+      "url audit",
+      "mobile",
+      "desktop"
+    ],
+    "icon": "search",
+    "seo": {
+      "title": "SEO Checker — Page Scores and Improvement Suggestions",
+      "description": "Audit a public URL with Google Lighthouse. Check technical SEO, review failed checks and get actionable suggestions in English or Indonesian.",
+      "keywords": [
+        "seo checker",
+        "seo audit",
+        "lighthouse",
+        "website score"
+      ],
+      "robots": "index"
+    },
+    "guide": {
+      "summary": "Google PageSpeed Insights renders the submitted public URL for a Lighthouse technical SEO audit. This requires internet and provider availability; it is not a ranking or content-quality prediction.",
+      "steps": [
+        "Enable the online features permission and start the tool.",
+        "Enter a public HTTP(S) URL and choose mobile or desktop.",
+        "Complete the security check and approve sending the exact public URL to Google. Never submit private or signed links.",
+        "Review failed checks, page evidence and improvement steps, then complete the manual checks. Quota and unreachable-page failures can be retried."
+      ]
+    },
+    "permissions": [
+      {
+        "name": "services",
+        "reason": "Run a public-URL SEO audit through the host, with consent, rate limits and Cloudflare Turnstile verification.",
+        "required": true
+      }
+    ],
+    "assets": [],
+    "services": [
+      {
+        "id": "audit",
+        "handler": "pagespeed-seo",
+        "rateLimit": {
+          "limit": 5,
+          "periodSeconds": 60
+        },
+        "turnstile": true
+      }
+    ],
+    "translations": {
+      "id": {
+        "name": "Pemeriksa SEO",
+        "description": "Nilai halaman publik dengan audit SEO Lighthouse dan dapatkan langkah perbaikan yang praktis.",
+        "guide": {
+          "summary": "Google PageSpeed Insights merender URL publik untuk audit SEO teknis Lighthouse. Memerlukan internet dan ketersediaan penyedia; bukan prediksi peringkat atau kualitas konten.",
+          "steps": [
+            "Aktifkan izin fitur daring dan mulai alat.",
+            "Masukkan URL HTTP(S) publik lalu pilih seluler atau desktop.",
+            "Selesaikan pemeriksaan keamanan dan setujui pengiriman URL publik tersebut ke Google. Jangan kirim tautan pribadi atau bertanda tangan.",
+            "Tinjau masalah, bukti halaman, dan langkah perbaikan, lalu lakukan pemeriksaan manual. Galat kuota atau halaman tidak terjangkau dapat dicoba lagi."
+          ]
+        },
+        "seo": {
+          "title": "Pemeriksa SEO — Skor Halaman dan Saran Perbaikan",
+          "description": "Audit URL publik dengan Google Lighthouse. Periksa SEO teknis, tinjau masalah, dan dapatkan saran perbaikan dalam bahasa Indonesia atau Inggris.",
+          "keywords": [
+            "pemeriksa seo",
+            "audit seo",
+            "lighthouse",
+            "skor situs"
+          ],
+          "robots": "index"
+        }
+      }
+    },
+    "bundle": {
+      "format": "html",
+      "file": "dist/index.html",
+      "sha256": "8008275f8b1e2e1f36209bec1432dbaa644773b4da3e0240649759575e68717e"
+    }
+  },
+  {
+    "schemaVersion": 3,
+    "runtimeVersion": 1,
+    "locales": [
+      "en",
+      "id"
+    ],
+    "appearance": {
+      "theme": "host",
+      "protocolVersion": 1
+    },
+    "id": "text-manipulation",
+    "name": "Text Manipulation",
+    "description": "Convert, clean and organize text, count words, and estimate LLM tokens locally in your browser.",
+    "path": "/text-manipulation",
+    "category": "productivity",
+    "repository": "https://github.com/ygrip/text-manipulation",
+    "version": "0.2.0",
+    "status": "beta",
+    "capabilities": [
+      "text",
+      "word-count",
+      "case-conversion",
+      "slug",
+      "cleanup",
+      "find-replace",
+      "line-tools",
+      "unicode",
+      "token-counter",
+      "token-estimator"
+    ],
+    "icon": "filter",
+    "seo": {
+      "title": "Text Manipulation – text converter, word and token counter",
+      "description": "Convert case, clean text, count words and Unicode units, or estimate AI tokens with a custom ratio, all locally in your browser.",
+      "keywords": [
+        "text tools",
+        "case converter",
+        "word counter",
+        "remove duplicates",
+        "text cleaner",
+        "find and replace",
+        "slug generator",
+        "token counter",
+        "token estimator"
+      ],
+      "robots": "index"
+    },
+    "guide": {
+      "summary": "Text stays in your isolated browser tool. Token estimates are rough UTF-8 heuristics; exact counts for specific LLMs require their tokenizers. No uploads, assets or permissions.",
+      "steps": [
+        "Paste text into Input, then choose a transformation and method.",
+        "Choose Token counter to estimate LLM tokens with a custom bytes/token ratio, or count whitespace items, Unicode word segments, graphemes, code points or UTF-8 bytes. These are not official model token counts.",
+        "Inspect the Result and the live word, character and line counters. Find & replace interprets the search literally, not as a regular expression.",
+        "Select Result to copy with Ctrl+C or Cmd+C, or use the result as the next input. Changing the host language or theme preserves your work."
+      ]
+    },
+    "permissions": [],
+    "assets": [],
+    "services": [],
+    "translations": {
+      "id": {
+        "name": "Olah Teks",
+        "description": "Ubah, rapikan, atur teks, hitung kata, dan perkirakan token AI secara lokal di peramban.",
+        "guide": {
+          "summary": "Teks tetap di dalam alat peramban terisolasi. Perkiraan token memakai heuristik UTF-8; hitungan tepat model LLM memerlukan tokenizer aslinya. Tanpa unggahan atau izin.",
+          "steps": [
+            "Tempel teks ke Masukan, lalu pilih operasi dan metodenya.",
+            "Pilih Penghitung token untuk perkiraan token LLM atau hitung bagian dipisah spasi, segmen kata, grafem, titik kode Unicode, serta bita UTF-8. Ini bukan hitungan token resmi model.",
+            "Periksa Hasil dan penghitung kata, karakter, serta baris. Cari-ganti menggunakan teks biasa, bukan ekspresi reguler.",
+            "Pilih hasil lalu salin dengan Ctrl+C atau Cmd+C, atau gunakan hasil sebagai masukan berikutnya. Bahasa dan tema dapat diganti tanpa menghapus pekerjaan."
+          ]
+        },
+        "seo": {
+          "title": "Olah Teks – pengubah teks, penghitung kata dan token",
+          "description": "Ubah huruf, rapikan teks, hitung kata dan unit Unicode, atau perkirakan token AI dengan rasio sendiri langsung di peramban.",
+          "keywords": [
+            "olah teks",
+            "penghitung kata",
+            "pengubah huruf",
+            "hapus duplikat",
+            "rapikan teks",
+            "cari ganti",
+            "penghitung token"
+          ],
+          "robots": "index"
+        }
+      }
+    },
+    "bundle": {
+      "format": "html",
+      "file": "dist/index.html",
+      "sha256": "4d0d7508f70ef7c4040b377b1a91074da95aa0e76d3d39c1bd9802dc40827b6e"
     }
   }
 ]

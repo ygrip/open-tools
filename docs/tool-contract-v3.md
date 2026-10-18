@@ -80,6 +80,7 @@ Supported permission names:
 
 - `clipboard-read` and `clipboard-write`: host-mediated text access with a fresh host confirmation.
 - `geolocation`: host-mediated position access, followed by the browser/OS prompt when needed.
+- `services`: invoke only features declared in the optional `services` array through the host broker. Each declares an allowlisted handler, a per-feature native rate limit and a Turnstile requirement. The Worker enforces the generated policy; see [protected services](protected-services.md).
 - `downloads`: a user-confirmed host download of bounded bytes supplied by the tool; never an arbitrary remote download URL.
 - `external-assets`: allow declared, pinned public resources to be downloaded and cached locally.
 - `wasm` and `workers`: permit isolated WebAssembly compilation and/or tool-created blob workers through conditional CSP. These are platform policy capabilities, not browser permission names.
@@ -134,3 +135,18 @@ The host publishes `/bundles/<id>/<html-sha256>.json` containing `{ id, version,
 Tool version strings are limited to 80 characters. For a new release, bump the version, rebuild/test, publish the source commit, and update the full pinned source SHA in the registry. Branch names, tags and short SHAs remain invalid. Deploy the complete static output atomically. Do not silently reload an active tool when a platform update becomes available: let the user preserve work and accept the update.
 
 Run host contract/runtime tests, type-check, build, performance budgets and browser tests after registration. Review actual prompts, denial/revocation, progress/retry, offline/cache corruption, language/theme preservation and narrow mobile layouts. Static schema validation cannot prove a tool's honesty, privacy claims, accessibility or CPU cost.
+
+## Optional Worker-backed features
+
+Existing local-only tools omit `services` or set it to `[]`. New online features require schemaVersion 3 and a declared `services` permission. No arbitrary server URL, secret, executable handler or client override is permitted.
+
+```json
+"services": [{
+  "id": "audit",
+  "handler": "pagespeed-seo",
+  "rateLimit": { "limit": 5, "periodSeconds": 60 },
+  "turnstile": true
+}]
+```
+
+At most eight services are accepted. IDs are unique lowercase hyphenated names, maximum 32 characters. `pagespeed-seo` is the initial host-owned handler. Rate limits require integer `limit` 1–60 and `periodSeconds` 10 or 60. `turnstile` must be an explicit boolean. Unknown nested keys are rejected. A new handler requires reviewed host code; registering a tool cannot introduce an arbitrary proxy. Limits are approximate per-IP/per-Cloudflare-location. Local computations cannot be securely limited by this server policy.

@@ -1,0 +1,10 @@
+import { readFile, writeFile } from 'node:fs/promises';
+import { compileServices } from './lib/services.mjs';
+const root = new URL('../',import.meta.url);
+const manifests = JSON.parse(await readFile(new URL('src/lib/registry/generated.json',root)));
+const {policies, bindings} = compileServices(manifests);
+const config = JSON.parse(await readFile(new URL('wrangler.jsonc',root)));
+config.ratelimits = [...(config.ratelimits ?? []), ...bindings];
+await writeFile(new URL('worker/generated-services.json',root), JSON.stringify(policies,null,2)+'\n');
+await writeFile(new URL('.wrangler.services.json',root),JSON.stringify(config,null,2)+'\n');
+console.log(`Compiled ${bindings.length} protected service feature(s).`);

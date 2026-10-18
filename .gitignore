@@ -21,3 +21,11 @@ static/sitemap.xml
 # Local agent skills (not published)
 .agents/skills/transitions-dev/
 .agents/skills/web-performance/
+
+# Local Worker secrets and simulation state
+.dev.vars
+.dev.vars.*
+.wrangler/
+
+# Generated from validated service metadata
+.wrangler.services.json

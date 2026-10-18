@@ -68,7 +68,7 @@
   "privacy_analytics_title": "Analytics",
   "privacy_analytics_text": "No analytics requirement is built into the trick-it shell. If analytics are added later, this policy should be updated before collection begins.",
   "privacy_links_title": "Third-party links",
-  "privacy_links_text": "The catalog links to source repositories. A tool may ask to download declared public assets from the hosts listed in its guide. Those hosts receive ordinary network information such as your IP address, but the platform does not attach your tool input or credentials. Offline files are stored in your browser; clear site data to remove them.",
+  "privacy_links_text": "The catalog links to source repositories. A tool may ask to download declared public assets from the hosts listed in its guide. Those hosts receive ordinary network information such as your IP address, but the platform does not attach your tool input or credentials. Offline files are stored in your browser; clear site data to remove them. SEO Checker sends the URL you approve to Google PageSpeed Insights, which visits that page. Use public links only. The host does not store audit responses. Protected online features may use Cloudflare Turnstile to check browser and network signals. Tokens are verified by the host; local-only tools do not load the challenge.",
   "terms_description": "Terms policy for trick-it.",
   "terms_title": "Terms of Use",
   "terms_use_title": "Use of the tools",

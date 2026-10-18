@@ -6,7 +6,7 @@
   "scripts": {
     "predev": "npm run registry:sync && npm run seo:generate",
     "dev": "vite dev",
-    "build": "npm run registry:sync && npm run seo:generate && vite build && node scripts/export-error-page.mjs",
+    "build": "npm run registry:sync && npm run services:generate && npm run seo:generate && vite build && node scripts/export-error-page.mjs",
     "preview": "vite preview",
     "check": "npm run i18n:compile && npm run seo:generate && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "registry:sync": "node scripts/sync-tools.mjs",
@@ -15,7 +15,8 @@
     "test:e2e": "playwright test",
     "performance:check": "node scripts/check-performance.mjs",
     "prepare": "svelte-kit sync || echo ''",
-    "i18n:compile": "paraglide-js compile --project ./project.inlang"
+    "i18n:compile": "paraglide-js compile --project ./project.inlang",
+    "services:generate": "node scripts/generate-services.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

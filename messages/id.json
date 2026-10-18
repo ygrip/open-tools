@@ -68,7 +68,7 @@
   "privacy_analytics_title": "Analitik",
   "privacy_analytics_text": "trick-it tidak mewajibkan analitik di antarmuka utamanya. Jika analitik ditambahkan, kebijakan ini akan diperbarui sebelum pengumpulan data dimulai.",
   "privacy_links_title": "Tautan pihak ketiga",
-  "privacy_links_text": "Katalog menautkan repositori sumber. Alat dapat meminta unduhan aset publik dari host yang tercantum dalam panduannya. Host menerima informasi jaringan seperti alamat IP, tetapi platform tidak menyertakan masukan alat atau kredensialmu. Berkas luring disimpan di browser; hapus data situs untuk menghapusnya.",
+  "privacy_links_text": "Katalog menautkan repositori sumber. Alat dapat meminta unduhan aset publik dari host yang tercantum dalam panduannya. Host menerima informasi jaringan seperti alamat IP, tetapi platform tidak menyertakan masukan alat atau kredensialmu. Berkas luring disimpan di browser; hapus data situs untuk menghapusnya. Pemeriksa SEO mengirim URL yang Anda setujui ke Google PageSpeed Insights untuk dikunjungi. Gunakan tautan publik saja. Host tidak menyimpan hasil audit. Fitur daring terlindungi dapat memakai Cloudflare Turnstile untuk memeriksa sinyal browser dan jaringan. Token diverifikasi oleh host; alat lokal tidak memuat tantangan ini.",
   "terms_description": "Ketentuan penggunaan trick-it.",
   "terms_title": "Ketentuan Penggunaan",
   "terms_use_title": "Penggunaan alat",
