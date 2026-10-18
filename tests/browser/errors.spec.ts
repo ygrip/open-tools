@@ -28,6 +28,7 @@ test('failed tool route chunks use the global illustrated 500 with a safe refere
   expect(toolChunk).not.toBe('');
   await page.goto('/');
   await page.route(`**/${toolChunk}`, (route) => route.abort('failed'));
+  await page.getByRole('searchbox', { name: 'Search the toolbox' }).fill('JSON Tools');
   await page.getByRole('link', { name: /Open JSON Tools/ }).click();
   await expect(page.getByText('Error 500', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Even little tools need a tune-up.' })).toBeVisible();

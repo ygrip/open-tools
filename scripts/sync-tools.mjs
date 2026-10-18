@@ -12,6 +12,7 @@ const github = createGithubClient(createCredentialResolver(config));
 const registrations = await readToolRegistrations(config, root);
 const sources = registrations.map(({ source }) => source);
 const configuredIds = new Map(registrations.map(({ id, source }) => [source.repository.toLowerCase(), id]));
+const addedDates = new Map(registrations.filter(({ added }) => added).map(({ source, added }) => [source.repository.toLowerCase(), added]));
 
 // Explicit sources are authoritative and work for private repositories.
 if (config.discovery) {
@@ -41,7 +42,8 @@ for (const source of sources) {
   if (configuredId && tool.manifest.id !== configuredId) throw new Error(`tool registration filename does not match manifest id: ${configuredId}`);
   if (ids.has(tool.manifest.id)) throw new Error(`duplicate tool id/path: ${tool.manifest.id}`);
   ids.add(tool.manifest.id);
-  loaded.push(tool);
+  const addedAt = addedDates.get(source.repository.toLowerCase());
+  loaded.push(addedAt ? { ...tool, manifest: { ...tool.manifest, addedAt } } : tool);
 }
 loaded.sort((a, b) => a.manifest.name.localeCompare(b.manifest.name));
 await mkdir(resolve(root, 'static'), { recursive: true });

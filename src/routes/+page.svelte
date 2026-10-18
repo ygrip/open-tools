@@ -14,6 +14,8 @@
   import Pagination from '$lib/components/Pagination.svelte';
   import { getPagination } from '$lib/pagination.js';
   import { categories, tools } from '$lib/registry/tools';
+  import ToolArt from '$lib/components/ToolArt.svelte';
+  import { readRecentTools, clearRecentTools, readToolSort, saveToolSort, sortTools, toolSorts, type ToolSort } from '$lib/recent';
 
   const pageSize = 6;
   let currentPage = $state(1);
@@ -24,13 +26,29 @@
   let SearchOverlay = $state<typeof import('$lib/components/SearchOverlay.svelte').default | null>(null);
   const categoryNames: Record<string, string> = { all: m.category_all(), data: m.category_data(), developer: m.category_developer(), media: m.category_media(), productivity: m.category_productivity(), other: m.category_other() };
   const catalog = $derived(tools.map((tool) => localizedTool(tool, getLocale())));
-  const filteredTools = $derived(catalog.filter((tool) =>
+  // Browser-only preferences: hydrated after mount so prerendered HTML stays deterministic.
+  let recentIds = $state<string[]>([]);
+  let sortOrder = $state<ToolSort>('az');
+  const sortNames: Record<ToolSort, string> = { az: m.sort_az(), za: m.sort_za(), newest: m.sort_newest(), oldest: m.sort_oldest() };
+  const recentTools = $derived(recentIds.map((id) => catalog.find((tool) => tool.id === id)).filter((tool) => tool !== undefined));
+  const filteredTools = $derived(sortTools(catalog, sortOrder, getLocale()).filter((tool) =>
     (selectedCategory === 'all' || tool.category === selectedCategory) &&
     [tool.name, tool.description, ...tool.capabilities].join(' ').toLowerCase().includes(query.trim().toLowerCase())
   ));
 
   const pageState = $derived(getPagination(filteredTools.length, pageSize, currentPage));
   const pagedTools = $derived(filteredTools.slice(pageState.offset, pageState.end));
+
+  function changeSort(value: ToolSort) {
+    sortOrder = value;
+    currentPage = 1;
+    saveToolSort(value);
+  }
+
+  function clearRecent() {
+    clearRecentTools();
+    recentIds = [];
+  }
 
   function selectCategory(category: string) {
     selectedCategory = category;
@@ -57,6 +75,8 @@
   }
 
   onMount(() => {
+    recentIds = readRecentTools();
+    sortOrder = readToolSort();
     function shortcut(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       if (target?.matches('input, textarea, select') || target?.isContentEditable) return;
@@ -98,6 +118,17 @@
       <div class="benefit-tile surface butter"><span class="clay-icon"><Icon name="grid" size={23} /></span><div><strong>{m.benefit_collection()}</strong><p>{m.benefit_collection_desc()}</p></div></div>
     </section>
 
+    {#if recentTools.length}
+      <section class="recent-section" aria-labelledby="recent-title">
+        <div class="recent-heading"><div><p class="eyebrow">{m.recent_eyebrow()}</p><h2 id="recent-title">{m.recent_heading()}</h2></div><button class="clay-button small" type="button" onclick={clearRecent} aria-label={m.recent_clear()}><Icon name="x" size={16} /></button></div>
+        <ul class="recent-list">
+          {#each recentTools as tool (tool.id)}
+            <li><a class="recent-card surface" href={localizedPath(`${tool.path}/`)}><ToolArt id={tool.id} icon={tool.icon} size={44} /><span>{tool.name}</span></a></li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
+
     <section class="catalog-section" id="tools" aria-labelledby="catalog-title">
       <div class="section-heading"><div><p class="eyebrow">{m.catalog_eyebrow()}</p><h2 id="catalog-title" tabindex="-1">{m.catalog_heading()}</h2></div><span class="count-pill">{tools.length} {tools.length === 1 ? m.handy_tool() : m.handy_tools()} {m.count_and_counting()}</span></div>
       <div class="catalog-controls surface">
@@ -106,13 +137,14 @@
           <button type="button" class:active={selectedCategory === 'all'} aria-pressed={selectedCategory === 'all'} onclick={() => selectCategory('all')}><Icon name="grid" size={16} /> {m.category_all()}</button>
           {#each categories as category}<button type="button" class:active={selectedCategory === category} aria-pressed={selectedCategory === category} onclick={() => selectCategory(category)}>{categoryNames[category]}</button>{/each}
         </div>
+        <label class="sort-control"><Icon name="sliders" size={16} /><span class="sr-only">{m.sort_label()}</span><select value={sortOrder} onchange={(event) => changeSort(event.currentTarget.value as ToolSort)}>{#each toolSorts as sort}<option value={sort}>{sortNames[sort]}</option>{/each}</select></label>
       </div>
       {#if searchError}<p role="status">{searchError}</p>{/if}
       <p class="sr-only" role="status">{filteredTools.length} {m.tools_found()}</p>
       <div class="tool-grid" class:single-result={filteredTools.length === 1}>
         {#each pagedTools as tool (tool.id)}
           <a class="tool-card surface" href={localizedPath(`${tool.path}/`)}>
-            <div class="tool-card-top"><span class="clay-icon peach"><Icon name={tool.icon} size={30} /></span><span class="tool-status"><span class="status-dot"></span> {m.tool_ready()}</span></div>
+            <div class="tool-card-top"><ToolArt id={tool.id} icon={tool.icon} size={60} /><span class="tool-status"><span class="status-dot"></span> {m.tool_ready()}</span></div>
             <div class="tool-card-copy"><span class="eyebrow">{categoryNames[tool.category]}</span><h3>{tool.name}</h3><p>{tool.description}</p></div>
             <div class="tool-capabilities">{#each tool.capabilities.slice(0, 3) as capability}<span>{capability.replaceAll('-', ' ')}</span>{/each}</div>
             <div class="tool-card-bottom"><span>{m.open_tool()} {tool.name}</span><span class="round-arrow"><Icon name="arrow-right" size={21} /></span></div>

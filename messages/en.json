@@ -228,5 +228,13 @@
   "pwa_later": "Not now",
   "pwa_close": "Got it",
   "hero_proof_one": "{count} handy tool, ready when you need it.",
-  "hero_proof_empty": "New tools are on the way. Check back soon."
+  "hero_proof_empty": "New tools are on the way. Check back soon.",
+  "recent_eyebrow": "Pick up where you left off",
+  "recent_heading": "Recently used",
+  "recent_clear": "Clear recent tools",
+  "sort_label": "Sort tools",
+  "sort_az": "Name A–Z",
+  "sort_za": "Name Z–A",
+  "sort_newest": "Newest first",
+  "sort_oldest": "Oldest first"
 }

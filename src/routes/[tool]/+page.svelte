@@ -6,6 +6,8 @@
   import QuickSettings from '$lib/components/QuickSettings.svelte';
   import ToolRuntime from '$lib/components/ToolRuntime.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import ToolArt from '$lib/components/ToolArt.svelte';
+  import { recordRecentTool } from '$lib/recent';
   import Seo from '$lib/components/Seo.svelte';
   import { localizedPath } from '$lib/i18n';
   import { localizedTool } from '$lib/registry/presentation';
@@ -15,6 +17,7 @@
 
   let { data }: { data: PageData } = $props();
   const tool = $derived(localizedTool(data.tool, getLocale()));
+  $effect(() => recordRecentTool(data.tool.id));
 </script>
 
 <Seo title={tool.seo.title} description={tool.seo.description} path={`${tool.path}/`} keywords={tool.seo.keywords} robots={tool.seo.robots} {tool} />
@@ -25,7 +28,7 @@
     <div class="tool-header-actions"><LanguageSwitcher /><ThemeToggle /><ShareButton {tool} /><QuickSettings /></div>
   </header>
   <section class="tool-intro" aria-labelledby="tool-name">
-    <span class="clay-icon peach"><Icon name={tool.icon} size={30} /></span>
+    <ToolArt id={tool.id} icon={tool.icon} size={84} eager />
     <div><p class="eyebrow">trick-it</p><h1 id="tool-name">{tool.name}</h1><p>{tool.description}</p></div>
   </section>
   <ToolRuntime {tool} locale={getLocale()} />
@@ -57,6 +60,7 @@
   .workspace-note a :global(svg) { transition: transform var(--duration-quick) var(--ease-smooth-out); }
   .workspace-note a:hover :global(svg) { transform: translateX(3px); }
   @media (max-width: 560px) {
+    .tool-intro > :global(.tool-art) { width: 64px; height: 64px; }
     .workspace-note { flex-wrap: wrap; }
     .workspace-note p { flex-basis: calc(100% - 64px); }
     .workspace-note a { width: 100%; }

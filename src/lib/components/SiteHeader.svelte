@@ -10,6 +10,22 @@
   import type { ToolManifest } from '$lib/registry/types';
 
   let { onsearch, catalog = [] }: { onsearch: () => void; catalog?: ToolManifest[] } = $props();
+
+  // Highlight the section in view: "How it works" once its top passes mid-screen, else the toolbox.
+  let active = $state<'tools' | 'how'>('tools');
+  $effect(() => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const how = document.getElementById('how-it-works');
+      active = how && how.getBoundingClientRect().top < window.innerHeight * 0.5 ? 'how' : 'tools';
+    };
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
+    update();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule); };
+  });
 </script>
 
 <header class="topbar">
@@ -18,8 +34,8 @@
     <span class="brand-text"><strong>trick<span class="brand-accent">-it</span></strong><small>{m.brand_tagline()}</small></span>
   </a>
   <nav class="topnav" aria-label={m.nav_primary()}>
-    <a class="nav-link" href="#tools"><Icon name="grid" size={17} /> {m.nav_toolbox()}</a>
-    <a class="nav-link about-link" href="#how-it-works">{m.nav_how()}</a>
+    <a class="nav-link" class:active={active === 'tools'} aria-current={active === 'tools' ? 'location' : undefined} href="#tools"><Icon name="grid" size={17} /> {m.nav_toolbox()}</a>
+    <a class="nav-link about-link" class:active={active === 'how'} aria-current={active === 'how' ? 'location' : undefined} href="#how-it-works">{m.nav_how()}</a>
     <a class="nav-link mobile-github" href="https://github.com/ygrip/open-tools" target="_blank" rel="noreferrer"><Icon name="github" size={17} /> GitHub</a>
   </nav>
   <div class="header-actions">

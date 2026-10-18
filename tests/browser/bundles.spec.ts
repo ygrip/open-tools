@@ -2,7 +2,9 @@ import { expect, test } from '@playwright/test';
 
 test('catalog opens the bundle and runs all four operations', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: /JSON Tools/ }).click();
+  // The catalog is paginated; search keeps this independent of how many tools exist.
+  await page.getByRole('searchbox', { name: 'Search the toolbox' }).fill('JSON Tools');
+  await page.getByRole('link', { name: /Open JSON Tools/ }).click();
   await expect(page).toHaveURL(/\/json-tools\/?$/);
   const tool = page.frameLocator('iframe');
   const input = tool.getByRole('textbox', { name: 'Input', exact: true });

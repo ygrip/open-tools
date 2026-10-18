@@ -46,6 +46,19 @@ test('a tool cannot smuggle mutable refs, new properties, duplicates or invalid 
   });
 });
 
+test('optional added timestamps are returned beside, not inside, the fetched source', async () => {
+  await fixture(async (root, dir) => {
+    await writeFile(join(dir, 'alpha.json'), JSON.stringify({ repository: 'ygrip/alpha', ref, added: '2026-10-18T03:17:15Z' }));
+    assert.deepEqual(await readToolRegistrations(config, root), [{ id: 'alpha', source: { repository: 'ygrip/alpha', ref }, added: '2026-10-18T03:17:15Z' }]);
+  });
+  for (const added of ['2026-10-18', 'yesterday', 1, '2026-13-40T99:99:99Z']) {
+    await fixture(async (root, dir) => {
+      await writeFile(join(dir, 'alpha.json'), JSON.stringify({ repository: 'ygrip/alpha', ref, added }));
+      await assert.rejects(readToolRegistrations(config, root), /invalid added/);
+    });
+  }
+});
+
 test('registration directory is confined to config and symlinks are rejected', async () => {
   await fixture(async (root, dir) => {
     await writeFile(join(dir, 'real.json'), JSON.stringify({ repository: 'ygrip/real', ref }));

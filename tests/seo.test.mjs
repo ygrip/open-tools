@@ -77,6 +77,11 @@ test('sitemap and robots cover real locale routes and omit noindex tools without
   assert.ok(xml.includes('xhtml:link rel="alternate" hreflang="id"'));
   assert.ok(!xml.includes('/hidden/'));
   assert.ok(!xml.includes('<lastmod>'));
+  assert.ok(xml.includes(`hreflang="x-default" href="${origin}/json-tools/"`));
+  const withImages = sitemapXml([tool], origin, '', { 'tools/json-tools-en': '/og/tools/json-tools-en.abc.png', 'home-id': '/og/home-id.def.png' });
+  assert.ok(withImages.includes(`<image:loc>${origin}/og/tools/json-tools-en.abc.png</image:loc>`));
+  assert.ok(withImages.includes(`<image:loc>${origin}/og/home-id.def.png</image:loc>`));
+  assert.ok(withImages.includes('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"'));
   assert.ok(!sitemapXml([tool], '').includes('<loc>'));
   assert.match(robotsText(''), /Disallow: \//);
   assert.ok(robotsText(origin).includes(`Sitemap: ${origin}/sitemap.xml`));

@@ -228,5 +228,13 @@
   "pwa_later": "Nanti saja",
   "pwa_close": "Mengerti",
   "hero_proof_one": "{count} alat praktis, siap membantu kapan saja.",
-  "hero_proof_empty": "Alat baru sedang disiapkan. Mampir lagi nanti, ya."
+  "hero_proof_empty": "Alat baru sedang disiapkan. Mampir lagi nanti, ya.",
+  "recent_eyebrow": "Lanjutkan yang tadi",
+  "recent_heading": "Baru dipakai",
+  "recent_clear": "Hapus daftar alat terakhir",
+  "sort_label": "Urutkan alat",
+  "sort_az": "Nama A–Z",
+  "sort_za": "Nama Z–A",
+  "sort_newest": "Terbaru dulu",
+  "sort_oldest": "Terlama dulu"
 }

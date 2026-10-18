@@ -2,6 +2,7 @@
   import { m } from '$lib/paraglide/messages.js';
   import { localizedPath } from '$lib/i18n';
   import Icon from './Icon.svelte';
+  import ToolArt from './ToolArt.svelte';
   import type { ToolManifest } from '$lib/registry/types';
 
   let { open = $bindable(false), tools }: { open?: boolean; tools: ToolManifest[] } = $props();
@@ -47,7 +48,7 @@
   </div>
   <div class="search-results">
     {#each results as tool}
-      <a class="search-result" href={localizedPath(`${tool.path}/`)} onclick={close}><span class="clay-icon peach"><Icon name="braces" size={24} /></span><span class="search-result-copy"><strong>{tool.name}</strong><small>{tool.description}</small></span><Icon name="arrow-right" size={20} /></a>
+      <a class="search-result" href={localizedPath(`${tool.path}/`)} onclick={close}><ToolArt id={tool.id} icon={tool.icon} size={44} /><span class="search-result-copy"><strong>{tool.name}</strong><small>{tool.description}</small></span><Icon name="arrow-right" size={20} /></a>
     {:else}
       <div class="search-empty"><strong>{m.overlay_empty_prefix()} “{query}” {m.overlay_empty_suffix()}</strong><p>{m.overlay_empty_tip()}</p></div>
     {/each}

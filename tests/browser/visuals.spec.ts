@@ -73,6 +73,8 @@ test('catalog filters and empty state are usable', async ({ page }) => {
   await page.getByRole('searchbox', { name: 'Search the toolbox' }).fill('not-here');
   await expect(page.getByRole('heading', { name: 'No little helpers found. Yet.' })).toBeVisible();
   await page.getByRole('button', { name: 'Show all tools' }).click();
+  await expect(page.getByRole('link', { name: /Open / }).first()).toBeVisible();
+  await page.getByRole('searchbox', { name: 'Search the toolbox' }).fill('JSON');
   await expect(page.getByRole('link', { name: /Open JSON Tools/ })).toBeVisible();
 });
 

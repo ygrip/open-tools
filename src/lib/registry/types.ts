@@ -31,6 +31,8 @@ export type ToolManifest = {
   services: ToolService[];
   translations: Partial<Record<'en' | 'id', ToolTranslation>>;
   bundle: { format: 'html'; file: string; sha256: string };
+  /** Host registration date (UTC ISO), used for "newest first" sorting. */
+  addedAt?: string;
 };
 
 export { validateManifest } from './contract.js';

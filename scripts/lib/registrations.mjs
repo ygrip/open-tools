@@ -36,7 +36,7 @@ export async function readToolRegistrations(config, root) {
     try { source = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
     catch { throw new Error(`invalid tool registration JSON: ${file.name}`); }
     if (!source || typeof source !== 'object' || Array.isArray(source) ||
-        Object.keys(source).some((key) => !['repository', 'ref', 'local'].includes(key)) ||
+        Object.keys(source).some((key) => !['repository', 'ref', 'local', 'added'].includes(key)) ||
         typeof source.repository !== 'string' || !repoPattern.test(source.repository) ||
         (Object.hasOwn(source, 'ref') === Object.hasOwn(source, 'local'))) {
       throw new Error(`invalid tool registration: ${file.name}`);
@@ -45,10 +45,16 @@ export async function readToolRegistrations(config, root) {
     if (source.local !== undefined && (typeof source.local !== 'string' || !source.local.startsWith('examples/'))) {
       throw new Error(`invalid local development source: ${file.name}`);
     }
+    // Optional catalog date for "newest first" sorting; never part of the fetched source.
+    const { added, ...pinned } = source;
+    if (added !== undefined && (typeof added !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(added) || Number.isNaN(Date.parse(added)))) {
+      throw new Error(`invalid added timestamp (use UTC ISO, e.g. 2026-01-31T12:00:00Z): ${file.name}`);
+    }
+    source = pinned;
     const key = source.repository.toLowerCase();
     if (seenRepositories.has(key)) throw new Error(`duplicate tool repository: ${source.repository}`);
     seenRepositories.add(key);
-    registrations.push({ id, source });
+    registrations.push(added === undefined ? { id, source } : { id, source, added });
   }
   return registrations;
 }

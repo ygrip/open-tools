@@ -10,12 +10,14 @@
     image?: string;
     keywords?: string[];
     robots?: 'index' | 'noindex';
-    tool?: { id: string; name: string; version: string; category: string; description?: string; locales?: string[] };
+    tool?: { id: string; name: string; version: string; category: string; description?: string; locales?: string[]; capabilities?: string[]; addedAt?: string };
     locale?: 'en' | 'id';
   } = $props();
   const generatedImages: Record<string, string> = config.images;
   const language = $derived(locale ?? getLocale());
   const socialImage = $derived(image ?? generatedImages[`${tool ? `tools/${tool.id}` : 'home'}-${language}`]);
+  const toolIcons: Record<string, string> = (config as { icons?: Record<string, string> }).icons ?? {};
+  const toolIcon = $derived(tool ? toolIcons[tool.id] : undefined);
   const metadata = $derived(seoMetadata({ title, description, path, image: socialImage, keywords, robots, tool, locale: language, origin: config.origin, base: config.base }));
 </script>
 
@@ -24,6 +26,7 @@
   <meta name="description" content={metadata.description} />
   {#if metadata.keywords}<meta name="keywords" content={metadata.keywords} />{/if}
   <meta name="robots" content={metadata.robots} />
+  {#if toolIcon}<link rel="icon" type="image/webp" href={toolIcon} />{/if}
   {#if metadata.canonical}
     <link rel="canonical" href={metadata.canonical} />
     {#each metadata.alternates as alternate}<link rel="alternate" hreflang={alternate.locale} href={alternate.href} />{/each}
@@ -37,6 +40,7 @@
   <meta property="og:locale" content={metadata.locale} />
   <meta property="og:locale:alternate" content={metadata.alternateLocale} />
   <meta property="og:image" content={metadata.image} />
+  {#if metadata.image.startsWith('https://')}<meta property="og:image:secure_url" content={metadata.image} />{/if}
   <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />

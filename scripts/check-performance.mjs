@@ -32,7 +32,10 @@ for (const file of assets) {
   const bytes = await readFile(file);
   if (file.endsWith('.js')) javascript += gzipSync(bytes).length;
   if (file.endsWith('.css')) css += gzipSync(bytes).length;
-  if (/\.(?:webp|svg|png|avif)$/.test(file) && !file.includes('/og/')) images += bytes.length;
+  // Tool clay icons load lazily per card, so each gets its own small budget instead of the shared one.
+  const toolIcon = file.includes('/icons/tools/');
+  if (toolIcon && bytes.length > 12_000) throw new Error(`Tool icon exceeds 12 kB budget: ${relative(client, file)}`);
+  if (/\.(?:webp|svg|png|avif)$/.test(file) && !file.includes('/og/') && !toolIcon) images += bytes.length;
   if (file.includes('/og/') && file.endsWith('.png') && bytes.length > 200_000) throw new Error(`Social card exceeds 200 kB budget: ${file}`);
   if (file.endsWith('.woff2')) fonts += bytes.length;
   if (/\/bundles\/.*\.json$/.test(file) && gzipSync(bytes).length > 90_000) throw new Error(`Tool bundle exceeds 90 kB gzip budget: ${relative(client, file)}`);

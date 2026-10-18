@@ -16,11 +16,14 @@ To register a new production tool, **add only** `config/tools/<id>.json`:
 ```json
 {
   "repository": "ygrip/id-generator",
-  "ref": "633e6b044a21493dec72f5741f447b0e0ba60d6d"
+  "ref": "633e6b044a21493dec72f5741f447b0e0ba60d6d",
+  "added": "2026-10-18T03:17:15Z"
 }
 ```
 
-The filename must equal the manifest ID. `ref` must be the complete 40-character lowercase commit SHA. There is no copied HTML, release Markdown or tool manifest in trick-it. The tool repository owns source, documentation and release assets. Each registration can be added or updated in an independent PR without modifying a shared `sources` array.
+The filename must equal the manifest ID. `ref` must be the complete 40-character lowercase commit SHA. `added` is the optional UTC registration time (`YYYY-MM-DDTHH:MM:SSZ`) used by the homepage "Newest first" sort and JSON-LD `datePublished`; keep it unchanged when updating `ref`.
+
+Each tool should also get host-owned clay art: `scripts/assets/tool-icons/<id>.png` (512×512, transparent, used in its social card) and `static/icons/tools/<id>.webp` (160×160, ≤12 kB, used on cards and the tool page). Pick a tile color and symbol no other tool uses. Missing art falls back to the manifest's line icon. There is no copied HTML, release Markdown or tool manifest in trick-it. The tool repository owns source, documentation and release assets. Each registration can be added or updated in an independent PR without modifying a shared `sources` array.
 
 The sync combines validated manifests into `src/lib/registry/generated.json` for the app, route generation and metadata. This file is ignored build output, just like `static/bundles/`; do not edit or commit it. A combined output is useful at runtime, while independent `config/tools/<id>.json` files keep source changes separate and avoid generated-file merge conflicts. CI regenerates the complete catalog from the merged registrations. Worker service policies and generated Wrangler configuration follow the same rule.
 

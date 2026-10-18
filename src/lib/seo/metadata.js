@@ -36,7 +36,9 @@ export function safeJsonLd(value) {
   return JSON.stringify(value).replace(/[<>&\u2028\u2029]/g, (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`);
 }
 
-/** @typedef {{id:string,name:string,version:string,category:string,description?:string,locales?:string[]}} SeoTool */
+/** @typedef {{id:string,name:string,version:string,category:string,description?:string,locales?:string[],capabilities?:string[],addedAt?:string}} SeoTool */
+
+const applicationCategories = /** @type {Record<string, string>} */ ({ developer: 'DeveloperApplication', media: 'MultimediaApplication', data: 'BusinessApplication', productivity: 'UtilitiesApplication' });
 /** @param {{title:string,description:string,path:string,locale?:string,origin?:string,base?:string,image?:string,keywords?:string[],robots?:string,tool?:SeoTool}} options */
 export function seoMetadata(options) {
   const locale = options.locale === 'id' ? 'id' : 'en';
@@ -54,7 +56,11 @@ export function seoMetadata(options) {
     '@context': 'https://schema.org', '@type': 'WebApplication',
     ...(canonical ? { '@id': `${canonical}#application`, url: canonical } : {}),
     name: options.tool.name, description: options.description, softwareVersion: options.tool.version,
-    applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any', browserRequirements: 'Requires JavaScript', inLanguage: options.tool.locales?.includes(locale) ? locale : options.tool.locales?.[0] ?? 'en'
+    applicationCategory: applicationCategories[options.tool.category] ?? 'UtilitiesApplication', operatingSystem: 'Any', browserRequirements: 'Requires JavaScript', inLanguage: options.tool.locales?.includes(locale) ? locale : options.tool.locales?.[0] ?? 'en',
+    image, isAccessibleForFree: true,
+    ...(options.tool.capabilities?.length ? { featureList: options.tool.capabilities.map((capability) => capability.replaceAll('-', ' ')).join(', ') } : {}),
+    ...(options.tool.addedAt ? { datePublished: options.tool.addedAt.slice(0, 10) } : {}),
+    publisher: { '@type': 'Organization', name: 'trick-it', ...(origin ? { url: `${origin}${base}/` } : {}) }
   } : localePath(options.path, 'en', base) === `${base}/` ? {
     '@context': 'https://schema.org', '@type': 'WebSite', name: 'trick-it', description: options.description,
     ...(canonical ? { '@id': `${canonical}#website`, url: canonical } : {}), inLanguage: locale
