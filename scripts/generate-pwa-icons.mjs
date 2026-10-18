@@ -2,6 +2,7 @@
 // Usage: node scripts/generate-pwa-icons.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
+import sharp from 'sharp';
 
 const logo = readFileSync(new URL('../static/brand/logo.svg', import.meta.url), 'utf8');
 const inner = logo.replace(/<svg[^>]*>/, '').replace('</svg>', '').replace(/<title[^>]*>.*?<\/title>/, '').replaceAll('ot-logo-', 'pwa-');
@@ -23,7 +24,8 @@ const page = await browser.newPage();
 for (const [file, size, fill] of targets) {
   await page.setViewportSize({ width: size, height: size });
   await page.setContent(`<style>html,body{margin:0}</style>${compose(size, fill)}`);
-  writeFileSync(new URL(`../${file}`, import.meta.url), await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: size, height: size } }));
+  const raw = await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: size, height: size } });
+  writeFileSync(new URL(`../${file}`, import.meta.url), await sharp(raw).png({ palette: true, quality: 90, effort: 10, colours: 128, dither: 0.6 }).toBuffer());
 }
 writeFileSync(new URL('../static/pwa/icon.svg', import.meta.url), compose(512, 0.68));
 await browser.close();
