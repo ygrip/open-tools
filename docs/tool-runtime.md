@@ -93,7 +93,7 @@ For tool-owned loading (e.g. engine initialization or a worker reporting progres
 
 Existing callers can subscribe without rendering a card: `trickIt.asset('model', { onProgress({ loaded, total, phase }) {} })`; progress is host-authenticated, bounded and scoped to the pending request, including cache reads and integrity verification. A callback exception rejects that caller's promise; it does not authorize or cancel another request. Existing `trickIt.asset(id)` calls remain compatible. Automatic (`defer: false`) downloads happen before the frame launches and continue to use the host's loading card.
 
-Popups and toasts are text only (title ≤120, message ≤800, ≤12 items, labels ≤40, toast ≤240 characters) and one popup is shown at a time. **Do not open an in-frame `<dialog>`**: the iframe grows with its content, so a modal inside it is centred in the frame, not on screen. Without a host (a standalone file), the kit falls back to in-frame rendering.
+Popups and toasts are text only (title ≤120, message ≤800, ≤12 items, labels ≤40, toast ≤240 characters) and one popup is shown at a time. If the host is busy (another popup or a permission prompt is open), `ui.info`/`ui.confirm` wait briefly and retry; they never fall back to an in-frame modal, and resolve `false` if the host stays busy. An in-frame fallback is used only when no host/SDK channel exists. **Do not open an in-frame `<dialog>`**: the iframe grows with its content, so a modal inside it is centred in the frame, not on screen. Without a host (a standalone file), the kit falls back to in-frame rendering.
 
 ## Request a sensitive operation
 

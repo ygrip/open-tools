@@ -148,12 +148,24 @@ export const uiKitScript = `
       if (!config.token) { localToast(payload.message); return Promise.resolve(); }
       return request('ui-toast', payload).then(() => undefined, () => localToast(payload.message));
     }
+    // A busy host (another popup or a permission prompt is open) is not a reason to
+    // open a modal inside the iframe: wait briefly, then give up with 'false'.
+    async function hostDialog(payload) {
+      for (let attempt = 0; attempt < 40; attempt++) {
+        try { return (await request('ui-dialog', payload)) === true; }
+        catch (error) {
+          if (error?.code !== 'busy') return localDialog(payload);
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
+      }
+      return false;
+    }
     // Centralized popups: rendered by the host, centred in the real viewport.
     function dialog(options = {}) {
       const items = Array.isArray(options.items) ? options.items.slice(0, 12).map(item => clip(String(item ?? ''), 300)).filter(Boolean) : [];
       const payload = { kind: options.kind === 'confirm' ? 'confirm' : 'info', title: clip(options.title, 120) || (options.kind === 'confirm' ? 'Continue?' : 'Note'), message: clip(options.message, 800), items, ordered: options.ordered === true, confirmLabel: clip(options.confirmLabel, 40), cancelLabel: clip(options.cancelLabel, 40), tone: options.tone === 'danger' ? 'danger' : 'default' };
       if (!config.token) return localDialog(payload);
-      return request('ui-dialog', payload).then(value => value === true, () => localDialog(payload));
+      return hostDialog(payload);
     }
     const confirm = (options = {}) => dialog({ ...options, kind: 'confirm' });
     const info = (options = {}) => dialog({ ...options, kind: 'info' });

@@ -29,6 +29,21 @@ Tool-specific functional, UI, import/export, decoder and workflow tests belong i
 
 The host owns shared runtime/SDK/UI-kit, sandbox/security, permission, host-service, registry/catalog, navigation, SEO and PWA tests. Use synthetic fixtures for cross-cutting behavior. Catalog smoke checks may open a registered tool, but must not assert that tool's transformations, formats, forms or result data. Keep tool-specific regression coverage when moving tests; do not replace it with source-token checks.
 
+## Current compliance matrix
+
+Recorded at the shared-UI migration. “Picker/status/popup/loader” mean a real `trickIt.ui` integration; “n/a” means the tool has no applicable interaction (persistent domain validation, results and editors stay tool-owned). Browser evidence lives in each tool repository (`tests/host/`) unless noted.
+
+| Tool | Picker | Status | Toast | Popup | Loader | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| app-icon-generator, diff-checker, og-metadata-generator, svg-tools | yes | yes | yes | help via `ui.info` | n/a | Download/clipboard permissions are remembered by the host. |
+| csv-tools | yes | yes | yes | n/a | n/a | Help is an inline guide; no hosted modal. |
+| image-compression, pdf-tools, background-remover | yes | yes | yes | yes | yes | Model/WASM assets use `ui.loader().asset()`; background-remover keeps its own protocol/browser suite. |
+| qr-bar-coder | yes | yes | yes | n/a | n/a | Camera/share keep host previews; focus returns to the initiating button. |
+| regex-mania | yes | n/a | yes | help via `ui.info` | n/a | Safety/validation messages are persistent domain output. |
+| encoder-decoder, text-manipulation, time-wizard | n/a | text-manipulation only | yes | n/a | n/a | Copy uses the clipboard permission; no files or jobs. |
+| fake-data-generator, id-generator, json-tools, jwt-tools | n/a | yes | yes | n/a | n/a | No files; cards report generation/parsing outcomes. |
+| seo-checker | n/a | yes | yes | n/a | n/a | Host service verification stays host-owned; dashboard charts are tool-owned. Its own browser suite is in the tool repository. |
+
 ## Evidence required before commit/push
 
 For **each applicable row**, record its source integration and a passing behavioral check. Mark other rows “not applicable” with the reason. A token `.ui` reference, an unused helper or screenshot of restyled custom controls is not evidence.

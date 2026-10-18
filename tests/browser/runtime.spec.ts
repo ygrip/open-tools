@@ -359,6 +359,25 @@ test('tools show centred host popups, toasts and inline clay status through tric
   expect(await frame.evaluate(() => { const p = document.createElement('p'); p.textContent = 'https://developer.chrome.com/docs/' + 'x'.repeat(400); document.body.append(p); return document.documentElement.scrollWidth <= document.documentElement.clientWidth; })).toBe(true);
 });
 
+test('a tool popup waits for a busy host instead of opening an in-frame modal', async ({ page }) => {
+  await mountFixture(page, { permissions: [{ name: 'clipboard-write', reason: 'Copy a chosen result.', required: true }] });
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  type Sdk = { trickIt: { request: (operation: string, payload: string) => Promise<unknown>; ui: { info: (o: unknown) => Promise<boolean> } } };
+  await frame.evaluate(() => { void (window as unknown as Sdk).trickIt.request('clipboard-write', 'text').catch(() => {}); });
+  const permission = page.getByRole('dialog', { name: 'Allow this tool action?' });
+  await expect(permission).toBeVisible();
+  const info = frame.evaluate(() => (window as unknown as Sdk).trickIt.ui.info({ title: 'Queued guide', items: ['One'] }));
+  await page.waitForTimeout(700);
+  expect(await frame.evaluate(() => document.querySelector('dialog'))).toBeNull();
+  await page.getByRole('button', { name: 'Don’t allow', exact: true }).click();
+  const guide = page.getByRole('dialog', { name: 'Queued guide' });
+  await expect(guide).toBeVisible();
+  expect(await frame.evaluate(() => document.querySelector('dialog'))).toBeNull();
+  await guide.getByRole('button', { name: 'Got it' }).click();
+  expect(await info).toBe(true);
+});
+
 test('shared clay file input validates type, size and count before the tool sees files', async ({ page }) => {
   await mountFixture(page);
   const tool = page.frameLocator('iframe');
