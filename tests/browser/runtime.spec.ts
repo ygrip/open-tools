@@ -65,6 +65,16 @@ for (const width of [375, 1440]) test(`isolated tool grows and shrinks with its 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+for (const width of [375, 1440]) test(`registered JSON Tools uses page scrolling instead of a nested tool scrollbar at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 812 });
+  await page.goto('/json-tools/');
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'JSON Tools' })).toBeVisible();
+  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  // Editors may scroll their own data, but the tool document itself should fit.
+  await expect.poll(() => frame.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThan(4);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test('required consent blocks startup and native host confirmation gates each clipboard write', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (value: string) => { (window as unknown as { __clipboard: string }).__clipboard = value; } } });
