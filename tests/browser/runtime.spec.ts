@@ -51,6 +51,12 @@ for (const width of [375, 1440]) test(`isolated tool grows and shrinks with its 
   await expect.poll(height).toBeLessThan(500);
 
   // Spoofed and out-of-range height messages must not affect the parent.
+  await frame.evaluate(() => {
+    parent.postMessage({ type: 'trick-it:resize', version: 1, token: 'wrong-session', height: 50000 }, '*');
+    const script = document.querySelector('script')!.textContent!;
+    const config = JSON.parse(script.match(/const config = (\\{[^\\n]+\\});/)![1]);
+    parent.postMessage({ type: 'trick-it:resize', version: 1, token: config.token, height: 100001 }, '*');
+  });
   await page.evaluate(async () => {
     window.postMessage({ type: 'trick-it:resize', version: 1, token: 'forged', height: 50000 }, '*');
     await new Promise((resolve) => setTimeout(resolve, 100));
