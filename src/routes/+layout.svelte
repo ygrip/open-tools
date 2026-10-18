@@ -15,7 +15,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="trick-it" />
-  <link rel="apple-touch-icon" href={`${base}/pwa/icon-192.png`} />
+  <link rel="apple-touch-icon" href={`${base}/pwa/apple-touch-icon.png`} />
   <link rel="preload" href={fontUrl} as="font" type="font/woff2" crossorigin="anonymous" />
 </svelte:head>
 

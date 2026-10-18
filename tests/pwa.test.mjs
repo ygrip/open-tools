@@ -24,6 +24,9 @@ test('PWA metadata and service-worker lifecycle require an explicit update actio
   assert.equal(manifest.name, 'trick-it');
   assert.equal(manifest.display, 'standalone');
   for (const icon of manifest.icons) assert.ok((await readFile(new URL(`../static/${icon.src}`, import.meta.url))).length);
+  assert.ok(manifest.icons.some(icon => icon.purpose === 'any' && icon.sizes === '512x512'), 'needs a 512 any icon');
+  assert.ok(manifest.icons.some(icon => icon.purpose === 'maskable'), 'needs a dedicated maskable icon with safe-zone padding');
+  assert.ok(manifest.icons.every(icon => !/\bany\b.*\bmaskable\b/.test(icon.purpose)), 'any and maskable must be separate files');
   const worker = await readFile(new URL('../src/service-worker.ts', import.meta.url), 'utf8');
   assert.ok(worker.includes("event.data?.type !== 'trick-it:activate'"));
   assert.ok(!worker.includes('clients.claim('));
