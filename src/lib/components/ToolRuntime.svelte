@@ -204,7 +204,7 @@
     if (event.data?.type === 'trick-it:resize') {
       const size = event.data;
       if (event.source !== frame?.contentWindow || !frameDocument || size.version !== 1 || size.token !== token || !Number.isSafeInteger(size.height) || size.height < 0 || size.height > 100000) return;
-      const nextHeight = Math.max(200, size.height);
+      const nextHeight = Math.max(200, size.height + 2);
       if (Math.abs(frameHeight - nextHeight) >= 2) frameHeight = nextHeight;
       return;
     }
@@ -337,7 +337,7 @@
   .permission > span > span { display: block; color: var(--muted); margin-top: 4px; }
   .permission small { color: var(--muted); }
   .hint { font-size: 13px; }
-  .runtime-workspace { overflow: hidden; }
+  .runtime-workspace { min-width: 0; overflow: hidden; }
   .runtime-topline { padding: 14px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
   .runtime-topline > span:first-child { min-width: 0; flex: 1; overflow-wrap: anywhere; }
   .runtime-topline > span:nth-child(2) { margin-left: auto; }
