@@ -15,8 +15,11 @@ test('installed shell and an opened tool work offline without hiding missing rou
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts');
-  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
-  await expect.poll(() => frame.evaluate(() => typeof (window as unknown as { trickIt?: { request?: unknown } }).trickIt?.request)).toBe('function');
+  // The sandbox document is replaced while the offline bundle loads: resolve the frame on every poll and ignore a navigation in flight.
+  await expect.poll(async () => {
+    const frame = page.frames().find(candidate => candidate !== page.mainFrame());
+    return frame?.evaluate(() => typeof (window as unknown as { trickIt?: { request?: unknown } }).trickIt?.request).catch(() => 'navigating');
+  }, { timeout: 15_000 }).toBe('function');
   const legal = await page.goto('/id/privacy/');
   expect(legal?.status()).toBe(200);
   await expect(page.locator('html')).toHaveAttribute('lang', 'id');

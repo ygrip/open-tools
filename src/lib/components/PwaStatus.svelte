@@ -176,11 +176,11 @@
 
 {#if manualInstructions && !installed}
   <div class="pwa-shade">
-    <section class="pwa-manual" role="dialog" aria-modal="true" aria-labelledby="pwa-manual-title">
+    <div class="pwa-manual" role="dialog" aria-modal="true" aria-labelledby="pwa-manual-title">
       <h2 id="pwa-manual-title">{m.pwa_install_title()}</h2>
       <p>{m.pwa_manual()}</p>
       <button class="clay-button primary" type="button" onclick={() => manualInstructions = false}>{m.pwa_close()}</button>
-    </section>
+    </div>
   </div>
 {/if}
 
