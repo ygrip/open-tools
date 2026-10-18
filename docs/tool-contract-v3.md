@@ -58,6 +58,12 @@ See [`examples/tool.manifest.json`](../examples/tool.manifest.json) for a copyab
 
 Optional `translations.en` / `translations.id` each require localized `name` and `description`; they may also provide a complete localized `guide` and/or `seo` object with the same limits. Canonical fields are the fallback. Other locale keys are rejected until the host supports them. Metadata localization does not automatically translate the HTML bundle. Declare the actual interface languages in optional `locales` (a nonempty unique list of `en`/`id`, default `["en"]`), and use the runtime locale bridge described in [the runtime guide](tool-runtime.md). The host keeps an unsupported tool interface in its first supported language rather than mislabeling English controls as Indonesian.
 
+## Layout contract
+
+The manifest does not prescribe a frame height. The platform owns the available width, starting-height fallback, and sandbox isolation; each tool owns its responsive HTML/CSS and natural page height. A host-installed observer sizes the iframe to the rendered tool content so the outer page scrolls normally. No new schema field or runtime permission is required, and existing v2 tools receive the same behavior.
+
+Avoid wrapping entire tools in viewport-height scroll panes. Tool-specific bounded editors, menus, and tables may still scroll where appropriate. See [tool-owned workspace layout](tool-runtime.md#tool-owned-workspace-layout) for implementation guidance.
+
 ## Capability declarations
 
 A descriptor has exactly the public shape below. Unknown fields are not published.
