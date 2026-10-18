@@ -81,11 +81,13 @@ Supported permission names:
 - `clipboard-read` and `clipboard-write`: host-mediated text access with a fresh host confirmation.
 - `geolocation`: host-mediated position access, followed by the browser/OS prompt when needed.
 - `services`: invoke only features declared in the optional `services` array through the host broker. Each declares an allowlisted handler, a per-feature native rate limit and a Turnstile requirement. The Worker enforces the generated policy; see [protected services](protected-services.md).
-- `downloads`: a user-confirmed host download of bounded bytes supplied by the tool; never an arbitrary remote download URL.
+- `downloads`: a confirmed host download of bounded bytes, including PNG and SVG; never a remote URL.
+- `camera-capture`: a one-shot host camera preview that captures a bounded PNG only after user approval; the opaque iframe never gets the camera stream.
+- `share-image`: native share sheet for a generated PNG only, with per-action approval and browser fallback.
 - `external-assets`: allow declared, pinned public resources to be downloaded and cached locally.
 - `wasm` and `workers`: permit isolated WebAssembly compilation and/or tool-created blob workers through conditional CSP. These are platform policy capabilities, not browser permission names.
 
-Names must be unique. A reason is required and limited to 240 characters; `required` must be a boolean. Camera, microphone, arbitrary network access and same-origin iframe privileges are **not implemented**; declaring an unsupported permission fails closed rather than pretending to grant it.
+Names must be unique. A reason is required and limited to 240 characters; `required` must be a boolean. Microphone, arbitrary network access and same-origin iframe privileges are **not implemented**; declaring an unsupported permission fails closed rather than pretending to grant it.
 
 Required permissions must be approved before a privileged tool can start. Optional permissions can be declined; the tool must handle denied operations without losing user input. A declaration never triggers a browser prompt automatically. The host displays reasons, requested resources and release identity, and retains grants only for the active tool session/release. Revocation destroys that runtime rather than leaving privileged code running. Clipboard, location and downloads additionally require a host-owned user confirmation for the individual operation. Browser denial, missing support, insecure contexts and user cancellation remain possible after platform consent.
 
