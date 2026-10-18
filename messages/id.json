@@ -3,7 +3,7 @@
   "search_label": "Cari alat",
   "hero_eyebrow": "Kurangi pekerjaan berulang",
   "hero_description": "Rapikan data, selesaikan tugas kecil, lalu lanjutkan pekerjaanmu. Semua alat yang kamu butuhkan ada di sini.",
-  "hero_proof": "Alat sederhana dan berguna, terkumpul di satu tempat.",
+  "hero_proof": "{count} alat praktis, siap membantu kapan saja.",
   "benefit_private": "Datamu tetap milikmu",
   "benefit_private_desc": "Alat kami memproses data langsung di browser.",
   "benefit_setup": "Tanpa instalasi",
@@ -55,7 +55,7 @@
   "how_title_2": "tanpa ribet.",
   "handy_tool": "alat praktis",
   "handy_tools": "alat praktis",
-  "count_and_counting": "dan terus bertambah",
+  "count_and_counting": "tersedia",
   "tools_found": "alat ditemukan",
   "open_tool": "Buka",
   "json_intro": "Rapikan JSON, cari data dengan JSONPath, atau konversi JSON dan XML di satu tempat.",
@@ -226,5 +226,7 @@
   "pwa_install_title": "Simpan kotak alatmu",
   "pwa_install_description": "Pasang trick-it untuk akses cepat dan memakai alat yang sudah tersimpan saat luring.",
   "pwa_later": "Nanti saja",
-  "pwa_close": "Mengerti"
+  "pwa_close": "Mengerti",
+  "hero_proof_one": "{count} alat praktis, siap membantu kapan saja.",
+  "hero_proof_empty": "Alat baru sedang disiapkan. Mampir lagi nanti, ya."
 }

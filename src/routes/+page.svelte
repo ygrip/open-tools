@@ -90,7 +90,7 @@
           <a class="clay-button primary" href="#tools">{m.hero_explore()} <Icon name="arrow-right" size={20} /></a>
           <span class="no-account"><Icon name="check" size={16} /> {m.hero_no_account()}</span>
         </div>
-        <div class="hero-proof"><span class="tiny-clay-icon"><Icon name="shield" size={17} /></span><span>{m.hero_proof()}</span></div>
+        <div class="hero-proof"><span class="tiny-clay-icon"><Icon name="grid" size={17} /></span><span>{tools.length === 0 ? m.hero_proof_empty() : tools.length === 1 ? m.hero_proof_one({ count: tools.length }) : m.hero_proof({ count: tools.length })}</span></div>
       </div>
       <HeroArt />
       <div class="benefit-tile surface mint"><span class="clay-icon"><Icon name="lock" size={23} /></span><div><strong>{m.benefit_private()}</strong><p>{m.benefit_private_desc()}</p></div></div>

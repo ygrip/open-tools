@@ -3,7 +3,7 @@
   "search_label": "Search tools",
   "hero_eyebrow": "A little less busywork",
   "hero_description": "Untangle your data. Tidy up a task. Get on with the good stuff. Your next shortcut is right here.",
-  "hero_proof": "Thoughtful little utilities. One happy home.",
+  "hero_proof": "{count} handy tools, ready when you need them.",
   "benefit_private": "Your data stays yours",
   "benefit_private_desc": "Our first tools work right in your browser.",
   "benefit_setup": "Skip the setup",
@@ -55,7 +55,7 @@
   "how_title_2": "another learning curve.",
   "handy_tool": "handy tool",
   "handy_tools": "handy tools",
-  "count_and_counting": "& counting",
+  "count_and_counting": "available",
   "tools_found": "tools found",
   "open_tool": "Open",
   "json_intro": "Messy JSON? Make it readable, find just the bits you need, or turn it into XML. All in one tidy spot.",
@@ -226,5 +226,7 @@
   "pwa_install_title": "Keep your toolbox handy",
   "pwa_install_description": "Add trick-it to your device for quick access and offline-ready tools.",
   "pwa_later": "Not now",
-  "pwa_close": "Got it"
+  "pwa_close": "Got it",
+  "hero_proof_one": "{count} handy tool, ready when you need it.",
+  "hero_proof_empty": "New tools are on the way. Check back soon."
 }
