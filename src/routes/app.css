@@ -153,8 +153,9 @@ h2 { font-size: clamp(27px, 3vw, 35px); font-weight: 900; letter-spacing: -.045e
 .search-input-wrap input { width: 100%; min-width: 0; height: 44px; background: transparent; border: none; color: var(--text); font-size: 14px; }
 input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 1; }
 .search-input-wrap kbd { font-family: inherit; border: 1px solid var(--line); border-radius: 7px; padding: 1px 7px; font-size: 12px; }
-.chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.chips button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; border-radius: 13px; border: 1px solid transparent; background: transparent; color: var(--muted); padding: 8px 14px; font-size: 12px; font-weight: 850; }
+.chips { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.chips::-webkit-scrollbar { display: none; }
+.chips button { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; min-height: 44px; white-space: nowrap; scroll-snap-align: start; border-radius: 13px; border: 1px solid transparent; background: transparent; color: var(--muted); padding: 8px 14px; font-size: 12px; font-weight: 850; }
 .chips button.active { background: var(--peach); color: var(--text); border-color: var(--line); box-shadow: inset 1px 2px 2px var(--highlight), 0 2px 0 var(--line); }
 .tool-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .tool-card { padding: 28px; display: flex; flex-direction: column; min-height: 335px; transition: transform var(--duration-fast) var(--ease-smooth-out); }
