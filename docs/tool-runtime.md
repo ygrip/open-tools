@@ -67,6 +67,8 @@ await ui.info({ title: 'How it works', items: ['Pick a file', 'Download the ZIP'
 if (await ui.confirm({ title: 'Clear everything?', message: 'This cannot be undone.', confirmLabel: 'Clear', tone: 'danger' })) reset();
 ```
 
+`picker.setDisabled(true)` locks native selection, drag-and-drop and selected-file removal together; re-enable after processing. Programmatic `.clear()` remains available for tool-owned reset. Disabling must not let removal change the dataset underneath an active job.
+
 ### Deferred/external asset loader
 
 Use `ui.loader(target, options)` for resource loading rather than building another spinner. It reuses the clay status card, shows real byte counts/percentages when known, and has localized waiting/loading/verifying/initializing/done/error labels. Unknown progress stays indeterminate—never estimate a percentage from elapsed time.

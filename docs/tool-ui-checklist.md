@@ -27,7 +27,7 @@ The rule applies **when the feature exists**. A synchronous text counter does no
 
 For **each applicable row**, record its source integration and a passing behavioral check. Mark other rows “not applicable” with the reason. A token `.ui` reference, an unused helper or screenshot of restyled custom controls is not evidence.
 
-- File picker: select **and drop** valid files; check type/size/count refusal, previews/removal and the unchanged workspace after invalid replacement.
+- File picker: select **and drop** valid files; check type/size/count refusal, previews/removal, disabled selection/drop/removal during processing, and the unchanged workspace after invalid replacement.
 - Job/asset UI: shared card appears while pending; real progress when available, indeterminate otherwise; success only after work completes; error/retry and cancellation preserve prior output. Asset tests must verify hash failure never exposes usable bytes.
 - Popups/notices: actual shared toast and parent-viewport dialog appear; no in-frame hosted modal; confirmation supports cancel, Escape and focus return. Forms stay inline.
 - Host integration: both themes and EN/ID where declared; 320–375px without document overflow; keyboard and reduced-motion behavior; remembered permission allowance/refusal and reset.

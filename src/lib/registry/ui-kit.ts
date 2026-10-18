@@ -253,8 +253,8 @@ export const uiKitScript = `
           chip.append(thumb);
           const name = document.createElement('span'); name.textContent = file.name;
           const size = document.createElement('small'); size.textContent = formatBytes(file.size);
-          const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', copy().remove + ' ' + file.name);
-          remove.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); files = files.filter((_, i) => i !== index); renderList(); options.onChange?.(files.slice()); });
+          const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.disabled = input.disabled; remove.setAttribute('aria-label', copy().remove + ' ' + file.name);
+          remove.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); if (input.disabled) return; files = files.filter((_, i) => i !== index); renderList(); options.onChange?.(files.slice()); });
           chip.append(name, size, remove); return chip;
         }));
       }
@@ -263,6 +263,7 @@ export const uiKitScript = `
         options.onError?.(message);
       }
       function take(list) {
+        if (input.disabled) return;
         const t = copy(); const incoming = Array.from(list || []);
         if (!incoming.length) return;
         error.textContent = ''; zone.removeAttribute('data-error');
@@ -282,7 +283,7 @@ export const uiKitScript = `
         element: zone,
         get files() { return files.slice(); },
         clear() { files = []; error.textContent = ''; zone.removeAttribute('data-error'); renderList(); },
-        setDisabled(value) { input.disabled = !!value; if (value) zone.setAttribute('data-disabled', ''); else zone.removeAttribute('data-disabled'); },
+        setDisabled(value) { input.disabled = !!value; for (const button of list.querySelectorAll('button')) button.disabled = input.disabled; if (value) { zone.setAttribute('data-disabled', ''); zone.removeAttribute('data-dragging'); } else zone.removeAttribute('data-disabled'); },
         setError(message) { if (message) fail(clip(String(message), 300)); else { error.textContent = ''; zone.removeAttribute('data-error'); } },
         remove() { removeEventListener('trick-it:localechange', text); for (const url of previews) URL.revokeObjectURL(url); zone.remove(); }
       });

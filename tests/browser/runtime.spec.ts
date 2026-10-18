@@ -350,6 +350,32 @@ test('shared clay file input validates type, size and count before the tool sees
   expect(await frame.evaluate(() => (window as unknown as { picked: string[] }).picked)).toEqual(['ok.png']);
 });
 
+test('disabled file pickers lock removal and drop until re-enabled', async ({ page }) => {
+  await mountFixture(page);
+  const tool = page.frameLocator('iframe');
+  await expect(tool.getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  await frame.evaluate(() => {
+    const w = window as any; w.changes = 0;
+    w.picker = w.trickIt.ui.fileInput(document.body, { onChange() { w.changes++; } });
+  });
+  await tool.locator('.ti-drop input').setInputFiles({ name: 'data.json', mimeType: 'application/json', buffer: Buffer.from('{}') });
+  await frame.evaluate(() => (window as any).picker.setDisabled(true));
+  await expect(tool.locator('.ti-file button')).toBeDisabled();
+  await frame.evaluate(() => {
+    document.querySelector('.ti-file button')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    const data = new DataTransfer(); data.items.add(new File(['x'], 'next.txt', { type: 'text/plain' }));
+    document.querySelector('.ti-drop')!.dispatchEvent(new DragEvent('drop', { dataTransfer: data, bubbles: true, cancelable: true }));
+  });
+  await expect(tool.locator('.ti-file')).toContainText('data.json');
+  expect(await frame.evaluate(() => (window as any).changes)).toBe(1);
+  await frame.evaluate(() => (window as any).picker.setDisabled(false));
+  await expect(tool.locator('.ti-file button')).toBeEnabled();
+  await tool.locator('.ti-file button').click();
+  await expect(tool.locator('.ti-file')).toHaveCount(0);
+  expect(await frame.evaluate(() => (window as any).changes)).toBe(2);
+});
+
 test('file input previews images locally and accepts drag and drop', async ({ page }) => {
   await mountFixture(page);
   const tool = page.frameLocator('iframe');
