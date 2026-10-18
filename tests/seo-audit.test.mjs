@@ -24,7 +24,8 @@ test('endpoint contacts only fixed Google API, with locale, category and server-
     assert.equal(url.searchParams.get('category'), 'SEO');
     assert.equal(url.searchParams.get('locale'), 'id');
     assert.equal(url.searchParams.get('key'), 'test-key');
-    assert.equal(options.redirect, 'error');
+    // Workers' fetch throws on 'error'; a redirect must surface as a non-ok response.
+    assert.equal(options.redirect, 'manual');
     return Response.json(result);
   });
   assert.equal(response.status, 200);

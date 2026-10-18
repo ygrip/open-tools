@@ -60,7 +60,7 @@ export async function handleAudit(request, env, fetcher = fetch) {
     url.searchParams.set('url', target); url.searchParams.set('category', 'SEO'); url.searchParams.set('strategy', body.strategy); url.searchParams.set('locale', body.locale);
     if (env.PAGESPEED_API_KEY) url.searchParams.set('key', env.PAGESPEED_API_KEY);
     controller = new AbortController(); timer = setTimeout(() => controller.abort(), 90_000);
-    const response = await fetcher(url, { method: 'GET', redirect: 'error', signal: controller.signal, headers: { accept: 'application/json' } });
+    const response = await fetcher(url, { method: 'GET', redirect: 'manual', signal: controller.signal, headers: { accept: 'application/json' } });
     if (!response.ok) { await response.body?.cancel(); throw new AuditFailure(response.status === 429 ? 'provider-quota' : 'provider-failed', response.status === 429 ? 429 : 502); }
     const report = normalizeReport(await readJson(response, 4 * 1024 * 1024));
     return json({ ...report, requestedUrl: target, strategy: body.strategy, locale: body.locale });

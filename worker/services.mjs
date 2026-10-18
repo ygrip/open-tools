@@ -18,7 +18,8 @@ async function verifyTurnstile(token, request, env, policy, fetcher) {
   if (!allowed.size) return false;
   try {
     const response = await fetcher('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-      method:'POST',redirect:'error',signal:AbortSignal.timeout(10_000),headers:{'content-type':'application/x-www-form-urlencoded'},
+      // Workers' fetch throws on redirect:'error'; 'manual' surfaces a 3xx as !ok instead.
+      method:'POST',redirect:'manual',signal:AbortSignal.timeout(10_000),headers:{'content-type':'application/x-www-form-urlencoded'},
       body:new URLSearchParams({secret:env.TURNSTILE_SECRET,response:token,remoteip:request.headers.get('cf-connecting-ip')})
     });
     if (!response.ok) { await response.body?.cancel();return false; }

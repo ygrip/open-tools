@@ -12,7 +12,7 @@ const result = { lighthouseResult: { finalUrl: input.url, categories: { seo: { s
 test('server policy gates the provider and verifies exact hostname/action with a single-use token', async () => {
   let audits=0;let verifications=0;const used=new Set();
   const fetcher=async(url,options)=>{
-    if(String(url).includes('siteverify')){verifications++;const params=new URLSearchParams(options.body);assert.equal(params.get('secret'),'test-secret');const token=params.get('response');const success=!used.has(token);used.add(token);return Response.json({success,hostname:'tools.readynaz.com',action:'svc_audit'});}
+    if(String(url).includes('siteverify')){verifications++;const params=new URLSearchParams(options.body);assert.equal(params.get('secret'),'test-secret');assert.equal(options.redirect,'manual');const token=params.get('response');const success=!used.has(token);used.add(token);return Response.json({success,hostname:'tools.readynaz.com',action:'svc_audit'});}
     audits++;return Response.json(result);
   };
   assert.equal((await handleService(req(),env,policies,fetcher)).status,200);

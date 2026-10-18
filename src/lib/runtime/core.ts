@@ -184,7 +184,13 @@ export async function runService(endpoint: string, payload: unknown, signal: Abo
   const timer = setTimeout(abort, 100_000);
   try {
     const response = await fetcher(endpoint, { method: 'POST', credentials: 'omit', redirect: 'error', cache: 'no-store', referrerPolicy: 'no-referrer', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: controller.signal });
-    if (!response.ok) { await response.body?.cancel(); throw new RuntimeFailure(response.status === 429 ? 'quota' : response.status === 403 ? 'verification' : response.status === 409 ? 'stale-release' : response.status === 504 ? 'timeout' : 'audit-failed'); }
+    if (!response.ok) {
+      // Only a Turnstile rejection is a verification failure; other 403s are request errors.
+      let code: unknown;
+      if (response.status === 403) { try { code = (JSON.parse(new TextDecoder().decode(await readBounded(response, 1024, controller.signal))) as { error?: unknown })?.error; } catch { code = undefined; } }
+      await response.body?.cancel().catch(() => undefined);
+      throw new RuntimeFailure(response.status === 429 ? 'quota' : response.status === 403 ? (code === 'verification' ? 'verification' : 'request') : response.status === 409 ? 'stale-release' : response.status === 504 ? 'timeout' : 'audit-failed', response.status);
+    }
     const data = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await readBounded(response, 512 * 1024, controller.signal)));
     if (!data || typeof data !== 'object' || Array.isArray(data)) throw new RuntimeFailure('request');
     checkAbort(signal);
