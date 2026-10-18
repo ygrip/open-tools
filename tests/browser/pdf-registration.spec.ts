@@ -5,7 +5,8 @@ for(const [path,title,help] of [['/pdf-tools/','PDF Tools','How to use'],['/id/p
   await page.goto(path);
   await expect(page.locator('iframe')).toHaveCount(0);
   const checks=page.getByRole('checkbox');
-  await expect(checks).toHaveCount(3);
+  // Only startup permissions (assets, workers) are chosen before launch; downloads is asked on use.
+  await expect(checks).toHaveCount(2);
   for(const checkbox of await checks.all())await checkbox.check();
   await page.locator('button').filter({hasText:path.startsWith('/id/')?'Mulai dengan izin':'Start with selected permissions'}).click();
   const tool=page.frameLocator('iframe');

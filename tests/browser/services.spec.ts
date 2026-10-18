@@ -8,8 +8,6 @@ async function start(page: Page) {
     permissions: [{ name: 'services', reason: 'Use the test service.', required: true }],
     services: [{ id: 'audit', handler: 'pagespeed-seo', rateLimit: { limit: 5, periodSeconds: 60 }, turnstile: true }]
   });
-  await page.getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Start with selected permissions' }).click();
   await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
   return page.frames().find(frame => frame !== page.mainFrame())!;
 }
@@ -32,7 +30,7 @@ test('service consent sends the declared release and token only after verificati
   const frame = await start(page);
   const pending = request(frame);
   await expect(page.getByRole('dialog').getByText('https://example.com/', { exact: true })).toBeVisible();
-  const allow = page.getByRole('button', { name: 'Allow once', exact: true });
+  const allow = page.getByRole('button', { name: 'Allow', exact: true });
   await expect(allow).toBeDisabled();
   expect(calls).toBe(0);
   await page.getByRole('button', { name: 'Verify test', exact: true }).click();
@@ -46,12 +44,12 @@ test('denial avoids the endpoint and provider quota becomes a broker error', asy
   await page.route('**/api/tools/runtime-fixture/audit', async route => { calls++; await route.fulfill({ status: 429, json: { error: 'provider-quota' } }); });
   const frame = await start(page);
   const denied = request(frame);
-  await page.getByRole('button', { name: 'Deny', exact: true }).click();
+  await page.getByRole('button', { name: 'Don’t allow', exact: true }).click();
   expect(await denied).toEqual({ error: 'denied' });
   expect(calls).toBe(0);
   const limited = request(frame);
   await page.getByRole('button', { name: 'Verify test', exact: true }).click();
-  await page.getByRole('button', { name: 'Allow once', exact: true }).click();
+  await page.getByRole('button', { name: 'Allow', exact: true }).click();
   expect(await limited).toEqual({ error: 'quota' });
 });
 
@@ -60,7 +58,7 @@ test('Turnstile expiry blocks approval and retries require fresh tokens', async 
   await page.route('**/api/tools/runtime-fixture/audit', async route => { tokens.push(route.request().postDataJSON().turnstileToken); await route.fulfill({ json: {} }); });
   const frame = await start(page);
   const pending = request(frame);
-  const allow = page.getByRole('button', { name: 'Allow once', exact: true });
+  const allow = page.getByRole('button', { name: 'Allow', exact: true });
   await page.getByRole('button', { name: 'Verify test', exact: true }).click();
   await expect(allow).toBeEnabled();
   await page.evaluate(() => (window as unknown as { __turnstileOptions: Record<string, () => void> }).__turnstileOptions['expired-callback']());
@@ -90,8 +88,8 @@ test('stale service config requires reload and keeps approval blocked', async ({
   await page.route('**/api/tools/runtime-fixture/audit/config?*', route => route.fulfill({ status: 409, json: { error: 'stale-release' } }));
   const pending = request(frame);
   await expect(page.getByRole('dialog').getByRole('status')).toContainText('This tool release is outdated');
-  await expect(page.getByRole('button', { name: 'Allow once', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Allow', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Retry security check', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Deny', exact: true }).click();
+  await page.getByRole('button', { name: 'Don’t allow', exact: true }).click();
   expect(await pending).toEqual({ error: 'denied' });
 });

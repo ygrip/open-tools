@@ -1,4 +1,5 @@
 import { isTheme, type Theme } from '../theme';
+import { uiKitScript, uiKitStyles } from './ui-kit';
 
 // The policy precedes tool markup and cannot be relaxed by a later meta tag.
 // Opaque-origin sandboxing is also mandatory: never add allow-same-origin.
@@ -33,6 +34,9 @@ const themeStyles = `
   --ot-highlight: rgba(255, 255, 255, 0.075) !important;
 }
 html, body { background-color: var(--ot-bg) !important; color: var(--ot-text) !important; }
+/* Overridable safety net: long URLs, hashes and tokens wrap instead of widening the tool. */
+body { overflow-wrap: anywhere; }
+img, video { max-width: 100%; }
 `;
 
 // This runs before bundle scripts. Opaque frames have a "null" origin, so source
@@ -79,7 +83,8 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
       if (data.ok === true) request.resolve(data.value); else request.reject(Object.assign(new Error('The requested capability was denied or could not complete.'), { code: typeof data.error === 'string' ? data.error : 'request' }));
     });
     function request(operation, payload) {
-      if (!config.token || (operation !== 'asset' && !config.permissions.includes(operation)) || (operation === 'asset' && !config.permissions.includes('external-assets'))) return Promise.reject(new Error('Permission not granted.'));
+      const hostUi = operation === 'ui-toast' || operation === 'ui-dialog';
+      if (!config.token || (!hostUi && operation !== 'asset' && !config.permissions.includes(operation)) || (operation === 'asset' && !config.permissions.includes('external-assets'))) return Promise.reject(new Error('Permission not granted.'));
       if (pending.size >= 16) return Promise.reject(new Error('Too many pending requests.'));
       const id = String(++sequence);
       return new Promise((resolve, reject) => {
@@ -89,7 +94,8 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
         catch { clearTimeout(timer); pending.delete(id); reject(new Error('Invalid capability payload.')); }
       });
     }
-    Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, asset: id => request('asset', { id }), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
+${uiKitScript}
+    Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, ui, asset: id => request('asset', { id }), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
   })();`;
   // The parent cannot measure an opaque sandbox. Send only the height of the
   // tool's rendered document, never DOM/content, through the session channel.
@@ -132,5 +138,5 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
   else start();
 })();
 `;
-  return `<!doctype html><html lang="${locale}" data-theme="${theme}" style="color-scheme:${theme}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}</style><script>${themeBootstrap}${sdk}</script><script>${resizeBootstrap}</script></head><body>${html}</body></html>`;
+  return `<!doctype html><html lang="${locale}" data-theme="${theme}" style="color-scheme:${theme}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}${uiKitStyles}</style><script>${themeBootstrap}${sdk}</script><script>${resizeBootstrap}</script></head><body>${html}</body></html>`;
 }

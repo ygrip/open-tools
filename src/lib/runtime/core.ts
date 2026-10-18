@@ -3,7 +3,7 @@ export type PermissionName = 'clipboard-read' | 'clipboard-write' | 'geolocation
 export type RuntimePermission = { name: PermissionName; reason: string; required: boolean };
 export type RuntimeAsset = { id: string; url: string; sha256: string; bytes: number; type: 'wasm' | 'script' | 'worker' | 'data'; defer: boolean };
 export type RuntimeTool = {
-  schemaVersion: number; id: string; name: string; version: string; bundle: { sha256: string }; locales?: string[];
+  schemaVersion: number; id: string; name: string; version: string; bundle: { sha256: string }; locales?: string[]; icon?: string;
   permissions?: RuntimePermission[]; assets?: RuntimeAsset[]; services?: ToolService[];
   guide?: { summary: string; steps: string[] };
 };
@@ -129,8 +129,27 @@ async function readAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetO
   } else if (cache) onWarning?.('cache-unavailable');
   return bytes;
 }
-export type RuntimeRequest = { type: 'trick-it:request'; version: 1; token: string; id: string; operation: PermissionName | 'asset'; payload?: unknown };
-export type ParsedRequest = { request: RuntimeRequest; error?: RuntimeErrorCode; asset?: RuntimeAsset };
+export type RuntimeRequest = { type: 'trick-it:request'; version: 1; token: string; id: string; operation: PermissionName | 'asset' | 'ui-toast' | 'ui-dialog'; payload?: unknown };
+export type UiToast = { message: string; tone: 'info' | 'success' | 'error' };
+export type UiDialog = { kind: 'info' | 'confirm'; title: string; message: string; items: string[]; ordered: boolean; confirmLabel: string; cancelLabel: string; tone: 'default' | 'danger' };
+export type ParsedRequest = { request: RuntimeRequest; error?: RuntimeErrorCode; asset?: RuntimeAsset; toast?: UiToast; dialog?: UiDialog };
+
+const plainObject = (value: unknown, keys: string[]): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype && Object.keys(value).every((key) => keys.includes(key));
+const shortText = (value: unknown, max: number) => typeof value === 'string' && value.length <= max;
+
+/** Host UI (toast, centred popups) is text-only and needs no permission. */
+function parseUi(request: RuntimeRequest): ParsedRequest {
+  const data = request.payload;
+  if (request.operation === 'ui-toast') {
+    if (!plainObject(data, ['message', 'tone']) || !shortText(data.message, 240) || !(data.message as string).trim() || !['info', 'success', 'error'].includes(data.tone as string)) return { request, error: 'invalid-request' };
+    return { request, toast: { message: data.message as string, tone: data.tone as UiToast['tone'] } };
+  }
+  if (!plainObject(data, ['kind', 'title', 'message', 'items', 'ordered', 'confirmLabel', 'cancelLabel', 'tone']) || !['info', 'confirm'].includes(data.kind as string) || !shortText(data.title, 120) || !(data.title as string).trim() ||
+    !shortText(data.message, 800) || !Array.isArray(data.items) || data.items.length > 12 || !data.items.every((item) => shortText(item, 300)) || typeof data.ordered !== 'boolean' ||
+    !shortText(data.confirmLabel, 40) || !shortText(data.cancelLabel, 40) || !['default', 'danger'].includes(data.tone as string)) return { request, error: 'invalid-request' };
+  return { request, dialog: { ...(data as UiDialog), items: [...(data.items as string[])] } };
+}
 export function parseRuntimeRequest(event: Pick<MessageEvent, 'source' | 'data'>, frameWindow: Window | null, token: string, tool: RuntimeTool, grants: readonly string[]): ParsedRequest | null {
   if (!frameWindow || event.source !== frameWindow) return null;
   const message = event.data;
@@ -147,6 +166,7 @@ export function parseRuntimeRequest(event: Pick<MessageEvent, 'source' | 'data'>
     if (asset.type === 'wasm' && !declared('wasm') || asset.type === 'worker' && !declared('workers')) return { request, error: 'denied' };
     return { request, asset };
   }
+  if (request.operation === 'ui-toast' || request.operation === 'ui-dialog') return parseUi(request);
   if (!['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'services'].includes(request.operation)) return { request, error: 'unsupported' };
   if (!declared(request.operation)) return { request, error: 'denied' };
   if ((request.operation === 'clipboard-read' || request.operation === 'geolocation' || request.operation === 'camera-capture') && request.payload !== undefined) return { request, error: 'invalid-request' };

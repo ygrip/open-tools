@@ -45,7 +45,7 @@ const mascotSvg = `<path d="M995 247v-26a39 39 0 0 1 78 0v26" fill="none" stroke
   <path d="M1019 333q17 21 34 0" fill="none" stroke="#382f2b" stroke-width="7" stroke-linecap="round"/>`;
 
 export function socialCardSvg({ title, description, locale = 'en', version = '', iconDataUri = '' }) {
-  if (iconDataUri && !/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(iconDataUri)) throw new Error('Social card icon must be an embedded PNG');
+  if (iconDataUri && !/^data:image\/(?:png|svg\+xml);base64,[A-Za-z0-9+/]+=*$/.test(iconDataUri)) throw new Error('Social card icon must be an embedded PNG or SVG');
   const heading = wrapText(title, iconDataUri ? 24 : 29, 3);
   const details = wrapText(description, 64, heading.length >= 3 ? 2 : 3);
   const fit = (line, size) => {
@@ -125,13 +125,16 @@ export async function generateSeo({ root = defaultRoot, origin = process.env.PUB
     const source = join(root, 'scripts/assets/tool-icons', `${tool.id}.png`);
     if (await exists(source)) iconSources[tool.id] = `data:image/png;base64,${(await readFile(source)).toString('base64')}`;
   }
+  // The home card shows the real trick-it mascot, the same art as the header logo.
+  const brandLogo = join(staticRoot, 'brand/logo.svg');
+  const brandDataUri = await exists(brandLogo) ? `data:image/svg+xml;base64,${(await readFile(brandLogo)).toString('base64')}` : '';
   const staging = await mkdtemp(join(staticRoot, '.og-'));
   const images = {};
   try {
     for (const locale of SEO_LOCALES) {
       const messages = JSON.parse(await readFile(join(root, `messages/${locale}.json`), 'utf8'));
       const cards = [
-        { id: 'home', kind: 'site', title: messages.home_title, description: messages.home_description, version: '' },
+        { id: 'home', kind: 'site', title: messages.home_title, description: messages.home_description, version: '', iconDataUri: brandDataUri },
         ...tools.map((tool) => {
           const view = translated(tool, locale);
           return { id: tool.id, kind: 'tool', title: view.seo?.title || view.name, description: view.seo?.description || view.description, version: tool.version, iconDataUri: iconSources[tool.id] || '' };

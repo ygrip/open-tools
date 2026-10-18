@@ -3,6 +3,10 @@
   import Icon from './Icon.svelte';
   import { generateShareImage, nativeShare, copyLink, downloadBlob, type SharePayload } from '$lib/share';
   import type { ToolManifest } from '$lib/registry/types';
+  import { base } from '$app/paths';
+  import seoConfig from '$lib/seo/generated.json';
+
+  const artwork: Record<string, string> = (seoConfig as { icons?: Record<string, string> }).icons ?? {};
 
   let { tool = null, catalog = [], variant = 'button' }: { tool?: ToolManifest | null; catalog?: ToolManifest[]; variant?: 'button' | 'link' | 'none' } = $props();
 
@@ -29,6 +33,7 @@
         description: tool.description,
         eyebrow: tool.category,
         icon: tool.icon,
+        art: artwork[tool.id],
         chips: tool.capabilities.slice(0, 4).map((c) => c.replaceAll('-', ' ')),
         footnote: m.share_card_private(),
         brandTagline: m.brand_tagline(),
@@ -39,7 +44,10 @@
       title: `${m.hero_small()} ${m.hero_big()} ${m.hero_wins()}`.replace(/\s+/g, ' ').trim(),
       description: m.hero_description(),
       icon: 'toolbox',
+      // The brand mascot leads; three tools follow with their own clay art.
+      art: `${base}/brand/logo.svg`,
       icons: catalog.slice(0, 3).map((t) => t.icon),
+      arts: catalog.slice(0, 3).map((t) => artwork[t.id]),
       chips: catalog.slice(0, 4).map((t) => t.name),
       footnote: m.share_card_private(),
       brandTagline: m.brand_tagline(),

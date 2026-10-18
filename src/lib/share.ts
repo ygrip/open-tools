@@ -14,6 +14,9 @@ export interface SharePayload {
   icon?: IconName;
   chips?: string[];
   icons?: IconName[];
+  /** Clay artwork URLs: `art` replaces the main line icon, `arts` the mini tiles. */
+  art?: string;
+  arts?: (string | undefined)[];
   footnote: string;
   brandTagline: string;
   url: string;
@@ -146,7 +149,12 @@ function pill(ctx: CanvasRenderingContext2D, p: Palette, text: string, x: number
 }
 
 export async function generateShareImage(payload: SharePayload): Promise<Blob | null> {
-  const [logo] = await Promise.all([loadImage(`${base}/brand/logo.svg`), loadFonts()]);
+  const [logo, art, ...arts] = await Promise.all([
+    loadImage(`${base}/brand/logo.svg`),
+    payload.art ? loadImage(payload.art) : Promise.resolve(null),
+    ...(payload.arts ?? []).slice(0, 3).map((src) => src ? loadImage(src) : Promise.resolve(null)),
+    loadFonts()
+  ]) as (HTMLImageElement | null)[];
   const p = readPalette();
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = SIZE;
@@ -207,12 +215,28 @@ export async function generateShareImage(payload: SharePayload): Promise<Blob | 
   // Icon tile(s).
   y += 130;
   const tile = 168;
-  clay(ctx, p, ix, y, tile, tile, 56, p.peach, 12);
-  drawIcon(ctx, payload.icon ?? 'toolbox', ix + tile / 2, y + tile / 2, 88, p.accentStrong);
+  if (art) {
+    // Clay art is already a lit tile; add only a soft contact shadow.
+    ctx.save();
+    ctx.shadowColor = 'rgba(67, 46, 32, 0.22)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 12;
+    ctx.drawImage(art, ix - 8, y - 8, tile + 16, tile + 16);
+    ctx.restore();
+  } else {
+    clay(ctx, p, ix, y, tile, tile, 56, p.peach, 12);
+    drawIcon(ctx, payload.icon ?? 'toolbox', ix + tile / 2, y + tile / 2, 88, p.accentStrong);
+  }
   const minis = (payload.icons ?? []).slice(0, 3);
   const minisFill = [p.mint, p.lavender, p.butter];
   minis.forEach((name, i) => {
     const mx = ix + tile + 36 + i * 100;
+    const image = arts[i];
+    if (image) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(67, 46, 32, 0.2)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 7;
+      ctx.drawImage(image, mx - 4, y + 76, 88, 88);
+      ctx.restore();
+      return;
+    }
     clay(ctx, p, mx, y + 80, 80, 80, 28, minisFill[i % 3], 8);
     drawIcon(ctx, name, mx + 40, y + 120, 40, p.text);
   });
@@ -224,7 +248,7 @@ export async function generateShareImage(payload: SharePayload): Promise<Blob | 
   }
 
   // Title + description.
-  y += tile + 70;
+  y += tile + 92;
   ctx.fillStyle = p.text;
   ctx.font = `900 84px ${FONT}`;
   const titleLines = wrap(ctx, payload.title, iw, 2);
@@ -240,10 +264,12 @@ export async function generateShareImage(payload: SharePayload): Promise<Blob | 
   const chipFills = [p.mint, p.lavender, p.butter, p.peach];
   let chipX = ix;
   const chipY = y + 18;
+  // Chips sit above the footer rule; skip them when the copy leaves no room.
+  const footerTop = cy + ch - PAD - 56 - 28;
   (payload.chips ?? []).slice(0, 4).forEach((chip, i) => {
     ctx.font = `800 28px ${FONT}`;
     const w = ctx.measureText(chip).width + 48;
-    if (chipX + w > ix + iw) return;
+    if (chipX + w > ix + iw || chipY + 28 * 2.1 + 5 > footerTop - 14) return;
     chipX += pill(ctx, p, chip, chipX, chipY, chipFills[i % 4], 28) + 18;
   });
 

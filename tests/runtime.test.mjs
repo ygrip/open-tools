@@ -98,6 +98,17 @@ test('broker rejects wrong windows, wrong tokens, undeclared and ungranted capab
   assert.equal(parseRuntimeRequest(event('clipboard-write', 'text'), frame, token, fixture, ['clipboard-write']).error, undefined);
   assert.equal(parseRuntimeRequest(event('camera'), frame, token, fixture, ['camera']).error, 'unsupported');
 });
+test('host UI toasts and centred popups need no permission but accept only bounded text', () => {
+  const frame = {}; const token = 'private-channel';
+  const event = (operation, payload) => ({ source: frame, data: { type: 'trick-it:request', version: 1, token, id: 'ui-1', operation, payload } });
+  const dialog = { kind: 'info', title: 'Publishing', message: '', items: ['One', 'Two'], ordered: true, confirmLabel: '', cancelLabel: '', tone: 'default' };
+  assert.deepEqual(parseRuntimeRequest(event('ui-toast', { message: 'Copied', tone: 'success' }), frame, token, tool, []).toast, { message: 'Copied', tone: 'success' });
+  assert.deepEqual(parseRuntimeRequest(event('ui-dialog', dialog), frame, token, tool, []).dialog, dialog);
+  for (const bad of [{ message: '', tone: 'info' }, { message: 'x'.repeat(241), tone: 'info' }, { message: 'Hi', tone: 'loud' }, { message: 'Hi', tone: 'info', html: '<b>' }, 'Hi'])
+    assert.equal(parseRuntimeRequest(event('ui-toast', bad), frame, token, tool, []).error, 'invalid-request');
+  for (const bad of [{ ...dialog, kind: 'prompt' }, { ...dialog, title: '' }, { ...dialog, items: Array(13).fill('x') }, { ...dialog, items: [1] }, { ...dialog, tone: 'warn' }, { ...dialog, extra: true }])
+    assert.equal(parseRuntimeRequest(event('ui-dialog', bad), frame, token, tool, []).error, 'invalid-request');
+});
 test('camera capture requires a grant and image share is PNG-only', () => {
   const frame = {}; const fixture = { ...tool, permissions: [{ name: 'camera-capture' }, { name: 'share-image' }] };
   const parse = (operation, payload, grants = ['camera-capture', 'share-image']) =>

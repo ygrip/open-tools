@@ -6,6 +6,12 @@
   import { loadAsset, loadBundle, runService, parseRuntimeRequest, RuntimeFailure, type RuntimeAsset, type RuntimeRequest, type RuntimeTool, type PermissionName, type CacheWarning } from '$lib/runtime/core';
   import ServiceChallenge from './ServiceChallenge.svelte';
   import { runtimeStrings } from '$lib/runtime/strings';
+  import { openDialog, closeDialog, hostUi, showToast } from '$lib/ui/host-ui.svelte';
+  import { readDecisions, saveDecisions, clearDecisions, type Decisions } from '$lib/permissions';
+  import ClayStatus from './ClayStatus.svelte';
+  import ToolArt from './ToolArt.svelte';
+  import Icon from './Icon.svelte';
+  import type { ToolIcon } from '$lib/registry/types';
 
   let { tool, locale = 'en' }: { tool: RuntimeTool; locale?: string } = $props();
   const text = $derived(runtimeStrings(locale));
@@ -51,7 +57,14 @@
   let inFlight = new Set<string>();
   let loadedAssets = new Map<string, Promise<Uint8Array>>();
   const downloadUrls = new Set<string>();
-  const missingRequired = $derived(permissions.some((permission) => permission.required && !selected.includes(permission.name)));
+  // Startup permissions change the sandbox policy, so they are chosen before launch.
+  // Runtime permissions are asked on first use. Both are remembered per tool.
+  const STARTUP: PermissionName[] = ['wasm', 'workers', 'external-assets'];
+  const startupPermissions = $derived(permissions.filter((permission) => STARTUP.includes(permission.name)));
+  const missingRequired = $derived(startupPermissions.some((permission) => permission.required && !selected.includes(permission.name)));
+  let decisions = $state<Decisions>({});
+  /** True while the pending request's permission has never been decided. */
+  let pendingAsk = $state(false);
 
   function syncFrame() {
     frame?.contentWindow?.postMessage({ type: themeMessageType, version: 1, theme: documentTheme(document) }, '*');
@@ -118,7 +131,7 @@
     warning = null;
     progress = null;
     timedOut = false;
-    grants = [...selected];
+    grants = [...selected, ...permissions.filter((permission) => !STARTUP.includes(permission.name) && decisions[permission.name] !== 'denied').map((permission) => permission.name)];
     consent = false;
     loading = true;
     const timeout = setTimeout(() => {
@@ -265,7 +278,9 @@
     finishLocation(request, true, precise ? fix : { latitude: round(fix.latitude), longitude: round(fix.longitude), accuracy: Math.max(fix.accuracy, 1100) });
   }
 
-  function revoke() {
+  function teardown() {
+    // A popup from the old session must not answer the restarted tool.
+    if (hostUi.dialog?.source?.id === tool.id) closeDialog(false);
     stopCamera();
     stopLocation();
     controller?.abort();
@@ -284,13 +299,40 @@
     loadedAssets.clear();
     inFlight.clear();
     seen.clear();
-    consent = true;
+    pendingAsk = false;
+  }
+
+  function initialize() {
+    teardown();
+    decisions = readDecisions(tool.id);
+    selected = startupPermissions.filter((permission) => decisions[permission.name] === 'granted').map((permission) => permission.name);
+    consent = startupPermissions.some((permission) => !decisions[permission.name]);
+    if (!consent) void startTool();
+  }
+
+  function resetAccess() {
+    clearDecisions(tool.id);
+    initialize();
+  }
+
+  function startWithChoices() {
+    saveDecisions(tool.id, Object.fromEntries(startupPermissions.map((permission) => [permission.name, selected.includes(permission.name) ? 'granted' : 'denied'])));
+    decisions = readDecisions(tool.id);
+    void startTool();
+  }
+
+  function remember(operation: string, decision: 'granted' | 'denied') {
+    saveDecisions(tool.id, { [operation]: decision });
+    decisions = readDecisions(tool.id);
+    if (decision === 'denied') grants = grants.filter((name) => name !== operation);
   }
 
   function denyPending() {
     stopCamera();
     stopLocation();
     brokerBusy = false;
+    if (pending && pendingAsk) remember(pending.operation, 'denied');
+    pendingAsk = false;
     if (pending) {
       reply(pending, false, undefined, 'denied');
       inFlight.delete(pending.id);
@@ -301,6 +343,7 @@
   async function approvePending() {
     const request = pending;
     if (!request) return;
+    if (pendingAsk) { remember(request.operation, 'granted'); pendingAsk = false; }
     if (request.operation === 'camera-capture') { await startCamera(request); return; }
     if (request.operation === 'geolocation') { await startLocation(request); return; }
     const service = pendingService;
@@ -368,6 +411,20 @@
     seen.add(request.id);
     if (parsed.error) { reply(request, false, undefined, parsed.error); return; }
     if (inFlight.size >= 16) { reply(request, false, undefined, 'busy'); return; }
+    const source = { id: tool.id, name: tool.name, icon: tool.icon };
+    if (parsed.toast) { showToast(parsed.toast.message, parsed.toast.tone, source); reply(request, true); return; }
+    if (parsed.dialog) {
+      // One centred popup at a time, never alongside a host permission prompt.
+      if (pending || brokerBusy || hostUi.dialog) { reply(request, false, undefined, 'busy'); return; }
+      inFlight.add(request.id);
+      const current = generation;
+      try {
+        const accepted = await openDialog({ ...parsed.dialog, source });
+        if (current === generation) reply(request, true, accepted);
+      } catch { if (current === generation) reply(request, false, undefined, 'busy'); }
+      finally { if (current === generation) inFlight.delete(request.id); }
+      return;
+    }
     if (parsed.asset) {
       inFlight.add(request.id);
       const current = generation;
@@ -385,7 +442,16 @@
         reply(request, false, undefined, assetFailure.code);
       } finally { if (current === generation) { progress = null; inFlight.delete(request.id); } }
     } else if (pending || brokerBusy) reply(request, false, undefined, 'busy');
-    else { verificationToken = ''; inFlight.add(request.id); pending = request; }
+    else {
+      verificationToken = '';
+      inFlight.add(request.id);
+      // Protected services confirm the exact URL and security check every time; nothing to remember.
+      pendingAsk = request.operation !== 'services' && decisions[request.operation] !== 'granted';
+      pending = request;
+      // Remembered grants run straight away; camera and location still show their
+      // live preview, and protected services still need their security check.
+      if (!pendingAsk && request.operation !== 'services') void approvePending();
+    }
   }
 
   onMount(() => {
@@ -394,6 +460,7 @@
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     window.addEventListener('message', receive);
     return () => {
+      if (hostUi.dialog?.source?.id === tool.id) closeDialog(false);
       stopCamera();
       stopLocation();
       controller?.abort();
@@ -407,9 +474,7 @@
     if (!mounted) return;
     void release;
     untrack(() => {
-      revoke();
-      consent = permissions.length > 0;
-      if (!consent) void startTool();
+      initialize();
     });
   });
   $effect(() => { if (mounted) { void locale; syncFrame(); } });
@@ -430,32 +495,38 @@
 </div>
 
 {#if consent}
-  <section class="consent surface" aria-labelledby="runtime-consent-title">
+  <div class="load-state"><ClayStatus state="waiting" title={text.permissions} detail={tool.name} /></div>
+  <div class="consent surface" role="dialog" aria-modal="true" aria-labelledby="runtime-consent-title">
+    <p class="consent-source"><ToolArt id={tool.id} icon={(tool.icon ?? 'sparkles') as ToolIcon} size={32} /> {tool.name}</p>
     <h2 id="runtime-consent-title">{text.permissions}</h2>
     <p>{text.permissionHelp}</p>
-    {#each permissions as permission}
+    {#each startupPermissions as permission}
       <label class="permission"><input type="checkbox" value={permission.name} required={permission.required} bind:group={selected} /><span><strong>{text.labels[permission.name]}</strong> <small>({permission.required ? text.required : text.optional})</small><span>{permission.reason}</span></span></label>
     {/each}
     {#if assets.length}
       <h3>{text.assets}</h3><p>{text.assetHelp}</p>
       <ul>{#each assets as asset}<li>{asset.id} · {new URL(asset.url).origin} · {(asset.bytes / 1024 / 1024).toFixed(2)} MiB · {asset.type} · {asset.defer ? text.deferred : text.automatic}</li>{/each}</ul>
     {/if}
-    <button class="clay-button primary" type="button" disabled={missingRequired} onclick={startTool}>{text.start}</button>
+    <button class="clay-button primary" type="button" disabled={missingRequired} onclick={startWithChoices}>{text.start}</button>
     <p class="hint">{text.optionalOff}</p>
-  </section>
+  </div>
 {:else}
   <section class="runtime-workspace surface" aria-label={tool.name}>
-    <div class="runtime-topline"><span>{tool.name}</span><span>v{tool.version}</span>{#if permissions.length}<button class="clay-button small" type="button" onclick={revoke}>{text.revoke}</button>{/if}</div>
+    <div class="runtime-topline">
+      <ToolArt id={tool.id} icon={(tool.icon ?? 'sparkles') as ToolIcon} size={40} />
+      <span class="runtime-title"><strong>{tool.name}</strong><span class="runtime-meta"><span class="version-chip">v{tool.version}</span><span class="private-chip"><Icon name="shield" size={12} /> {text.sandboxed}</span></span></span>
+      {#if permissions.length}<button class="clay-button small revoke" type="button" onclick={resetAccess} aria-label={text.revoke} title={text.revoke}><Icon name="lock" size={16} /><span>{text.revokeShort}</span></button>{/if}
+    </div>
     {#if failure || timedOut}
-      <div class="load-state" role="alert"><h2>{text.failed}</h2><p>{timedOut ? text.timeout : text.errors[failure!.code]}{#if failure?.status} ({failure.status}){/if}</p><button class="clay-button" type="button" onclick={startTool}>{text.retry}</button></div>
+      <div class="load-state"><ClayStatus state="error" title={text.failed} detail={`${timedOut ? text.timeout : text.errors[failure!.code]}${failure?.status ? ` (${failure.status})` : ''}`}><button class="clay-button small" type="button" onclick={startTool}>{text.retry}</button></ClayStatus></div>
     {:else if frameDocument}
       <iframe bind:this={frame} title={tool.name} srcdoc={frameDocument} sandbox="allow-scripts" allow="camera 'none'; microphone 'none'; geolocation 'none'; clipboard-read 'none'; clipboard-write 'none'" referrerpolicy="no-referrer" style:height={`${frameHeight}px`} onload={syncFrame}></iframe>
     {:else if loading}
-      <div class="load-state" role="status"><h2>{text.loading} {tool.name}…</h2></div>
+      <div class="load-state"><ClayStatus state={progress ? 'working' : 'waiting'} title={`${text.loading} ${tool.name}…`} detail={progress ? `${text.progress}: ${progress.id}` : ''} progress={progress ? progress.bytes / progress.total * 100 : null} /></div>
     {/if}
   </section>
 {/if}
-{#if progress}<p class="runtime-notice" role="status">{text.progress}: {progress.id} · {Math.min(100, Math.round(progress.bytes / progress.total * 100))}%</p>{/if}
+{#if progress && frameDocument}<div class="runtime-notice"><ClayStatus state="working" title={text.progress} detail={progress.id} progress={progress.bytes / progress.total * 100} /></div>{/if}
 {#if warning}<p class="runtime-notice" role="status">{warning === 'cache-corrupt' ? text.corruptWarning : text.cachedWarning}</p>{/if}
 {#if assetFailure}<div class="runtime-notice" role="alert"><p>{text.errors[assetFailure.code]}</p>{#if failedAsset}<button class="clay-button small" type="button" onclick={retryAssetDownload}>{text.retryAsset}</button>{/if}</div>{/if}
 {#if recoveredAsset}<p class="runtime-notice" role="status">{text.assetReady}</p>{/if}
@@ -464,7 +535,7 @@
   {#if pending}
     <h2 id="runtime-operation-title">{text.confirm}</h2>
     <p><strong>{tool.name}: {text.labels[pending.operation as keyof typeof text.labels]}</strong></p>
-    <p>{text.confirmHelp}</p>
+    <p>{pendingAsk ? text.rememberHelp : text.confirmHelp}</p>
     {#if pendingService && pendingInput}<p>{text.seoHelp}</p><pre>{pendingInput.url}</pre><p>{pendingInput.strategy === 'mobile' ? text.seoMobile : text.seoDesktop} · {text.serviceLimit}: {pendingService.rateLimit.limit} / {pendingService.rateLimit.periodSeconds}s</p>{#if pendingService.turnstile}<ServiceChallenge endpoint={serviceEndpoint(pendingService.id)} version={tool.version} sha256={tool.bundle.sha256} {locale} onToken={(token) => verificationToken = token} />{/if}{/if}
     {#if pending.operation === 'clipboard-write'}<pre>{(pending.payload as string).slice(0, 240)}</pre>{/if}
     {#if pending.operation === 'downloads'}<p>{(pending.payload as { filename: string }).filename} · {(pending.payload as { mime: string }).mime} · {((pending.payload as { bytes: ArrayBuffer }).bytes.byteLength / 1024).toFixed(1)} KiB</p>{/if}
@@ -505,7 +576,8 @@
   .runtime-details p, .runtime-details li { color: var(--text-secondary); font-size: 14px; overflow-wrap: anywhere; }
   .runtime-details h2 { font-size: 20px; margin-top: 20px; }
   .runtime-details ol, .runtime-details ul { padding-left: 24px; }
-  .consent { padding: 28px; }
+  .consent { position: fixed; inset: 0; z-index: 70; margin: auto; width: min(560px, calc(100vw - 24px)); height: fit-content; max-height: calc(100dvh - 32px); overflow: auto; padding: 28px; box-shadow: 0 0 0 100vmax rgb(56 47 43 / .45), var(--clay-shadow); }
+  .consent-source { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 4px 12px 4px 4px; border: 1px solid var(--line); border-radius: 99px; background: var(--bg); font-size: 12px; font-weight: 800; color: var(--muted); }
   .consent h2 { font-size: 25px; }
   .consent > p { color: var(--muted); margin: 15px 0; }
   .consent li { overflow-wrap: anywhere; color: var(--muted); font-size: 14px; }
@@ -517,13 +589,16 @@
   .permission small { color: var(--muted); }
   .hint { font-size: 13px; }
   .runtime-workspace { min-width: 0; overflow: hidden; }
-  .runtime-topline { padding: 14px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
-  .runtime-topline > span:first-child { min-width: 0; flex: 1; overflow-wrap: anywhere; }
-  .runtime-topline > span:nth-child(2) { margin-left: auto; }
+  .runtime-topline { padding: 12px 14px 12px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 55%, var(--surface)); }
+  .runtime-title { flex: 1; min-width: 0; display: grid; gap: 4px; }
+  .runtime-title strong { font-size: 15px; font-weight: 900; line-height: 1.25; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .runtime-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+  .version-chip, .private-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); color: var(--muted); font-size: 11px; font-weight: 800; line-height: 1.5; white-space: nowrap; }
+  .private-chip { background: var(--mint); color: var(--text-secondary); }
+  .revoke { flex-shrink: 0; }
+  @media (max-width: 520px) { .revoke { width: 44px; padding: 0; } .revoke span { display: none; } }
   iframe { display: block; width: 100%; min-width: 0; height: 280px; border: 0; }
-  .load-state { min-height: 280px; padding: 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; }
-  .load-state h2 { font-size: 26px; }
-  .load-state p { color: var(--muted); }
+  .load-state { min-height: 280px; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; }
   .runtime-notice { margin: 16px 0; color: var(--text-secondary); overflow-wrap: anywhere; }
   .operation-dialog { width: min(550px, calc(100% - 32px)); padding: 28px; color: var(--text); }
   .operation-dialog::backdrop { background: rgb(27 22 25 / .6); }

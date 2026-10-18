@@ -6,7 +6,7 @@ Use this guide after [creating a standalone tool](scaffold-tool.md). [Contract v
 
 The iframe remains `sandbox="allow-scripts"`, with an opaque origin. Never add `allow-same-origin`. It cannot read the platform DOM, cookies or storage and cannot fetch arbitrary network URLs. The host installs `window.trickIt` before tool scripts run; it is the supported bridge for declared capabilities and assets, not an escape from isolation.
 
-The SDK is available only when hosted. For standalone development, feature-detect it and disable hosted-only features rather than inventing an insecure network fallback. A self-contained local-only tool needs no capability prompt and can start immediately. A tool with declared capabilities shows the release guide, version, reasons and resource disclosure before approval. Optional features must work gracefully when declined.
+The SDK is available only when hosted. For standalone development, feature-detect it and disable hosted-only features rather than inventing an insecure network fallback. Tools start immediately. Only **startup** permissions (`wasm`, `workers`, `external-assets`) change the sandbox policy, so a tool declaring them shows one host popup with reasons and resource disclosure before launch. **Runtime** permissions (clipboard, downloads, location, camera, share) are asked the first time the tool uses them. Every answer is remembered per tool in the user's browser and is not asked again; **Reset access** in the tool bar clears it. Optional features must work gracefully when declined.
 
 ## Tool-owned workspace layout
 
@@ -37,9 +37,41 @@ addEventListener('trick-it:localechange', translate);
 
 Theme updates require no custom receiver if styles use the host tokens. Do not read browser storage, introduce a competing preference, replace input values or reload the document on a locale/theme change. A v2 release without localized controls can still use the existing theme contract; metadata translations alone do not translate its operation UI.
 
+## Shared clay UI (`trickIt.ui`)
+
+The host injects a small claymorphism kit into every sandbox. It needs no permission, uses the `--ot-*` tokens and `ti-` class prefix (restyle freely), follows the host language, and respects reduced motion. Prefer it over hand-rolled equivalents so every tool looks and behaves the same.
+
+```js
+const { ui } = window.trickIt;
+
+// Shared file picker: click or drag-and-drop, local previews, validated before onChange.
+const picker = ui.fileInput('#drop', {
+  label: 'Drop a photo',              // optional; localized default
+  hint: 'PNG or JPEG, up to 12 MB',   // optional; generated from accept/maxBytes
+  accept: ['image/png', 'image/jpeg', '.webp'], // MIME, wildcard (image/*) or extension
+  maxBytes: 12 * 1024 * 1024,
+  multiple: false, maxFiles: 1,       // multiple: true allows up to maxFiles
+  onChange(files) { load(files[0]); },
+  onError(message) {}                 // already shown inline
+});
+picker.clear(); picker.setDisabled(true); picker.setError('Could not read this file.');
+
+// Inline status card: waiting → working (optional %) → done / error.
+const job = ui.status('#result', { state: 'waiting', title: 'Ready when you are' });
+job.work('Compressing…', '3 of 8 images', 37.5);
+job.done('All done', 'Saved 1.2 MB');      // or job.fail('Could not finish', reason)
+
+// Host-rendered, centred in the real viewport and labelled "From <tool>".
+await ui.toast('Copied to clipboard', { tone: 'success' }); // info | success | error
+await ui.info({ title: 'How it works', items: ['Pick a file', 'Download the ZIP'], ordered: true });
+if (await ui.confirm({ title: 'Clear everything?', message: 'This cannot be undone.', confirmLabel: 'Clear', tone: 'danger' })) reset();
+```
+
+Popups and toasts are text only (title ≤120, message ≤800, ≤12 items, labels ≤40, toast ≤240 characters) and one popup is shown at a time. **Do not open an in-frame `<dialog>`**: the iframe grows with its content, so a modal inside it is centred in the frame, not on screen. Without a host (a standalone file), the kit falls back to in-frame rendering.
+
 ## Request a sensitive operation
 
-Declare the matching permission and its reason in the manifest first. Call the SDK only in response to a meaningful tool action. The host checks the calling frame, random session channel, request ID, declared capability and current grant, then presents its own confirmation. Arbitrary sibling frames cannot submit a valid request for this tool. Native browser permissions are separate and can still deny the operation.
+Declare the matching permission and its reason in the manifest first. Call the SDK only in response to a meaningful tool action. The host checks the calling frame, random session channel, request ID, declared capability and remembered decision. The first request for a permission shows a host popup ("Allow" / "Don't allow"); the answer is stored per tool, so later requests run without asking (a remembered refusal rejects with `denied`). Camera and location still show their live preview/precision step, and protected services confirm the exact input and security check every time. Arbitrary sibling frames cannot submit a valid request for this tool. Native browser permissions are separate and can still deny the operation.
 
 Clipboard write accepts a **string**, not an object:
 
@@ -117,7 +149,7 @@ Automatic assets (`defer: false`) can delay launch while verified downloads comp
 
 ## Consent, revocation and updates
 
-Grants belong to the active tool session and release; they are not blanket permanent browser permissions. The user can revoke the runtime, which destroys its iframe and aborts pending work/requests. Store important output only through deliberate user actions. Never send user data to the parent for logging or analytics.
+Decisions are stored per tool ID in the user's own browser (`localStorage`, never sent anywhere). A release that declares a new permission is asked about that permission only. **Reset access and restart** clears the tool's decisions, destroys its iframe and aborts pending work/requests. Store important output only through deliberate user actions. Never send user data to the parent for logging or analytics.
 
 The host checks the release JSON identity and bootstrap HTML digest before embedding. A release/version mismatch, unsupported runtime, invalid digest, oversized resource or missing grant fails closed with a retry/recovery path. The platform's PWA update flow must ask before reloading an active workspace. A user's approval to download a model is not permission to silently replace it with bytes from a mutable URL.
 

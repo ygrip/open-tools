@@ -38,7 +38,7 @@
   "footer_policy": "Kebijakan alat",
   "search_error": "Pencarian cepat tidak dapat dibuka. Gunakan kolom pencarian di bawah.",
   "home_title": "trick-it · Alat kecil, hasil berarti.",
-  "home_description": "Kumpulan alat web praktis untuk format JSON, mengolah data, dan menyelesaikan tugas. Tanpa akun.",
+  "home_description": "Alat gratis dan privat yang berjalan di peramban: format JSON, konversi CSV, hapus latar foto, kompres gambar, buat kode QR, cek SEO, dan lainnya. Tanpa akun, tanpa unggah.",
   "brand_home": "Beranda trick-it",
   "brand_github": "trick-it di GitHub",
   "nav_primary": "Navigasi utama",
@@ -236,5 +236,12 @@
   "sort_az": "Nama A–Z",
   "sort_za": "Nama Z–A",
   "sort_newest": "Terbaru dulu",
-  "sort_oldest": "Terlama dulu"
+  "sort_oldest": "Terlama dulu",
+  "ui_got_it": "Mengerti",
+  "ui_cancel": "Batal",
+  "ui_continue": "Lanjutkan",
+  "ui_from_tool": "Dari {tool}",
+  "ui_dismiss": "Tutup",
+  "ui_notifications": "Notifikasi",
+  "recent_open": "Buka lagi"
 }

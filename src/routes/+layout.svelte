@@ -1,6 +1,7 @@
 <script lang="ts">
   import './app.css';
   import PwaStatus from '$lib/components/PwaStatus.svelte';
+  import HostUi from '$lib/components/HostUi.svelte';
   import { base } from '$app/paths';
   import { m } from '$lib/paraglide/messages.js';
   import fontUrl from '@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2?url';
@@ -21,3 +22,4 @@
 <a class="skip-link" href="#main-content">{m.skip_content()}</a>
 {@render children()}
 <PwaStatus />
+<HostUi />

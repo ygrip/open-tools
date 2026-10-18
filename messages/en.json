@@ -38,7 +38,7 @@
   "footer_policy": "Tool policy",
   "search_error": "Quick search could not open. You can still search the tools below.",
   "home_title": "trick-it · Little tools. Lovely results.",
-  "home_description": "Your friendly little toolbox for the web. Format JSON, find what you need, and turn tricky data into a small win. No account needed.",
+  "home_description": "Free, private tools that run in your browser: format JSON, convert CSV, remove backgrounds, compress images, make QR codes, check SEO and more. No account, no uploads.",
   "brand_home": "trick-it home",
   "brand_github": "trick-it on GitHub",
   "nav_primary": "Primary navigation",
@@ -236,5 +236,12 @@
   "sort_az": "Name A–Z",
   "sort_za": "Name Z–A",
   "sort_newest": "Newest first",
-  "sort_oldest": "Oldest first"
+  "sort_oldest": "Oldest first",
+  "ui_got_it": "Got it",
+  "ui_cancel": "Cancel",
+  "ui_continue": "Continue",
+  "ui_from_tool": "From {tool}",
+  "ui_dismiss": "Dismiss",
+  "ui_notifications": "Notifications",
+  "recent_open": "Open again"
 }
