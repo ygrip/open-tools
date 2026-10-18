@@ -1,5 +1,5 @@
 import type { ToolService } from '../registry/types';
-export type PermissionName = 'clipboard-read' | 'clipboard-write' | 'geolocation' | 'downloads' | 'external-assets' | 'wasm' | 'workers' | 'services';
+export type PermissionName = 'clipboard-read' | 'clipboard-write' | 'geolocation' | 'downloads' | 'camera-capture' | 'share-image' | 'external-assets' | 'wasm' | 'workers' | 'services';
 export type RuntimePermission = { name: PermissionName; reason: string; required: boolean };
 export type RuntimeAsset = { id: string; url: string; sha256: string; bytes: number; type: 'wasm' | 'script' | 'worker' | 'data'; defer: boolean };
 export type RuntimeTool = {
@@ -147,9 +147,9 @@ export function parseRuntimeRequest(event: Pick<MessageEvent, 'source' | 'data'>
     if (asset.type === 'wasm' && !declared('wasm') || asset.type === 'worker' && !declared('workers')) return { request, error: 'denied' };
     return { request, asset };
   }
-  if (!['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'services'].includes(request.operation)) return { request, error: 'unsupported' };
+  if (!['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'services'].includes(request.operation)) return { request, error: 'unsupported' };
   if (!declared(request.operation)) return { request, error: 'denied' };
-  if ((request.operation === 'clipboard-read' || request.operation === 'geolocation') && request.payload !== undefined) return { request, error: 'invalid-request' };
+  if ((request.operation === 'clipboard-read' || request.operation === 'geolocation' || request.operation === 'camera-capture') && request.payload !== undefined) return { request, error: 'invalid-request' };
   if (request.operation === 'clipboard-write' && (typeof request.payload !== 'string' || request.payload.length > 1024 * 1024)) return { request, error: 'invalid-request' };
   if (request.operation === 'services') {
     const data = request.payload as { feature?: unknown; input?: unknown } | undefined;
@@ -161,9 +161,16 @@ export function parseRuntimeRequest(event: Pick<MessageEvent, 'source' | 'data'>
     try { if (JSON.stringify(data.input).length > 4096) return { request, error: 'invalid-request' }; }
     catch { return { request, error: 'invalid-request' }; }
   }
+  if (request.operation === 'share-image') {
+    const data = request.payload as { filename?: unknown; bytes?: unknown; mime?: unknown } | undefined;
+    if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).some(key => !['bytes', 'filename', 'mime'].includes(key)) ||
+      typeof data.filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_. -]{0,119}$/.test(data.filename) ||
+      !(data.bytes instanceof ArrayBuffer) || data.bytes.byteLength < 1 || data.bytes.byteLength > 16 * 1024 * 1024 ||
+      data.mime !== 'image/png') return { request, error: 'invalid-request' };
+  }
   if (request.operation === 'downloads') {
     const data = request.payload as { filename?: unknown; bytes?: unknown; mime?: unknown } | undefined;
-    if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).some((key) => !['bytes', 'filename', 'mime'].includes(key)) || typeof data.filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_. -]{0,119}$/.test(data.filename) || !(data.bytes instanceof ArrayBuffer) || data.bytes.byteLength > 16 * 1024 * 1024 || typeof data.mime !== 'string' || !/^(?:text\/(?:plain|csv|html)|application\/(?:json|octet-stream|pdf)|image\/png)$/.test(data.mime)) return { request, error: 'invalid-request' };
+    if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).some((key) => !['bytes', 'filename', 'mime'].includes(key)) || typeof data.filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_. -]{0,119}$/.test(data.filename) || !(data.bytes instanceof ArrayBuffer) || data.bytes.byteLength > 16 * 1024 * 1024 || typeof data.mime !== 'string' || !/^(?:text\/(?:plain|csv|html)|application\/(?:json|octet-stream|pdf)|image\/(?:png|svg\+xml))$/.test(data.mime)) return { request, error: 'invalid-request' };
   }
   return { request };
 }

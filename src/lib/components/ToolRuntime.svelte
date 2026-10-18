@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, untrack } from 'svelte';
+  import { onMount, untrack, tick } from 'svelte';
   import { base } from '$app/paths';
   import { sandboxDocument, themeMessageType } from '$lib/registry/sandbox';
   import { documentTheme } from '$lib/theme';
@@ -32,6 +32,9 @@
   const pendingInput = $derived(pendingService ? (pending?.payload as { input: { url: string; strategy: string } }).input : undefined);
   const serviceEndpoint = (feature: string) => `${base}/api/tools/${tool.id}/${feature}`;
   let operationDialog = $state<HTMLDialogElement | null>(null);
+  let cameraStage = $state<'off' | 'starting' | 'ready'>('off');
+  let cameraVideo = $state<HTMLVideoElement | null>(null);
+  let cameraStream: MediaStream | null = null;
   let loading = $state(false);
   let timedOut = $state(false);
   let controller: AbortController | undefined;
@@ -134,7 +137,76 @@
     }
   }
 
+  function stopCamera() {
+    if (cameraVideo) { cameraVideo.pause(); cameraVideo.srcObject = null; }
+    cameraStream?.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+    cameraStage = 'off';
+  }
+
+  async function startCamera(request: RuntimeRequest) {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      reply(request, false, undefined, 'unsupported');
+      inFlight.delete(request.id); pending = null; return;
+    }
+    const current = generation;
+    brokerBusy = true;
+    cameraStage = 'starting';
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      if (current !== generation || pending?.id !== request.id || controller?.signal.aborted) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      cameraStream = stream;
+      await tick();
+      if (!cameraVideo) throw new RuntimeFailure('unsupported');
+      cameraVideo.srcObject = stream;
+      await cameraVideo.play();
+      if (current === generation && pending?.id === request.id) cameraStage = 'ready';
+    } catch (error) {
+      if (current === generation) {
+        stopCamera();
+        reply(request, false, undefined, error instanceof RuntimeFailure ? error.code : 'denied');
+        inFlight.delete(request.id); pending = null;
+      }
+    } finally { if (current === generation && cameraStage !== 'ready') brokerBusy = false; }
+  }
+
+  async function captureCamera() {
+    const request = pending;
+    if (request?.operation !== 'camera-capture' || cameraStage !== 'ready' || !cameraVideo) return;
+    const current = generation;
+    try {
+      const video = cameraVideo;
+      if (!video.videoWidth || !video.videoHeight) throw new RuntimeFailure('unsupported');
+      const scale = Math.min(1, 1280 / Math.max(video.videoWidth, video.videoHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+      canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+      const context = canvas.getContext('2d');
+      if (!context) throw new RuntimeFailure('unsupported');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob || blob.size > 8 * 1024 * 1024) throw new RuntimeFailure('size');
+      const bytes = await blob.arrayBuffer();
+      if (current === generation) {
+        stopCamera();
+        pending = null;
+        reply(request, true, { bytes, mime: 'image/png' }, undefined, [bytes]);
+      }
+    } catch (error) {
+      if (current === generation) {
+        reply(request, false, undefined, error instanceof RuntimeFailure ? error.code : 'request');
+        stopCamera(); pending = null;
+      }
+    } finally { if (current === generation) { brokerBusy = false; inFlight.delete(request.id); } }
+  }
+
   function revoke() {
+    stopCamera();
     controller?.abort();
     generation++;
     pending = null;
@@ -155,6 +227,8 @@
   }
 
   function denyPending() {
+    stopCamera();
+    brokerBusy = false;
     if (pending) {
       reply(pending, false, undefined, 'denied');
       inFlight.delete(pending.id);
@@ -165,6 +239,7 @@
   async function approvePending() {
     const request = pending;
     if (!request) return;
+    if (request.operation === 'camera-capture') { await startCamera(request); return; }
     const service = pendingService;
     if (request.operation === 'services' && (!service || service.turnstile && !verificationToken)) return;
     const tokenForAction = verificationToken;
@@ -189,6 +264,12 @@
         ));
       } else if (request.operation === 'services') {
         value = await runService(serviceEndpoint(service!.id), { version: tool.version, sha256: tool.bundle.sha256, input: (request.payload as { input: unknown }).input, ...(service!.turnstile ? { turnstileToken: tokenForAction } : {}) }, controller!.signal);
+      } else if (request.operation === 'share-image') {
+        const data = request.payload as { bytes: ArrayBuffer; filename: string; mime: 'image/png' };
+        if (!navigator.share || !navigator.canShare) throw new RuntimeFailure('unsupported');
+        const file = new File([data.bytes], data.filename, { type: data.mime });
+        if (!navigator.canShare({ files: [file] })) throw new RuntimeFailure('unsupported');
+        await navigator.share({ files: [file], title: tool.name });
       } else if (request.operation === 'downloads') {
         const data = request.payload as { bytes: ArrayBuffer; filename: string; mime: string };
         const url = URL.createObjectURL(new Blob([data.bytes], { type: data.mime }));
@@ -256,6 +337,7 @@
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     window.addEventListener('message', receive);
     return () => {
+      stopCamera();
       controller?.abort();
       observer.disconnect();
       window.removeEventListener('message', receive);
@@ -328,7 +410,18 @@
     {#if pendingService && pendingInput}<p>{text.seoHelp}</p><pre>{pendingInput.url}</pre><p>{pendingInput.strategy === 'mobile' ? text.seoMobile : text.seoDesktop} · {text.serviceLimit}: {pendingService.rateLimit.limit} / {pendingService.rateLimit.periodSeconds}s</p>{#if pendingService.turnstile}<ServiceChallenge endpoint={serviceEndpoint(pendingService.id)} version={tool.version} sha256={tool.bundle.sha256} {locale} onToken={(token) => verificationToken = token} />{/if}{/if}
     {#if pending.operation === 'clipboard-write'}<pre>{(pending.payload as string).slice(0, 240)}</pre>{/if}
     {#if pending.operation === 'downloads'}<p>{(pending.payload as { filename: string }).filename} · {(pending.payload as { mime: string }).mime} · {((pending.payload as { bytes: ArrayBuffer }).bytes.byteLength / 1024).toFixed(1)} KiB</p>{/if}
-    <div class="dialog-actions"><button class="clay-button" type="button" onclick={denyPending}>{text.deny}</button><button class="clay-button primary" type="button" disabled={pendingService?.turnstile && !verificationToken} onclick={approvePending}>{text.allow}</button></div>
+    {#if pending.operation === 'camera-capture' && cameraStage !== 'off'}
+      <p>{locale === 'id' ? 'Foto hanya dikirim ke alat setelah Anda menekan Ambil foto.' : 'Only the photo you capture is sent to this tool.'}</p>
+      <video bind:this={cameraVideo} autoplay muted playsinline class="camera-preview" aria-label={locale === 'id' ? 'Pratinjau kamera' : 'Camera preview'}></video>
+    {/if}
+    <div class="dialog-actions">
+      <button class="clay-button" type="button" onclick={denyPending}>{cameraStage === 'off' ? text.deny : locale === 'id' ? 'Batal' : 'Cancel'}</button>
+      {#if pending.operation === 'camera-capture' && cameraStage !== 'off'}
+        <button class="clay-button primary" type="button" disabled={cameraStage !== 'ready'} onclick={captureCamera}>{cameraStage === 'ready' ? locale === 'id' ? 'Ambil foto' : 'Capture photo' : locale === 'id' ? 'Menyiapkan kamera…' : 'Starting camera…'}</button>
+      {:else}
+        <button class="clay-button primary" type="button" disabled={pendingService?.turnstile && !verificationToken} onclick={approvePending}>{text.allow}</button>
+      {/if}
+    </div>
   {/if}
 </dialog>
 
@@ -363,6 +456,7 @@
   .operation-dialog h2 { font-size: 25px; }
   .operation-dialog p { margin-top: 16px; color: var(--text-secondary); overflow-wrap: anywhere; }
   .operation-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); padding: 14px; border-radius: 14px; max-height: 160px; overflow: auto; }
+  .camera-preview { display: block; width: 100%; max-height: 55vh; margin-top: 16px; object-fit: contain; background: #111; border-radius: 16px; }
   .dialog-actions { display: flex; justify-content: end; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
   @media (max-width: 520px) { .consent { padding: 22px; } }
 </style>
