@@ -4,5 +4,6 @@
   ],
   "topic": "open-tools",
   "discovery": false,
+  "trustedAssetOrigins": ["https://cdn.jsdelivr.net"],
   "toolDirectory": "config/tools"
 }
