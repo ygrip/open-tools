@@ -8,6 +8,14 @@ The iframe remains `sandbox="allow-scripts"`, with an opaque origin. Never add `
 
 The SDK is available only when hosted. For standalone development, feature-detect it and disable hosted-only features rather than inventing an insecure network fallback. A self-contained local-only tool needs no capability prompt and can start immediately. A tool with declared capabilities shows the release guide, version, reasons and resource disclosure before approval. Optional features must work gracefully when declined.
 
+## Tool-owned workspace layout
+
+trick-it provides the responsive outer page width and an initial iframe height only. Once the verified HTML bundle is loaded, a host-installed resize observer inside the opaque sandbox reports its document's content height; the shell grows **and shrinks** with the tool. Users should scroll the page, not a separate fixed-height tool panel. This applies to v2 and v3 bundles without changing their manifests or adding permissions.
+
+Design tools with fluid width (`width: 100%` and `min-width: 0` for flexible/grid children) and natural document height. Avoid `height: 100vh`, `max-height: 100vh`, full-screen fixed/absolute shells, and `overflow-y: auto` on an entire tool workspace: viewport-relative height creates resize feedback and can reintroduce a nested scrollbar. Intentional bounded scroll areas, such as text editors or wide data tables, can still scroll independently.
+
+The resize bridge is **host-managed**. Tools do not need to post sizing messages themselves and cannot access or manipulate the parent document. Changing visible content, translated copy, or responsive layout should naturally trigger a height update; avoid polling or reloading the frame to resize it. Very large heights are bounded to prevent a broken or malicious tool from creating an unbounded page.
+
 ## Locale and theme without losing work
 
 The host initializes `html.lang` and `html[data-theme]` before parsing the tool's own script. Declare actual UI support with `locales: ["en", "id"]`; omitted `locales` means English only. Platform/guide translations are independent from tool interface support. Unsupported interface locales use the tool's first declared language, while platform navigation stays in the selected language. Consume the root `--ot-*` color tokens. Listen for locale changes to update **labels**, not to recreate the editor:
