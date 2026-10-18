@@ -35,6 +35,12 @@
   let cameraStage = $state<'off' | 'starting' | 'ready'>('off');
   let cameraVideo = $state<HTMLVideoElement | null>(null);
   let cameraStream: MediaStream | null = null;
+  // Location is routed through the host like the camera: the browser prompt,
+  // a preview and a precision choice happen here; the tool only gets the result.
+  let locationStage = $state<'off' | 'locating' | 'ready' | 'blocked'>('off');
+  // Raw state: a deep $state proxy cannot be structured-cloned by postMessage.
+  let locationFix = $state.raw<{ latitude: number; longitude: number; accuracy: number } | null>(null);
+  const locationActive = $derived(pending?.operation === 'geolocation' && locationStage !== 'off');
   let loading = $state(false);
   let timedOut = $state(false);
   let controller: AbortController | undefined;
@@ -205,8 +211,63 @@
     } finally { if (current === generation) { brokerBusy = false; inFlight.delete(request.id); } }
   }
 
+  function stopLocation() {
+    locationStage = 'off';
+    locationFix = null;
+  }
+
+  async function geolocationState(): Promise<PermissionState | 'unknown'> {
+    try { return (await navigator.permissions?.query({ name: 'geolocation' }))?.state ?? 'unknown'; }
+    catch { return 'unknown'; }
+  }
+
+  async function startLocation(request: RuntimeRequest) {
+    if (!navigator.geolocation) {
+      reply(request, false, undefined, 'unsupported');
+      inFlight.delete(request.id); pending = null; return;
+    }
+    const current = generation;
+    const active = () => current === generation && pending?.id === request.id && !controller?.signal.aborted;
+    brokerBusy = true;
+    locationFix = null;
+    if (await geolocationState() === 'denied') { if (active()) locationStage = 'blocked'; return; }
+    if (!active()) return;
+    locationStage = 'locating';
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        if (!active()) return;
+        locationFix = { latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy };
+        locationStage = 'ready';
+      },
+      (error) => {
+        if (!active()) return;
+        if (error.code === error.PERMISSION_DENIED) { locationStage = 'blocked'; return; }
+        finishLocation(request, false, undefined, error.code === error.TIMEOUT ? 'timeout' : 'unsupported');
+      },
+      { timeout: 15_000, maximumAge: 60_000, enableHighAccuracy: false }
+    );
+  }
+
+  function finishLocation(request: RuntimeRequest, ok: boolean, value?: unknown, error?: string) {
+    stopLocation();
+    pending = null;
+    brokerBusy = false;
+    inFlight.delete(request.id);
+    reply(request, ok, value, error);
+  }
+
+  function shareLocation(precise: boolean) {
+    const request = pending;
+    const fix = locationFix;
+    if (request?.operation !== 'geolocation' || locationStage !== 'ready' || !fix) return;
+    // Two decimals is roughly 1.1 km: enough for timezone, weather or region lookups.
+    const round = (value: number) => Math.round(value * 100) / 100;
+    finishLocation(request, true, precise ? fix : { latitude: round(fix.latitude), longitude: round(fix.longitude), accuracy: Math.max(fix.accuracy, 1100) });
+  }
+
   function revoke() {
     stopCamera();
+    stopLocation();
     controller?.abort();
     generation++;
     pending = null;
@@ -228,6 +289,7 @@
 
   function denyPending() {
     stopCamera();
+    stopLocation();
     brokerBusy = false;
     if (pending) {
       reply(pending, false, undefined, 'denied');
@@ -240,6 +302,7 @@
     const request = pending;
     if (!request) return;
     if (request.operation === 'camera-capture') { await startCamera(request); return; }
+    if (request.operation === 'geolocation') { await startLocation(request); return; }
     const service = pendingService;
     if (request.operation === 'services' && (!service || service.turnstile && !verificationToken)) return;
     const tokenForAction = verificationToken;
@@ -256,12 +319,6 @@
       } else if (request.operation === 'clipboard-write') {
         if (!navigator.clipboard?.writeText) throw new RuntimeFailure('unsupported');
         await navigator.clipboard.writeText(request.payload as string);
-      } else if (request.operation === 'geolocation') {
-        if (!navigator.geolocation) throw new RuntimeFailure('unsupported');
-        value = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(
-          ({ coords }) => resolve({ latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy }),
-          () => reject(new RuntimeFailure('denied')), { timeout: 10_000, maximumAge: 0, enableHighAccuracy: false }
-        ));
       } else if (request.operation === 'services') {
         value = await runService(serviceEndpoint(service!.id), { version: tool.version, sha256: tool.bundle.sha256, input: (request.payload as { input: unknown }).input, ...(service!.turnstile ? { turnstileToken: tokenForAction } : {}) }, controller!.signal);
       } else if (request.operation === 'share-image') {
@@ -338,6 +395,7 @@
     window.addEventListener('message', receive);
     return () => {
       stopCamera();
+      stopLocation();
       controller?.abort();
       observer.disconnect();
       window.removeEventListener('message', receive);
@@ -414,9 +472,25 @@
       <p>{locale === 'id' ? 'Foto hanya dikirim ke alat setelah Anda menekan Ambil foto.' : 'Only the photo you capture is sent to this tool.'}</p>
       <video bind:this={cameraVideo} autoplay muted playsinline class="camera-preview" aria-label={locale === 'id' ? 'Pratinjau kamera' : 'Camera preview'}></video>
     {/if}
+    {#if locationActive}
+      {#if locationStage === 'locating'}<p role="status">{text.location.locating}</p>{/if}
+      {#if locationStage === 'blocked'}<p role="alert">{text.location.blocked}</p>{/if}
+      {#if locationStage === 'ready' && locationFix}
+        <p>{text.location.preview}</p>
+        <pre>{locationFix.latitude.toFixed(5)}, {locationFix.longitude.toFixed(5)} · ±{Math.round(locationFix.accuracy)} m</pre>
+        <p class="hint">{text.location.precisionHelp}</p>
+      {/if}
+    {/if}
     <div class="dialog-actions">
-      <button class="clay-button" type="button" onclick={denyPending}>{cameraStage === 'off' ? text.deny : locale === 'id' ? 'Batal' : 'Cancel'}</button>
-      {#if pending.operation === 'camera-capture' && cameraStage !== 'off'}
+      <button class="clay-button" type="button" onclick={denyPending}>{cameraStage === 'off' && !locationActive ? text.deny : locale === 'id' ? 'Batal' : 'Cancel'}</button>
+      {#if locationActive}
+        {#if locationStage === 'blocked'}<button class="clay-button primary" type="button" onclick={() => pending && startLocation(pending)}>{text.location.retry}</button>{/if}
+        {#if locationStage === 'locating'}<button class="clay-button primary" type="button" disabled>{text.location.locatingShort}</button>{/if}
+        {#if locationStage === 'ready'}
+          <button class="clay-button" type="button" onclick={() => shareLocation(false)}>{text.location.approximate}</button>
+          <button class="clay-button primary" type="button" onclick={() => shareLocation(true)}>{text.location.precise}</button>
+        {/if}
+      {:else if pending.operation === 'camera-capture' && cameraStage !== 'off'}
         <button class="clay-button primary" type="button" disabled={cameraStage !== 'ready'} onclick={captureCamera}>{cameraStage === 'ready' ? locale === 'id' ? 'Ambil foto' : 'Capture photo' : locale === 'id' ? 'Menyiapkan kamera…' : 'Starting camera…'}</button>
       {:else}
         <button class="clay-button primary" type="button" disabled={pendingService?.turnstile && !verificationToken} onclick={approvePending}>{text.allow}</button>

@@ -79,7 +79,7 @@ A descriptor has exactly the public shape below. Unknown fields are not publishe
 Supported permission names:
 
 - `clipboard-read` and `clipboard-write`: host-mediated text access with a fresh host confirmation.
-- `geolocation`: host-mediated position access, followed by the browser/OS prompt when needed.
+- `geolocation`: host-routed position access. The host shows the browser/OS prompt when needed, guidance when the site is blocked, a preview, and a precise/approximate choice before anything reaches the tool.
 - `services`: invoke only features declared in the optional `services` array through the host broker. Each declares an allowlisted handler, a per-feature native rate limit and a Turnstile requirement. The Worker enforces the generated policy; see [protected services](protected-services.md).
 - `downloads`: a confirmed host download of bounded bytes, including PNG and SVG; never a remote URL.
 - `camera-capture`: a one-shot host camera preview that captures a bounded PNG only after user approval; the opaque iframe never gets the camera stream.

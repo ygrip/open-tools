@@ -149,6 +149,9 @@ test('geolocation and downloads require separate host confirmations', async ({ p
   expect(await frame.evaluate(() => new Promise<string>((resolve) => navigator.geolocation.getCurrentPosition(() => resolve('allowed'), () => resolve('blocked'))))).toBe('blocked');
   const location = frame.evaluate(() => (window as unknown as { trickIt: { request: (operation: string) => Promise<{ latitude: number; longitude: number }> } }).trickIt.request('geolocation'));
   await page.getByRole('button', { name: 'Allow once', exact: true }).click();
+  // The host previews the fix and asks for precision before anything reaches the tool.
+  await expect(page.getByRole('dialog')).toContainText('-6.20000, 106.80000');
+  await page.getByRole('button', { name: 'Share precise', exact: true }).click();
   expect(await location).toMatchObject({ latitude: -6.2, longitude: 106.8 });
   const result = frame.evaluate(() => (window as unknown as { trickIt: { request: (operation: string, payload: unknown) => Promise<unknown> } }).trickIt.request('downloads', { filename: 'result.json', mime: 'application/json', bytes: new TextEncoder().encode('{"ok":true}').buffer }));
   await expect(page.getByRole('dialog')).toContainText('result.json');
