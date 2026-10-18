@@ -75,7 +75,7 @@ export function assetRequestUrl(asset: RuntimeAsset): string {
 }
 type AssetOptions = {
   signal: AbortSignal; fetcher?: typeof fetch; cacheStorage?: CacheStorage | null; timeoutMs?: number;
-  onProgress?: (bytes: number) => void; onWarning?: (warning: CacheWarning) => void;
+  onProgress?: (bytes: number, phase?: 'loading' | 'verifying') => void; onWarning?: (warning: CacheWarning) => void;
 };
 export async function loadAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetOptions): Promise<Uint8Array> {
   checkAbort(options.signal);
@@ -104,7 +104,9 @@ async function readAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetO
     if (cached) {
       try {
         const bytes = await readBounded(cached, asset.bytes, signal, onProgress);
-        if (bytes.length !== asset.bytes || await sha256(bytes) !== asset.sha256) throw new RuntimeFailure('integrity');
+        if (bytes.length !== asset.bytes) throw new RuntimeFailure('integrity');
+        onProgress?.(bytes.length, 'verifying');
+        if (await sha256(bytes) !== asset.sha256) throw new RuntimeFailure('integrity');
         checkAbort(signal);
         return bytes;
       } catch (error) {
@@ -121,6 +123,7 @@ async function readAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetO
   if (!response.ok || response.type === 'opaque') throw new RuntimeFailure('request', response.status);
   const bytes = await readBounded(response, asset.bytes, signal, onProgress);
   if (bytes.length !== asset.bytes) throw new RuntimeFailure('size');
+  onProgress?.(bytes.length, 'verifying');
   if (await sha256(bytes) !== asset.sha256) throw new RuntimeFailure('integrity');
   checkAbort(signal);
   if (cache && !/no-store|private/i.test(response.headers.get('cache-control') || '')) {

@@ -3,6 +3,8 @@
  *
  * - `status(target, options)` renders an inline waiting / working / done / error
  *   card inside the tool (no data leaves the frame).
+ * - `loader(target, options)` reuses the status card for asset download,
+ *   verified-byte progress and tool-owned initialization, with EN/ID defaults.
  * - `fileInput(target, options)` renders a shared clay drop zone: configurable
  *   copy, accepted types and size/count limits, validated before `onChange`.
  * - `toast(message, options)` and `dialog/confirm/info(options)` are rendered by the host in
@@ -31,6 +33,8 @@ export const uiKitStyles = `
 .ti-detail:empty { display: none; }
 .ti-bar { height: 12px; margin-top: 10px; border-radius: 99px; background: var(--ot-bg); box-shadow: inset 1px 2px 3px var(--ot-shadow); overflow: hidden; }
 .ti-bar[hidden] { display: none; }
+.ti-loader-meta { display: block; margin-top: 8px; color: var(--ot-muted); font-size: .8em; font-weight: 750; font-variant-numeric: tabular-nums; }
+.ti-loader-meta:empty { display: none; }
 .ti-bar i { display: block; height: 100%; width: var(--ti-progress, 0%); border-radius: inherit; background: linear-gradient(180deg, color-mix(in srgb, var(--ti-tone), #fff 30%), var(--ti-tone)); box-shadow: inset 0 2px 0 rgba(255,255,255,.45); transition: width .3s cubic-bezier(.22,1,.36,1); }
 .ti-toasts { position: fixed; left: 50%; bottom: 16px; z-index: 2147483000; display: grid; gap: 8px; width: min(420px, calc(100% - 24px)); transform: translateX(-50%); }
 .ti-toast { padding: 12px 16px; border: 1px solid var(--ot-border); border-radius: 18px; background: var(--ot-surface); color: var(--ot-text); box-shadow: 0 5px 0 -1px var(--ot-border), 0 14px 26px -12px var(--ot-shadow); font-weight: 750; overflow-wrap: anywhere; animation: ti-rise .25s cubic-bezier(.22,1,.36,1); }
@@ -155,6 +159,52 @@ export const uiKitScript = `
     const info = (options = {}) => dialog({ ...options, kind: 'info' });
     const fileCopy = { en: { label: 'Drop a file here', labelMany: 'Drop files here', choose: 'Choose file', chooseMany: 'Choose files', upTo: 'up to', any: 'Any file', type: 'This file type is not supported.', size: 'This file is larger than', count: 'Too many files. Maximum:', remove: 'Remove' }, id: { label: 'Letakkan berkas di sini', labelMany: 'Letakkan berkas di sini', choose: 'Pilih berkas', chooseMany: 'Pilih berkas', upTo: 'maks.', any: 'Semua berkas', type: 'Jenis berkas ini tidak didukung.', size: 'Berkas ini lebih besar dari', count: 'Terlalu banyak berkas. Maksimal:', remove: 'Hapus' } };
     const formatBytes = bytes => bytes >= 1048576 ? (bytes / 1048576).toFixed(bytes % 1048576 ? 1 : 0) + ' MB' : bytes >= 1024 ? Math.round(bytes / 1024) + ' KB' : bytes + ' B';
+    const loaderCopy = {
+      en: { waiting: 'Ready to load', loading: 'Loading asset…', verifying: 'Checking asset integrity…', initializing: 'Preparing engine…', done: 'Asset ready', error: 'Could not load asset', failed: 'Check your connection and access permissions, then retry. Your input is preserved.' },
+      id: { waiting: 'Siap memuat', loading: 'Memuat aset…', verifying: 'Memeriksa integritas aset…', initializing: 'Menyiapkan mesin…', done: 'Aset siap', error: 'Gagal memuat aset', failed: 'Periksa koneksi dan izin akses, lalu coba lagi. Input Anda tetap tersimpan.' }
+    };
+    // Inline, never a blocking popup. Only the host downloads and verifies pinned assets.
+    function loader(target, options = {}) {
+      const card = status(target);
+      card.element.classList.add('ti-loader');
+      const meta = document.createElement('span'); meta.className = 'ti-loader-meta';
+      card.element.querySelector('.ti-copy').append(meta);
+      let model = { phase: 'waiting', loaded: null, total: null, title: '', detail: '', ...options };
+      let removed = false, busy = false;
+      function render() {
+        if (removed) return;
+        const copy = loaderCopy[document.documentElement.lang === 'id' ? 'id' : 'en'];
+        const phase = model.phase;
+        const measurable = ['loading', 'verifying'].includes(phase) && Number.isFinite(model.loaded) && Number.isFinite(model.total) && model.loaded >= 0 && model.total > 0;
+        const loaded = measurable ? Math.min(model.loaded, model.total) : 0;
+        const percent = measurable ? Math.floor(loaded / model.total * 100) : null;
+        card.update({ state: phase === 'waiting' ? 'waiting' : phase === 'error' ? 'error' : phase === 'done' ? 'done' : 'working', title: model.title || copy[phase], detail: model.detail || (phase === 'error' ? copy.failed : ''), progress: percent });
+        meta.textContent = measurable ? formatBytes(loaded) + ' / ' + formatBytes(model.total) + ' · ' + percent + '%' : '';
+        if (measurable) card.element.querySelector('[role="progressbar"]').setAttribute('aria-label', model.title || copy[phase]);
+      }
+      function update(next = {}) {
+        if (next.phase && !['waiting', 'loading', 'verifying', 'initializing', 'done', 'error'].includes(next.phase)) throw new TypeError('Unknown loader phase.');
+        model = { ...model, ...next }; render(); return controller;
+      }
+      const controller = Object.freeze({
+        element: card.element, update,
+        done: (title = '', detail = '') => update({ phase: 'done', title, detail }),
+        fail: (title = '', detail = '') => update({ phase: 'error', title, detail }),
+        async asset(id) {
+          if (removed) throw new Error('This loader was removed.');
+          if (busy) throw Object.assign(new Error('This loader is already loading an asset.'), { code: 'busy' });
+          busy = true;
+          update({ phase: 'loading', loaded: null, total: null, title: options.title || '', detail: clip(id, 120) });
+          try {
+            const result = await request('asset', { id }, progress => update(progress));
+            controller.done(); return result;
+          } catch (error) { controller.fail(); throw error; }
+          finally { busy = false; }
+        },
+        remove() { removed = true; removeEventListener('trick-it:localechange', render); card.remove(); }
+      });
+      update(model); addEventListener('trick-it:localechange', render); return controller;
+    }
     const typeLabel = rule => rule.startsWith('.') ? rule.slice(1).toUpperCase() : rule.endsWith('/*') ? rule.slice(0, -2).replace(/^./, c => c.toUpperCase()) : (rule.split('/')[1] || rule).replace('svg+xml', 'svg').replace(/^x-/, '').toUpperCase();
     function accepts(file, rules) {
       if (!rules.length) return true;
@@ -237,5 +287,5 @@ export const uiKitScript = `
         remove() { removeEventListener('trick-it:localechange', text); for (const url of previews) URL.revokeObjectURL(url); zone.remove(); }
       });
     }
-    const ui = Object.freeze({ status, fileInput, toast, dialog, confirm, info });
+    const ui = Object.freeze({ status, loader, fileInput, toast, dialog, confirm, info });
 `;

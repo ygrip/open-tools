@@ -77,25 +77,32 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
         document.documentElement.lang = data.locale;
         dispatchEvent(new CustomEvent('trick-it:localechange', { detail: { locale: data.locale } }));
       }
-      if (!config.token || data?.type !== 'trick-it:response' || data.version !== 1 || data.token !== config.token || typeof data.id !== 'string') return;
+      if (!config.token || data?.version !== 1 || data.token !== config.token || typeof data.id !== 'string') return;
       const request = pending.get(data.id); if (!request) return;
+      if (data.type === 'trick-it:asset-progress') {
+        if (request.operation !== 'asset' || !Number.isSafeInteger(data.loaded) || !Number.isSafeInteger(data.total) || data.loaded < 0 || data.total < 1 || data.loaded > data.total || data.total > 536870912 || !['loading', 'verifying'].includes(data.phase)) return;
+        try { request.onProgress?.({ loaded: data.loaded, total: data.total, phase: data.phase }); }
+        catch (error) { pending.delete(data.id); clearTimeout(request.timer); request.reject(error); }
+        return;
+      }
+      if (data.type !== 'trick-it:response') return;
       pending.delete(data.id); clearTimeout(request.timer);
       if (data.ok === true) request.resolve(data.value); else request.reject(Object.assign(new Error('The requested capability was denied or could not complete.'), { code: typeof data.error === 'string' ? data.error : 'request' }));
     });
-    function request(operation, payload) {
+    function request(operation, payload, onProgress) {
       const hostUi = operation === 'ui-toast' || operation === 'ui-dialog';
       if (!config.token || (!hostUi && operation !== 'asset' && !config.permissions.includes(operation)) || (operation === 'asset' && !config.permissions.includes('external-assets'))) return Promise.reject(new Error('Permission not granted.'));
       if (pending.size >= 16) return Promise.reject(new Error('Too many pending requests.'));
       const id = String(++sequence);
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => { pending.delete(id); reject(new Error('Capability request timed out.')); }, 330000);
-        pending.set(id, { resolve, reject, timer });
+        pending.set(id, { resolve, reject, timer, operation, onProgress });
         try { parent.postMessage({ type: 'trick-it:request', version: 1, token: config.token, id, operation, payload }, '*'); }
         catch { clearTimeout(timer); pending.delete(id); reject(new Error('Invalid capability payload.')); }
       });
     }
 ${uiKitScript}
-    Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, ui, asset: id => request('asset', { id }), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
+    Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, ui, asset: (id, options = {}) => request('asset', { id }, options.onProgress), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
   })();`;
   // The parent cannot measure an opaque sandbox. Send only the height of the
   // tool's rendered document, never DOM/content, through the session channel.

@@ -67,6 +67,30 @@ await ui.info({ title: 'How it works', items: ['Pick a file', 'Download the ZIP'
 if (await ui.confirm({ title: 'Clear everything?', message: 'This cannot be undone.', confirmLabel: 'Clear', tone: 'danger' })) reset();
 ```
 
+### Deferred/external asset loader
+
+Use `ui.loader(target, options)` for resource loading rather than building another spinner. It reuses the clay status card, shows real byte counts/percentages when known, and has localized waiting/loading/verifying/initializing/done/error labels. Unknown progress stays indeterminate—never estimate a percentage from elapsed time.
+
+```js
+const loader = trickIt.ui.loader('#model-loading'); // element or selector
+try {
+  // Same permissions and integrity checks as trickIt.asset; no direct network access.
+  const resource = await loader.asset('model');
+  // Download completion is not engine readiness: initialization is tool-owned.
+  loader.update({ phase: 'initializing' });
+  const model = await initializeEngine(resource.bytes);
+  loader.done('Model ready'); // localize custom copy in the tool
+} catch (error) {
+  loader.fail(); // friendly localized error; retain input and allow an explicit retry
+}
+```
+
+`loader.asset(id)` resolves to the unchanged `{ bytes: ArrayBuffer, type }` resource **after** SHA-256 verification, or shows an error and rethrows the original failure (including its `code`). A failed attempt can be retried with the same loader; it never retries or downloads automatically. Use one loader per concurrent asset; duplicate requests for the same asset still share one host download. `done` means the resource bytes are ready, not that an engine has initialized. `remove()` detaches the card/locale listener but does not abort a shared download; host revocation still aborts pending work.
+
+For tool-owned loading (e.g. engine initialization or a worker reporting progress), use `loader.update({ phase, loaded, total, title, detail })`. Phases: `waiting`, `loading`, `verifying`, `initializing`, `done`, `error`. `loaded`/`total` are byte counts for loading/verifying; omit them when unknown. Controllers also expose `.done(title?, detail?)`, `.fail(title?, detail?)`, `.element`, and `.remove()`. Default labels follow locale changes without restarting the work. All custom text is rendered as text, not HTML.
+
+Existing callers can subscribe without rendering a card: `trickIt.asset('model', { onProgress({ loaded, total, phase }) {} })`; progress is host-authenticated, bounded and scoped to the pending request, including cache reads and integrity verification. A callback exception rejects that caller's promise; it does not authorize or cancel another request. Existing `trickIt.asset(id)` calls remain compatible. Automatic (`defer: false`) downloads happen before the frame launches and continue to use the host's loading card.
+
 Popups and toasts are text only (title ≤120, message ≤800, ≤12 items, labels ≤40, toast ≤240 characters) and one popup is shown at a time. **Do not open an in-frame `<dialog>`**: the iframe grows with its content, so a modal inside it is centred in the frame, not on screen. Without a host (a standalone file), the kit falls back to in-frame rendering.
 
 ## Request a sensitive operation
@@ -114,15 +138,16 @@ Declare `external-assets` and any relevant `wasm`/`workers` policy capability, p
 ```js
 async function initializeModel() {
   if (!window.trickIt) throw new Error('Hosted model loading is unavailable.');
-  showStatus('Loading the optional model…');
+  const loading = window.trickIt.ui.loader('#model-loading');
   try {
-    const resource = await window.trickIt.asset('model');
+    const resource = await loading.asset('model');
     if (resource.type !== 'wasm') throw new Error('Unexpected resource type');
+    loading.update({ phase: 'initializing' });
     const { instance } = await WebAssembly.instantiate(resource.bytes, {});
-    showStatus('Model ready.');
+    loading.done('Model ready.');
     return instance;
   } catch {
-    showError('The model could not load or permission was declined. You can retry without losing input.');
+    loading.fail();
     return null;
   }
 }

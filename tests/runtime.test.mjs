@@ -58,6 +58,19 @@ test('asset loader sends no credentials, pins cache keys and never uses unverifi
   await assert.rejects(loadAsset(tool, asset, { signal: controller().signal, cacheStorage: null, fetcher: async () => new Response(new Uint8Array(model.length)) }), (error) => error.code === 'integrity');
   await assert.rejects(loadAsset(tool, asset, { signal: controller().signal, cacheStorage: null, fetcher: async () => new Response(new Uint8Array(model.length + 1)) }), (error) => error.code === 'size');
 });
+test('asset progress distinguishes downloaded bytes from integrity verification on network and cache reads', async () => {
+  const cache = memoryCache();
+  for (const cached of [false, true]) {
+    const events = [];
+    const result = await loadAsset(tool, asset, { signal: controller().signal, cacheStorage: cache.storage,
+      fetcher: async () => { assert.equal(cached, false); return new Response(model); },
+      onProgress: (bytes, phase = 'loading') => events.push({ bytes, phase })
+    });
+    assert.deepEqual(result, model);
+    assert.ok(events.some(event => event.phase === 'loading' && event.bytes === model.length));
+    assert.deepEqual(events.at(-1), { bytes: model.length, phase: 'verifying' });
+  }
+});
 test('storage denial is explicit but does not discard a verified download', async () => {
   const warnings = [];
   assert.deepEqual(await loadAsset(tool, asset, { signal: controller().signal, cacheStorage: { open: async () => { throw new Error('private storage failure'); } }, fetcher: async () => new Response(model), onWarning: (value) => warnings.push(value) }), model);

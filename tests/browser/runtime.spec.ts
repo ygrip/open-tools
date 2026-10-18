@@ -118,6 +118,78 @@ test('startup permissions are chosen once before launch and unselected ones stay
   await expect(page.getByRole('button', { name: 'Start with selected permissions' })).toHaveCount(0);
 });
 
+test('shared asset loader shows authenticated byte progress, verifies, localizes and retries failures', async ({ page }) => {
+  const size = 65536;
+  const digest = createHash('sha256').update(Buffer.alloc(size, 7)).digest('hex');
+  let corrupt = true;
+  await page.route('https://models.example/broken**', route => route.fulfill({ body: Buffer.alloc(size, corrupt ? 9 : 7), headers: { 'access-control-allow-origin': '*', 'cache-control': 'no-store' } }));
+  await mountFixture(page, {
+    permissions: [{ name: 'external-assets', reason: 'Load optional data.', required: true }],
+    assets: ['stream', 'broken'].map(id => ({ id, url: `https://models.example/${id}`, sha256: digest, bytes: size, type: 'data', defer: true }))
+  });
+  for (const checkbox of await page.getByRole('checkbox').all()) await checkbox.check();
+  await page.getByRole('button', { name: 'Start with selected permissions' }).click();
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  // Hold the second half of a real ReadableStream to inspect the intermediate state.
+  await page.evaluate((size) => {
+    const fetcher = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      if (!String(input).startsWith('https://models.example/stream')) return fetcher(input, init);
+      return Promise.resolve(new Response(new ReadableStream({ start(controller) {
+        controller.enqueue(new Uint8Array(size / 2).fill(7));
+        (window as any).__finishAsset = () => { controller.enqueue(new Uint8Array(size / 2).fill(7)); controller.close(); };
+      } }), { headers: { 'cache-control': 'no-store' } }));
+    };
+  }, size);
+  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  await frame.evaluate(() => {
+    const w = window as any;
+    w.loader = w.trickIt.ui.loader(document.body);
+    w.phases = [];
+    addEventListener('message', event => { if (event.data?.type === 'trick-it:asset-progress') w.phases.push(event.data.phase); });
+    w.loaded = w.loader.asset('stream');
+    w.loaded.catch(() => {}); // assertions below consume the original promise
+  });
+  const loader = page.frameLocator('iframe').locator('.ti-loader');
+  await expect(loader.locator('[role="progressbar"]')).toHaveAttribute('aria-valuenow', '50');
+  await expect(loader).toContainText('32 KB / 64 KB · 50%');
+  await expect(loader).toHaveAttribute('aria-busy', 'true');
+  expect(await frame.evaluate(async () => { try { await (window as any).loader.asset('stream'); return 'unexpected'; } catch (error) { return (error as { code: string }).code; } })).toBe('busy');
+  // A sibling/self-sent message, wrong session, ID or malformed counters cannot spoof progress.
+  const session = await frame.evaluate(() => {
+    const script = document.querySelector('script')!.textContent!;
+    const config = JSON.parse(script.match(/const config = (\{[^\n]+\});/)![1]);
+    window.postMessage({ type: 'trick-it:asset-progress', version: 1, token: config.token, id: '1', loaded: 99, total: 100, phase: 'loading' }, '*');
+    return config.token as string;
+  });
+  await page.evaluate((token) => {
+    const target = document.querySelector('iframe')!.contentWindow!;
+    for (const fields of [{ token: 'wrong' }, { id: '999' }, { loaded: -1 }, { loaded: 101 }, { total: 0 }, { total: 536870913 }, { phase: 'done' }]) target.postMessage({ type: 'trick-it:asset-progress', version: 1, token, id: '1', loaded: 99, total: 100, phase: 'loading', ...fields }, '*');
+  }, session);
+  await expect(loader.locator('[role="progressbar"]')).toHaveAttribute('aria-valuenow', '50');
+  await frame.evaluate(() => { document.documentElement.lang = 'id'; dispatchEvent(new CustomEvent('trick-it:localechange')); });
+  await expect(loader).toContainText('Memuat aset');
+  await expect(loader.locator('[role="progressbar"]')).toHaveAttribute('aria-valuenow', '50');
+  await page.evaluate(() => (window as any).__finishAsset());
+  expect(await frame.evaluate(async () => (await (window as any).loaded).bytes.byteLength)).toBe(size);
+  await expect(loader).toHaveAttribute('data-state', 'done');
+  await expect(loader).toContainText('Aset siap');
+  expect(await frame.evaluate(() => (window as any).phases)).toContain('verifying');
+
+  expect(await frame.evaluate(async () => { try { await (window as any).loader.asset('broken'); return 'unexpected'; } catch (error) { return (error as { code: string }).code; } })).toBe('integrity');
+  await expect(loader).toHaveAttribute('data-state', 'error');
+  await expect(loader).toContainText('Gagal memuat aset');
+  await expect(page.frameLocator('iframe').getByRole('textbox', { name: 'Remember me' })).toHaveValue('keep this text');
+  corrupt = false;
+  expect(await frame.evaluate(async () => (await (window as any).loader.asset('broken')).bytes.byteLength)).toBe(size);
+  await expect(loader).toHaveAttribute('data-state', 'done');
+  await frame.evaluate(() => (window as any).loader.update({ phase: 'initializing' }));
+  await expect(loader).toContainText('Menyiapkan mesin');
+  await expect(loader.locator('[role="progressbar"]')).toBeHidden();
+  await frame.evaluate(() => (window as any).loader.remove());
+  await expect(loader).toHaveCount(0);
+});
+
 test('deferred WASM downloads only on request, verifies bytes and preserves opaque origin', async ({ page }) => {
   const bytes = Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]);
   const sha256 = createHash('sha256').update(bytes).digest('hex');

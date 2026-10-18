@@ -56,6 +56,7 @@
   let seen = new Set<string>();
   let inFlight = new Set<string>();
   let loadedAssets = new Map<string, Promise<Uint8Array>>();
+  const assetRequests = new Map<string, string>(); // request ID → declared asset ID
   const downloadUrls = new Set<string>();
   // Startup permissions change the sandbox policy, so they are chosen before launch.
   // Runtime permissions are asked on first use. Both are remembered per tool.
@@ -87,9 +88,19 @@
   function getAsset(asset: RuntimeAsset, current: number, signal: AbortSignal) {
     let promise = loadedAssets.get(asset.id);
     if (!promise) {
+      let reportedAt = -Infinity;
       promise = loadAsset(tool, asset, {
         signal,
-        onProgress: (bytes) => { if (current === generation && !signal.aborted) progress = { id: asset.id, bytes, total: asset.bytes }; },
+        onProgress: (bytes, phase = 'loading') => {
+          if (current !== generation || signal.aborted) return;
+          const now = performance.now();
+          if (phase === 'loading' && bytes !== asset.bytes && now - reportedAt < 80) return;
+          reportedAt = now;
+          progress = { id: asset.id, bytes, total: asset.bytes };
+          for (const [id, assetId] of assetRequests) {
+            if (assetId === asset.id) frame?.contentWindow?.postMessage({ type: 'trick-it:asset-progress', version: 1, token, id, loaded: bytes, total: asset.bytes, phase }, '*');
+          }
+        },
         onWarning: (value) => { if (current === generation && !signal.aborted) warning = value; }
       });
       loadedAssets.set(asset.id, promise);
@@ -120,6 +131,7 @@
     seen = new Set();
     inFlight = new Set();
     loadedAssets = new Map();
+    assetRequests.clear();
     brokerBusy = false;
     pending = null;
     frameDocument = '';
@@ -297,6 +309,7 @@
     recoveredAsset = false;
     progress = null;
     loadedAssets.clear();
+    assetRequests.clear();
     inFlight.clear();
     seen.clear();
     pendingAsk = false;
@@ -427,6 +440,7 @@
     }
     if (parsed.asset) {
       inFlight.add(request.id);
+      assetRequests.set(request.id, parsed.asset.id);
       const current = generation;
       assetFailure = null;
       recoveredAsset = false;
@@ -440,7 +454,7 @@
         assetFailure = fail(error);
         failedAsset = parsed.asset;
         reply(request, false, undefined, assetFailure.code);
-      } finally { if (current === generation) { progress = null; inFlight.delete(request.id); } }
+      } finally { if (current === generation) { progress = null; inFlight.delete(request.id); assetRequests.delete(request.id); } }
     } else if (pending || brokerBusy) reply(request, false, undefined, 'busy');
     else {
       verificationToken = '';
