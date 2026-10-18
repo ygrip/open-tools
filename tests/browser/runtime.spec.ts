@@ -31,6 +31,50 @@ async function mountFixture(page: Page, changes: Record<string, unknown> = {}) {
   await page.addScriptTag({ content: await script() });
 }
 
+for (const width of [375, 1440]) test(`isolated tool grows and shrinks with its content at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 812 });
+  await mountFixture(page);
+  const iframe = page.locator('iframe');
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  const height = () => iframe.evaluate((element) => Math.round(element.getBoundingClientRect().height));
+
+  await expect.poll(height).toBeLessThan(500);
+  await frame.evaluate(() => {
+    const extra = document.createElement('div');
+    extra.id = 'resize-test-extra';
+    extra.style.height = '1700px';
+    document.body.append(extra);
+  });
+  await expect.poll(height).toBeGreaterThan(1700);
+  await frame.evaluate(() => document.getElementById('resize-test-extra')?.remove());
+  await expect.poll(height).toBeLessThan(500);
+
+  // Spoofed and out-of-range height messages must not affect the parent.
+  await frame.evaluate(() => {
+    parent.postMessage({ type: 'trick-it:resize', version: 1, token: 'wrong-session', height: 50000 }, '*');
+    const script = document.querySelector('script')!.textContent!;
+    const config = JSON.parse(script.match(/const config = (\{[^\n]+\});/)![1]);
+    parent.postMessage({ type: 'trick-it:resize', version: 1, token: config.token, height: 100001 }, '*');
+  });
+  await page.evaluate(async () => {
+    window.postMessage({ type: 'trick-it:resize', version: 1, token: 'forged', height: 50000 }, '*');
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  });
+  expect(await height()).toBeLessThan(500);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+for (const width of [375, 1440]) test(`registered JSON Tools uses page scrolling instead of a nested tool scrollbar at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 812 });
+  await page.goto('/json-tools/');
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'JSON Tools' })).toBeVisible();
+  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  // Editors may scroll their own data, but the tool document itself should fit.
+  await expect.poll(() => frame.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThan(4);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test('required consent blocks startup and native host confirmation gates each clipboard write', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (value: string) => { (window as unknown as { __clipboard: string }).__clipboard = value; } } });

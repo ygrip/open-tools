@@ -15,6 +15,7 @@
   let mounted = $state(false);
   let frame = $state<HTMLIFrameElement | null>(null);
   let frameDocument = $state('');
+  let frameHeight = $state(280);
   let selected = $state<PermissionName[]>([]);
   let grants = $state<PermissionName[]>([]);
   let consent = $state(false);
@@ -95,6 +96,7 @@
     brokerBusy = false;
     pending = null;
     frameDocument = '';
+    frameHeight = 280;
     failure = null;
     assetFailure = null;
     failedAsset = null;
@@ -132,6 +134,7 @@
     generation++;
     pending = null;
     frameDocument = '';
+    frameHeight = 280;
     selected = [];
     grants = [];
     failure = null;
@@ -196,6 +199,15 @@
 
   async function receive(event: MessageEvent) {
     if (!controller || controller.signal.aborted) return;
+    // Size reports are layout-only, not capability requests. Still require the
+    // current sandbox window and session token so stale frames cannot resize us.
+    if (event.data?.type === 'trick-it:resize') {
+      const size = event.data;
+      if (event.source !== frame?.contentWindow || !frameDocument || size.version !== 1 || size.token !== token || !Number.isSafeInteger(size.height) || size.height < 0 || size.height > 100000) return;
+      const nextHeight = Math.max(200, size.height + 2);
+      if (Math.abs(frameHeight - nextHeight) >= 2) frameHeight = nextHeight;
+      return;
+    }
     const parsed = parseRuntimeRequest(event, frame?.contentWindow ?? null, token, tool, grants);
     if (!parsed) return;
     const { request } = parsed;
@@ -286,7 +298,7 @@
     {#if failure || timedOut}
       <div class="load-state" role="alert"><h2>{text.failed}</h2><p>{timedOut ? text.timeout : text.errors[failure!.code]}{#if failure?.status} ({failure.status}){/if}</p><button class="clay-button" type="button" onclick={startTool}>{text.retry}</button></div>
     {:else if frameDocument}
-      <iframe bind:this={frame} title={tool.name} srcdoc={frameDocument} sandbox="allow-scripts" allow="camera 'none'; microphone 'none'; geolocation 'none'; clipboard-read 'none'; clipboard-write 'none'" referrerpolicy="no-referrer" onload={syncFrame}></iframe>
+      <iframe bind:this={frame} title={tool.name} srcdoc={frameDocument} sandbox="allow-scripts" allow="camera 'none'; microphone 'none'; geolocation 'none'; clipboard-read 'none'; clipboard-write 'none'" referrerpolicy="no-referrer" style:height={`${frameHeight}px`} onload={syncFrame}></iframe>
     {:else if loading}
       <div class="load-state" role="status"><h2>{text.loading} {tool.name}…</h2></div>
     {/if}
@@ -325,12 +337,12 @@
   .permission > span > span { display: block; color: var(--muted); margin-top: 4px; }
   .permission small { color: var(--muted); }
   .hint { font-size: 13px; }
-  .runtime-workspace { overflow: hidden; }
+  .runtime-workspace { min-width: 0; overflow: hidden; }
   .runtime-topline { padding: 14px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
   .runtime-topline > span:first-child { min-width: 0; flex: 1; overflow-wrap: anywhere; }
   .runtime-topline > span:nth-child(2) { margin-left: auto; }
-  iframe { display: block; width: 100%; height: 82vh; min-height: 790px; border: 0; }
-  .load-state { min-height: 790px; padding: 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; }
+  iframe { display: block; width: 100%; min-width: 0; height: 280px; border: 0; }
+  .load-state { min-height: 280px; padding: 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; }
   .load-state h2 { font-size: 26px; }
   .load-state p { color: var(--muted); }
   .runtime-notice { margin: 16px 0; color: var(--text-secondary); overflow-wrap: anywhere; }
@@ -340,5 +352,5 @@
   .operation-dialog p { margin-top: 16px; color: var(--text-secondary); overflow-wrap: anywhere; }
   .operation-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); padding: 14px; border-radius: 14px; max-height: 160px; overflow: auto; }
   .dialog-actions { display: flex; justify-content: end; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
-  @media (max-width: 520px) { iframe, .load-state { min-height: 1100px; } .consent { padding: 22px; } }
+  @media (max-width: 520px) { .consent { padding: 22px; } }
 </style>
