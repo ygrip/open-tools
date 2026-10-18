@@ -4,6 +4,8 @@ Start with a standalone tool repository. The example shown here can be built as 
 
 Use Node.js 22+. Each release contains one self-contained UTF-8 HTML document and `tool.manifest.json`. Source can be private; published browser code and repository provenance are public.
 
+Keep every tool-specific functional and UI/browser suite in that tool's repository, including real-host SDK integration cases. Use the [shared runtime harness](../tests/tool-harness/README.md) against local built bytes with a compatible `TRICK_IT_DIR` checkout. Do not add a per-tool suite to trick-it or test local changes through an old catalog pin. The host owns generic runtime/security/permission, registry/catalog and site checks.
+
 ## Required: shared UI, including existing tools
 
 New scaffolds and releases of existing tools **must use the host-provided `trickIt.ui` components for every applicable interaction**. Follow the [shared-UI release checklist](tool-ui-checklist.md) before implementation and before any push/re-pin. Use `ui.fileInput` for selection/drop/previews, `ui.status` for async job states, `ui.loader` for resource downloads/setup, `ui.toast` for transient notices, and host-centred `ui.info`/`ui.confirm` for popups. The [runtime guide](tool-runtime.md#shared-clay-ui-trickitui) defines the APIs.

@@ -26,7 +26,7 @@ for (const locale of ['en', 'id']) test(`${locale} platform and tool SEO is rend
   expect((await response.body()).subarray(1, 4).toString()).toBe('PNG');
   const schema = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!);
   expect(schema['@type']).toBe('WebApplication');
-  expect(schema.softwareVersion).toBe('0.3.0');
+  expect(schema.softwareVersion).toBe(jsonTool.version);
   expect(schema.inLanguage).toBe(locale);
   expect(await page.locator('title').count()).toBe(1);
   const initialHtml = await (await page.request.get(`${prefix}/json-tools/`)).text();
@@ -45,20 +45,12 @@ for (const locale of ['en', 'id']) test(`${locale} platform and tool SEO is rend
   }
 });
 
-test('localized controls preserve data on SDK locale events and links preserve query/hash', async ({ page }) => {
+test('language links preserve query/hash and reach the isolated frame', async ({ page }) => {
   await page.goto('/id/json-tools/?keep=1#guide');
-  const frame = page.frameLocator('iframe');
-  await expect(frame.getByRole('heading', { name: 'Alat JSON', exact: true })).toBeVisible();
-  const input = frame.getByRole('textbox', { name: 'Masukan', exact: true });
-  await input.fill('{"pesan":"halo"}');
-  await frame.getByRole('button', { name: 'Jalankan', exact: true }).click();
-  await expect(frame.getByRole('textbox', { name: 'Hasil', exact: true })).toHaveValue('{\n  "pesan": "halo"\n}');
-  await page.locator('iframe').evaluate((element) => (element as HTMLIFrameElement).contentWindow!.postMessage({ type: 'trick-it:locale', version: 1, locale: 'en' }, '*'));
-  await expect(frame.getByRole('textbox', { name: 'Input', exact: true })).toHaveValue('{"pesan":"halo"}');
-  await expect(frame.getByRole('textbox', { name: 'Output', exact: true })).toHaveValue('{\n  "pesan": "halo"\n}');
+  await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang', 'id');
   const english = page.getByRole('link', { name: 'EN English', exact: true });
   await expect(english).toHaveAttribute('href', '/json-tools/?keep=1#guide');
   await english.click();
   await expect(page).toHaveURL(/\/json-tools\/\?keep=1#guide$/);
-  await expect(page.frameLocator('iframe').getByRole('button', { name: 'Run', exact: true })).toBeVisible();
+  await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang', 'en');
 });

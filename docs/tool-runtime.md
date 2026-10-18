@@ -99,6 +99,8 @@ Popups and toasts are text only (title ≤120, message ≤800, ≤12 items, labe
 
 Declare the matching permission and its reason in the manifest first. Call the SDK only in response to a meaningful tool action. The host checks the calling frame, random session channel, request ID, declared capability and remembered decision. The first request for a permission shows a host popup ("Allow" / "Don't allow"); the answer is stored per tool, so later requests run without asking (a remembered refusal rejects with `denied`). Camera and location still show their live preview/precision step, and protected services confirm the exact input and security check every time. Arbitrary sibling frames cannot submit a valid request for this tool. Native browser permissions are separate and can still deny the operation.
 
+Permission dialogs restore the previous parent-owned focus target, usually the iframe. After an authenticated response, the SDK can restore its connected local control when the frame is focused and focus is on the document body; it never overrides a newer local control or host-page focus. Asset responses/progress and toasts do not redirect focus. Keep the initiating action focusable with `aria-disabled` and a re-entry guard while awaiting a dialog, or explicitly focus the appropriate surviving control afterwards: native `disabled` can erase the target. The parent never reads the opaque child document.
+
 Clipboard write accepts a **string**, not an object:
 
 ```js

@@ -6,7 +6,7 @@ for (const theme of ['light', 'dark'] as const) {
     test(`${route} has no automated WCAG A/AA violations in ${theme} mode`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: theme });
       await page.goto(route);
-      if (route === '/json-tools') await expect(page.frameLocator('iframe').getByRole('heading', { name: 'JSON Tools' })).toBeVisible();
+      if (route === '/json-tools') await expect(page.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts');
       const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
       expect(result.violations).toEqual([]);
     });

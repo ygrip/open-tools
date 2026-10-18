@@ -70,6 +70,7 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
   const sdk = `(() => {
     const config = ${config};
     const pending = new Map(); let sequence = 0;
+    const focusElement = HTMLElement.prototype.focus;
     addEventListener('message', event => {
       if (event.source !== parent) return;
       const data = event.data;
@@ -87,6 +88,9 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
       }
       if (data.type !== 'trick-it:response') return;
       pending.delete(data.id); clearTimeout(request.timer);
+      // The parent can focus the opaque frame, but only this SDK can restore
+      // its local control. Never override a newer control or host-page focus.
+      if (request.focusTarget?.isConnected && document.hasFocus() && document.activeElement === document.body) focusElement.call(request.focusTarget, { preventScroll: true });
       if (data.ok === true) request.resolve(data.value); else request.reject(Object.assign(new Error('The requested capability was denied or could not complete.'), { code: typeof data.error === 'string' ? data.error : 'request' }));
     });
     function request(operation, payload, onProgress) {
@@ -96,7 +100,8 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
       const id = String(++sequence);
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => { pending.delete(id); reject(new Error('Capability request timed out.')); }, 330000);
-        pending.set(id, { resolve, reject, timer, operation, onProgress });
+        const focusTarget = operation !== 'asset' && operation !== 'ui-toast' && document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        pending.set(id, { resolve, reject, timer, operation, onProgress, focusTarget });
         try { parent.postMessage({ type: 'trick-it:request', version: 1, token: config.token, id, operation, payload }, '*'); }
         catch { clearTimeout(timer); pending.delete(id); reject(new Error('Invalid capability payload.')); }
       });

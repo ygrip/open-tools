@@ -54,6 +54,8 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
+Tool-specific functional and UI/browser tests belong in each tool repository, not in this host's test suite. The [shared runtime harness](tests/tool-harness/README.md) lets those suites exercise the real host/SDK against their own local artifact without a registry re-pin. Host tests cover the shared runtime, permissions/security, catalog and site behavior; see [test ownership](docs/tool-ui-checklist.md#test-ownership).
+
 `npm run build` syncs approved bundles before building the static site. The build output is `build/`; deploy it to any static host. It includes prerendered home/legal/tool routes as directory indexes and JSON-encoded bundle files. Directory indexes avoid depending on host-specific clean-URL rewrites. Deploy the complete output atomically, not just the catalog. `npm run dev` requires an initial sync; rerun sync and restart development after registry changes.
 
 ## Bundle contract v3 (with legacy v2 compatibility)

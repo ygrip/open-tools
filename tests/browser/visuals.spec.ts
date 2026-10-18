@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { stateProbe } from './runtime-fixture';
 
 test('support cards display each platform logo from local assets', async ({ page }) => {
   await page.goto('/');
@@ -10,15 +11,11 @@ test('support cards display each platform logo from local assets', async ({ page
   }
 });
 
-test('tool theme follows the host without resetting input or output', async ({ page }) => {
+test('host theme propagation preserves generic iframe state', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/json-tools');
-  const tool = page.frameLocator('iframe');
-  const input = tool.getByRole('textbox', { name: 'Input', exact: true });
-  const output = tool.getByRole('textbox', { name: 'Output', exact: true });
-  await input.fill('{"small":"win"}');
-  await tool.getByRole('button', { name: 'Run', exact: true }).click();
-  await expect(output).toHaveValue('{\n  "small": "win"\n}');
+  const input = await stateProbe(page);
+  await input.fill('unsaved platform fixture state');
   const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
   expect(await frame.evaluate(() => document.documentElement.dataset.theme)).toBe('light');
   expect(await frame.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ot-bg').trim())).toBe('#fff8f0');
@@ -30,8 +27,7 @@ test('tool theme follows the host without resetting input or output', async ({ p
   expect(await frame.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ot-bg').trim())).toBe('#242127');
   expect(await input.evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe(lightBackground);
   expect(await frame.evaluate(() => (window as unknown as { themeMarker: number }).themeMarker)).toBe(42);
-  await expect(input).toHaveValue('{"small":"win"}');
-  await expect(output).toHaveValue('{\n  "small": "win"\n}');
+  await expect(input).toHaveValue('unsaved platform fixture state');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('data-theme', 'dark');
@@ -44,7 +40,7 @@ test('theme continues to work when storage is denied', async ({ page }) => {
   });
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/json-tools');
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'JSON Tools' })).toBeVisible();
+  await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('data-theme', 'light');
   await page.getByRole('button', { name: 'Switch to dark theme' }).click();
   await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.getByRole('status')).toContainText('Theme changed for this visit');

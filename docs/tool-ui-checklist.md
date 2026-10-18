@@ -23,6 +23,12 @@ The rule applies **when the feature exists**. A synchronous text counter does no
 4. Keep fallback UI only behind **absence of the relevant SDK API**, for standalone files or older hosts. Never choose custom UI while the provided API exists. A denied capability is not permission to use a direct browser/network fallback. Remove unused hosted markup, CSS and handlers after replacement; fallback native inputs must not stay visible alongside the shared picker. Do not duplicate the kit's CSS/JavaScript.
 5. Update EN/ID copy and tests without resetting inputs, files, results or running work on locale/theme changes. Default shared labels already follow locale changes. Use first-use remembered permission wording; camera/location retain per-use previews and protected services retain per-request confirmation.
 
+## Test ownership
+
+Tool-specific functional, UI, import/export, decoder and workflow tests belong in the **tool's own repository**, including tests that exercise the real trick-it runtime/SDK. Run them there against a compatible host checkout; do not add a per-tool suite to `trick-it/tests/browser` or depend on the catalog's currently published pin to test local tool changes.
+
+The host owns shared runtime/SDK/UI-kit, sandbox/security, permission, host-service, registry/catalog, navigation, SEO and PWA tests. Use synthetic fixtures for cross-cutting behavior. Catalog smoke checks may open a registered tool, but must not assert that tool's transformations, formats, forms or result data. Keep tool-specific regression coverage when moving tests; do not replace it with source-token checks.
+
 ## Evidence required before commit/push
 
 For **each applicable row**, record its source integration and a passing behavioral check. Mark other rows “not applicable” with the reason. A token `.ui` reference, an unused helper or screenshot of restyled custom controls is not evidence.

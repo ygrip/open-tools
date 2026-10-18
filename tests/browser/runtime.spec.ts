@@ -40,16 +40,6 @@ for (const width of [375, 1440]) test(`isolated tool grows and shrinks with its 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-for (const width of [375, 1440]) test(`registered JSON Tools uses page scrolling instead of a nested tool scrollbar at ${width}px`, async ({ page }) => {
-  await page.setViewportSize({ width, height: 812 });
-  await page.goto('/json-tools/');
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'JSON Tools' })).toBeVisible();
-  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
-  // Editors may scroll their own data, but the tool document itself should fit.
-  await expect.poll(() => frame.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThan(4);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-});
-
 test('runtime permissions are asked once on first use, remembered per tool and resettable', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (value: string) => { (window as unknown as { __clipboard: string }).__clipboard = value; } } });
@@ -99,6 +89,47 @@ test('runtime permissions are asked once on first use, remembered per tool and r
   frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
   expect(await write('next visit')).toBe('allowed');
   await expect(page.getByRole('dialog', { name: 'Allow this tool action?' })).toBeHidden();
+});
+
+for (const allowed of [true, false]) test(`permission dialog returns keyboard focus to its iframe after ${allowed ? 'approval' : 'refusal'}`, async ({ page }) => {
+  await page.addInitScript(() => {
+    const state = window as unknown as { __holdClipboard?: boolean; __releaseClipboard?: () => void };
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async () => {
+      if (state.__holdClipboard) await new Promise<void>(resolve => { state.__releaseClipboard = resolve; });
+    } } });
+  });
+  await mountFixture(page, { permissions: [{ name: 'clipboard-write', reason: 'Copy a chosen result.', required: true }] });
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  await frame.evaluate(() => {
+    const button = document.createElement('button'); button.textContent = 'Request copy';
+    button.onclick = () => {
+      const sdk = (window as unknown as { trickIt: { request: (operation: string, payload: string) => Promise<unknown> } }).trickIt;
+      void sdk.request('clipboard-write', 'fixture text').then(() => { button.dataset.outcome = 'allowed'; }, () => { button.dataset.outcome = 'denied'; });
+    };
+    document.body.append(button);
+  });
+  const button = page.frameLocator('iframe').getByRole('button', { name: 'Request copy', exact: true });
+  await button.focus(); await button.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Allow this tool action?' });
+  await expect(dialog).toBeVisible();
+  await page.getByRole('button', { name: allowed ? 'Allow' : 'Don’t allow', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(button).toHaveAttribute('data-outcome', allowed ? 'allowed' : 'denied');
+  await expect(page.locator('iframe')).toBeFocused();
+  await expect(button).toBeFocused();
+  if (allowed) {
+    // A later async response must not steal focus from a newer local control.
+    await page.evaluate(() => { (window as unknown as { __holdClipboard: boolean }).__holdClipboard = true; });
+    await button.evaluate(element => element.removeAttribute('data-outcome'));
+    await button.press('Enter');
+    await expect.poll(() => page.evaluate(() => typeof (window as unknown as { __releaseClipboard?: () => void }).__releaseClipboard)).toBe('function');
+    const editor = page.frameLocator('iframe').getByRole('textbox', { name: 'Remember me' });
+    await editor.focus();
+    await page.evaluate(() => (window as unknown as { __releaseClipboard: () => void }).__releaseClipboard());
+    await expect(button).toHaveAttribute('data-outcome', 'allowed');
+    await expect(editor).toBeFocused();
+  }
 });
 
 test('startup permissions are chosen once before launch and unselected ones stay unavailable', async ({ page }) => {

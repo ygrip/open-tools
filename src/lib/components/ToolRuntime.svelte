@@ -38,6 +38,7 @@
   const pendingInput = $derived(pendingService ? (pending?.payload as { input: { url: string; strategy: string } }).input : undefined);
   const serviceEndpoint = (feature: string) => `${base}/api/tools/${tool.id}/${feature}`;
   let operationDialog = $state<HTMLDialogElement | null>(null);
+  let operationFocus: HTMLElement | null = null;
   let cameraStage = $state<'off' | 'starting' | 'ready'>('off');
   let cameraVideo = $state<HTMLVideoElement | null>(null);
   let cameraStream: MediaStream | null = null;
@@ -494,8 +495,19 @@
   $effect(() => { if (mounted) { void locale; syncFrame(); } });
   $effect(() => {
     if (!operationDialog) return;
-    if (pending && !operationDialog.open) operationDialog.showModal();
-    else if (!pending && operationDialog.open) operationDialog.close();
+    if (pending && !operationDialog.open) {
+      operationFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      operationDialog.showModal();
+    } else if (!pending && operationDialog.open) {
+      // Pending controls have already been removed by Svelte, so the native
+      // dialog may lose its return-focus step. Only touch parent-owned nodes;
+      // the sandbox's document must remain opaque.
+      const restore = document.activeElement === document.body || operationDialog.contains(document.activeElement);
+      operationDialog.close();
+      const target = operationFocus;
+      operationFocus = null;
+      if (restore && target?.isConnected) target.focus({ preventScroll: true });
+    }
   });
 </script>
 

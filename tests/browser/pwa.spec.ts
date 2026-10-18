@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { createServer } from 'node:http';
+import { stateProbe } from './runtime-fixture';
 
 const preview = 'http://127.0.0.1:4173';
 
@@ -9,14 +10,13 @@ test('installed shell and an opened tool work offline without hiding missing rou
   await page.evaluate(() => navigator.serviceWorker.ready);
   await expect(page.getByRole('searchbox', { name: 'Search the toolbox' })).toHaveValue('keep my input');
   await page.goto('/json-tools/');
-  await expect(page.frameLocator('iframe').getByRole('textbox', { name: 'Input', exact: true })).toBeVisible();
+  await expect(page.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts');
   await expect.poll(() => page.evaluate(async () => (await (await caches.open('trick-it-bundles-v1')).keys()).length)).toBeGreaterThan(0);
   await context.setOffline(true);
   await page.reload();
-  const tool = page.frameLocator('iframe');
-  await tool.getByRole('textbox', { name: 'Input', exact: true }).fill('{"offline":true}');
-  await tool.getByRole('button', { name: 'Run', exact: true }).click();
-  await expect(tool.getByRole('textbox', { name: 'Output', exact: true })).toHaveValue('{\n  "offline": true\n}');
+  await expect(page.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts');
+  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  await expect.poll(() => frame.evaluate(() => typeof (window as unknown as { trickIt?: { request?: unknown } }).trickIt?.request)).toBe('function');
   const legal = await page.goto('/id/privacy/');
   expect(legal?.status()).toBe(200);
   await expect(page.locator('html')).toHaveAttribute('lang', 'id');
@@ -54,7 +54,7 @@ test('PWA update requires approval and never reloads a running tool', async ({ p
     await page.goto(`${origin}/`);
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.goto(`${origin}/json-tools/`);
-    const input = page.frameLocator('iframe').getByRole('textbox', { name: 'Input', exact: true });
+    const input = await stateProbe(page);
     await input.fill('keep this unsaved input');
     await page.evaluate(() => { (window as unknown as { updateMarker: number }).updateMarker = 42; });
     updated = true;

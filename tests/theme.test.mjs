@@ -37,6 +37,7 @@ test('sandbox receiver accepts only its parent and the exact theme message shape
   const receive = (event) => { for (const listener of receivers) listener(event); };
   vm.runInNewContext(script, {
     parent,
+    HTMLElement: class { focus() { assert.fail('Theme messages must not move focus'); } },
     window: {},
     document: { documentElement: root },
     addEventListener(type, listener) { assert.equal(type, 'message'); receivers.push(listener); }
