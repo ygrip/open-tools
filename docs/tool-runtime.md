@@ -69,6 +69,10 @@ if (await ui.confirm({ title: 'Clear everything?', message: 'This cannot be undo
 
 `picker.setDisabled(true)` locks native selection, drag-and-drop and selected-file removal together; re-enable after processing. Programmatic `.clear()` remains available for tool-owned reset. Disabling must not let removal change the dataset underneath an active job.
 
+Finished status cards (done/error) show a close button. `job.dismiss()` hides a card (optionally call `onDismiss` passed in the options); the next state change shows it again, so reuse one card per place instead of creating a new `ui.status` on every update. Identical toasts (same text, tone and tool) replace each other instead of stacking, and every toast has a close button.
+
+The shared picker, status card and close buttons defend their own layout and typography (15px base, centred column) against a tool's global `label`, `button`, `input`, `span` or `.settings label` rules, so every tool looks the same. Do not restyle them with structural overrides; change tokens (`--ot-*`) or the surrounding container only.
+
 ### Deferred/external asset loader
 
 Use `ui.loader(target, options)` for resource loading rather than building another spinner. It reuses the clay status card, shows real byte counts/percentages when known, and has localized waiting/loading/verifying/initializing/done/error labels. Unknown progress stays indeterminate—never estimate a percentage from elapsed time.
@@ -86,6 +90,8 @@ try {
   loader.fail(); // friendly localized error; retain input and allow an explicit retry
 }
 ```
+
+A completed loader hides itself after about 2.5 seconds (pass `autoHide: false` to keep it) and can be closed manually, so tools that load several assets do not leave a stack of "Asset ready" cards. Create one loader per concurrent asset in the same container; do not create a new one each time a stage changes.
 
 `loader.asset(id)` resolves to the unchanged `{ bytes: ArrayBuffer, type }` resource **after** SHA-256 verification, or shows an error and rethrows the original failure (including its `code`). A failed attempt can be retried with the same loader; it never retries or downloads automatically. Use one loader per concurrent asset; duplicate requests for the same asset still share one host download. `done` means the resource bytes are ready, not that an engine has initialized. `remove()` detaches the card/locale listener but does not abort a shared download; host revocation still aborts pending work.
 

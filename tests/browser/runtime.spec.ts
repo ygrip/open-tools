@@ -359,6 +359,49 @@ test('tools show centred host popups, toasts and inline clay status through tric
   expect(await frame.evaluate(() => { const p = document.createElement('p'); p.textContent = 'https://developer.chrome.com/docs/' + 'x'.repeat(400); document.body.append(p); return document.documentElement.scrollWidth <= document.documentElement.clientWidth; })).toBe(true);
 });
 
+test('shared toasts and status cards never duplicate and can be closed', async ({ page }) => {
+  await mountFixture(page);
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  type Ui = { trickIt: { ui: { toast: (m: string, o?: unknown) => Promise<void>; status: (t: Element, o: unknown) => { work: (t: string) => void; done: (t: string) => void; element: HTMLElement }; loader: (t: Element, o?: unknown) => { done: () => void; update: (o: unknown) => void } } } };
+  // The same notice replaces its earlier copy; each toast has its own close button.
+  await frame.evaluate(async () => { const ui = (window as unknown as Ui).trickIt.ui; await ui.toast('Copied', { tone: 'success' }); await ui.toast('Copied', { tone: 'success' }); await ui.toast('Copied', { tone: 'success' }); });
+  const copied = page.locator('.toast').filter({ hasText: 'Copied' });
+  await expect(copied).toHaveCount(1);
+  await copied.getByRole('button', { name: 'Dismiss' }).click();
+  await expect(copied).toHaveCount(0);
+  // A finished status card can be closed, and a new state shows it again; a working card has no close button.
+  const inner = page.frameLocator('iframe');
+  await frame.evaluate(() => { const card = (window as unknown as Ui).trickIt.ui.status(document.body, { state: 'working', title: 'Busy' }); (window as unknown as { card: typeof card }).card = card; });
+  await expect(inner.locator('.ti-status .ti-close')).toBeHidden();
+  await frame.evaluate(() => (window as unknown as { card: { done: (t: string) => void } }).card.done('Finished'));
+  await expect(inner.locator('.ti-status')).toBeVisible();
+  await inner.getByRole('button', { name: 'Close' }).click();
+  await expect(inner.locator('.ti-status')).toBeHidden();
+  await frame.evaluate(() => (window as unknown as { card: { work: (t: string) => void } }).card.work('Again'));
+  await expect(inner.locator('.ti-status')).toBeVisible();
+  // A completed asset loader hides itself instead of leaving a card behind.
+  await frame.evaluate(() => { const ui = (window as unknown as Ui).trickIt.ui; for (let i = 0; i < 3; i++) { const l = ui.loader(document.body); l.update({ phase: 'loading' }); l.done(); } });
+  await expect(inner.locator('.ti-loader:visible')).toHaveCount(0, { timeout: 6000 });
+});
+
+test('the shared file picker keeps its layout under aggressive tool CSS', async ({ page }) => {
+  await mountFixture(page);
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  const layout = await frame.evaluate(() => {
+    const style = document.createElement('style');
+    style.textContent = '.settings label{display:grid;gap:6px;font-size:12px;font-weight:600} button,input{min-height:60px;padding:20px;border:3px solid red} span,strong{display:contents}';
+    document.head.append(style);
+    const host = document.createElement('div'); host.className = 'settings'; document.body.append(host);
+    const picker = (window as unknown as { trickIt: { ui: { fileInput: (t: Element, o: unknown) => { element: HTMLElement } } } }).trickIt.ui.fileInput(host, { accept: ['image/png', 'image/jpeg', '.png', '.jpg', '.jpeg'], maxBytes: 10485760, label: 'Watermark image' });
+    const zone = picker.element, box = zone.getBoundingClientRect(), center = (r: DOMRect) => r.left + r.width / 2;
+    const orb = zone.querySelector('.ti-orb')!.getBoundingClientRect(), button = zone.querySelector('.ti-drop-button')!.getBoundingClientRect();
+    return { display: getComputedStyle(zone).display, direction: getComputedStyle(zone).flexDirection, font: getComputedStyle(zone).fontSize, orbCentered: Math.abs(center(orb) - center(box)) < 2, buttonCentered: Math.abs(center(button) - center(box)) < 2, buttonNarrow: button.width < box.width / 2, hint: zone.querySelector('.ti-drop-hint')!.textContent };
+  });
+  expect(layout).toMatchObject({ display: 'flex', direction: 'column', font: '15px', orbCentered: true, buttonCentered: true, buttonNarrow: true, hint: 'PNG, JPEG · up to 10 MB' });
+});
+
 test('a tool popup waits for a busy host instead of opening an in-frame modal', async ({ page }) => {
   await mountFixture(page, { permissions: [{ name: 'clipboard-write', reason: 'Copy a chosen result.', required: true }] });
   await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();

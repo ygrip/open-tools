@@ -3,8 +3,11 @@
  *
  * - `status(target, options)` renders an inline waiting / working / done / error
  *   card inside the tool (no data leaves the frame).
+ *   Finished (done/error) cards have a close button; `dismiss()` hides the card and the
+ *   next state change shows it again.
  * - `loader(target, options)` reuses the status card for asset download,
  *   verified-byte progress and tool-owned initialization, with EN/ID defaults.
+ *   A completed loader hides itself after a moment (`autoHide: false` keeps it).
  * - `fileInput(target, options)` renders a shared clay drop zone: configurable
  *   copy, accepted types and size/count limits, validated before `onChange`.
  * - `toast(message, options)` and `dialog/confirm/info(options)` are rendered by the host in
@@ -20,6 +23,10 @@ export const uiKitStyles = `
 .ti-status[data-state="done"] { --ti-tone: #7fbf9a; }
 .ti-status[data-state="error"] { --ti-tone: #e7826f; animation: ti-shake .4s ease-in-out; }
 .ti-status[hidden] { display: none; }
+.ti-close { flex: 0 0 44px; width: 44px; height: 44px; min-height: 0; padding: 0; align-self: flex-start; margin: -8px -10px -8px 0; border: 0; border-radius: 14px; background: transparent; color: var(--ot-muted); display: grid; place-items: center; cursor: pointer; font: inherit; }
+.ti-close[hidden] { display: none; }
+.ti-close:hover, .ti-close:focus-visible { background: var(--ot-bg); color: var(--ot-text); }
+.ti-close svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; }
 .ti-orb { position: relative; flex: 0 0 52px; width: 52px; height: 52px; border-radius: 18px; display: grid; place-items: center; background: color-mix(in srgb, var(--ti-tone) 26%, var(--ot-surface)); box-shadow: 0 4px 0 color-mix(in srgb, var(--ti-tone) 45%, var(--ot-border)), inset 2px 3px 2px var(--ot-highlight); }
 .ti-orb svg { width: 26px; height: 26px; fill: none; stroke: color-mix(in srgb, var(--ti-tone), var(--ot-text) 55%); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .ti-dots { display: flex; gap: 5px; }
@@ -37,7 +44,7 @@ export const uiKitStyles = `
 .ti-loader-meta:empty { display: none; }
 .ti-bar i { display: block; height: 100%; width: var(--ti-progress, 0%); border-radius: inherit; background: linear-gradient(180deg, color-mix(in srgb, var(--ti-tone), #fff 30%), var(--ti-tone)); box-shadow: inset 0 2px 0 rgba(255,255,255,.45); transition: width .3s cubic-bezier(.22,1,.36,1); }
 .ti-toasts { position: fixed; left: 50%; bottom: 16px; z-index: 2147483000; display: grid; gap: 8px; width: min(420px, calc(100% - 24px)); transform: translateX(-50%); }
-.ti-toast { padding: 12px 16px; border: 1px solid var(--ot-border); border-radius: 18px; background: var(--ot-surface); color: var(--ot-text); box-shadow: 0 5px 0 -1px var(--ot-border), 0 14px 26px -12px var(--ot-shadow); font-weight: 750; overflow-wrap: anywhere; animation: ti-rise .25s cubic-bezier(.22,1,.36,1); }
+.ti-toast { display: flex; align-items: center; gap: 8px; padding: 12px 8px 12px 16px; border: 1px solid var(--ot-border); border-radius: 18px; background: var(--ot-surface); color: var(--ot-text); box-shadow: 0 5px 0 -1px var(--ot-border), 0 14px 26px -12px var(--ot-shadow); font-weight: 750; overflow-wrap: anywhere; animation: ti-rise .25s cubic-bezier(.22,1,.36,1); }
 .ti-dialog { width: min(440px, calc(100% - 24px)); padding: 24px; border: 1px solid var(--ot-border); border-radius: 26px; background: var(--ot-surface); color: var(--ot-text); box-shadow: 0 7px 0 -2px var(--ot-border), 0 24px 40px -18px var(--ot-shadow); overflow-wrap: anywhere; }
 .ti-dialog::backdrop { background: rgb(27 22 25 / .5); }
 .ti-dialog h2 { margin: 0 0 8px; font-size: 1.25rem; }
@@ -46,17 +53,17 @@ export const uiKitStyles = `
 .ti-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 .ti-actions button { min-height: 46px; padding: 10px 18px; border-radius: 16px; border: 1px solid var(--ot-border); background: var(--ot-bg); color: var(--ot-text); font: inherit; font-weight: 800; box-shadow: 0 4px 0 var(--ot-border), inset 1px 2px 2px var(--ot-highlight); cursor: pointer; }
 .ti-actions button.ti-primary { background: var(--ot-accent); color: var(--ot-on-accent); }
-.ti-drop { --ti-tone: var(--ot-accent); position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; margin: 12px 0; padding: 26px 20px; border: 2px dashed color-mix(in srgb, var(--ot-border), var(--ot-text) 18%); border-radius: 26px; background: var(--ot-surface); color: var(--ot-text); text-align: center; box-shadow: 0 5px 0 -1px var(--ot-border), inset 2px 3px 2px var(--ot-highlight); cursor: pointer; overflow-wrap: anywhere; transition: border-color .2s, background-color .2s, transform .2s cubic-bezier(.22,1,.36,1); }
+.ti-drop.ti-drop { --ti-tone: var(--ot-accent); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 10px; min-width: 0; margin: 12px 0; padding: 26px 20px; font-size: 15px; font-weight: 400; line-height: 1.4; letter-spacing: normal; text-transform: none; border: 2px dashed color-mix(in srgb, var(--ot-border), var(--ot-text) 18%); border-radius: 26px; background: var(--ot-surface); color: var(--ot-text); text-align: center; box-shadow: 0 5px 0 -1px var(--ot-border), inset 2px 3px 2px var(--ot-highlight); cursor: pointer; overflow-wrap: anywhere; transition: border-color .2s, background-color .2s, transform .2s cubic-bezier(.22,1,.36,1); }
 .ti-drop:hover, .ti-drop:focus-within { border-color: var(--ti-tone); }
 .ti-drop[data-dragging] { border-style: solid; border-color: var(--ti-tone); background: color-mix(in srgb, var(--ti-tone) 12%, var(--ot-surface)); transform: scale(1.01); }
 .ti-drop[data-error] { --ti-tone: #e7826f; border-color: #e7826f; animation: ti-shake .4s ease-in-out; }
 .ti-drop[data-disabled] { opacity: .6; cursor: not-allowed; }
 .ti-drop input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: inherit; }
 .ti-drop .ti-orb svg { stroke-width: 2.4; }
-.ti-drop-label { font-weight: 850; font-size: 1.05em; line-height: 1.35; }
-.ti-drop-hint { color: var(--ot-muted); font-size: .88em; line-height: 1.5; }
+.ti-drop-label { display: block; font-weight: 850; font-size: 1.05em; line-height: 1.35; }
+.ti-drop-hint { display: block; color: var(--ot-muted); font-size: .88em; line-height: 1.5; }
 .ti-drop-button { position: relative; pointer-events: none; display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; padding: 10px 18px; border: 1px solid color-mix(in srgb, var(--ot-accent), #6e3b24 22%); border-radius: 15px; background: var(--ot-accent); color: var(--ot-on-accent); font-weight: 850; box-shadow: 0 4px 0 color-mix(in srgb, var(--ot-accent), #6e3b24 30%), inset 1px 2px 2px rgba(255,255,255,.4); }
-.ti-drop-error { color: color-mix(in srgb, #e7826f, var(--ot-text) 45%); font-weight: 800; font-size: .9em; }
+.ti-drop-error { display: block; color: color-mix(in srgb, #e7826f, var(--ot-text) 45%); font-weight: 800; font-size: .9em; }
 .ti-drop-error:empty, .ti-files:empty { display: none; }
 .ti-files { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
 .ti-file { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 10px; max-width: 100%; padding: 6px; border: 1px solid var(--ot-border); border-radius: 20px; background: var(--ot-bg); font-size: .85em; font-weight: 750; box-shadow: 0 3px 0 var(--ot-border); animation: ti-rise .25s cubic-bezier(.22,1,.36,1); }
@@ -64,7 +71,7 @@ export const uiKitStyles = `
 .ti-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ti-file > span:not(.ti-thumb) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ti-file small { color: var(--ot-muted); white-space: nowrap; }
-.ti-file button { flex: 0 0 28px; height: 28px; border: 0; border-radius: 50%; background: var(--ot-surface); color: var(--ot-muted); font: inherit; font-weight: 900; cursor: pointer; }
+.ti-file button { flex: 0 0 28px; width: 28px; height: 28px; min-height: 0; padding: 0; border: 0; border-radius: 50%; background: var(--ot-surface); color: var(--ot-muted); font: inherit; font-weight: 900; cursor: pointer; }
 @keyframes ti-rise { from { opacity: 0; transform: translateY(8px) scale(.98); } }
 @keyframes ti-bounce { to { transform: translateY(-8px); } }
 @keyframes ti-spin { to { transform: rotate(360deg); } }
@@ -89,14 +96,22 @@ export const uiKitScript = `
       const title = document.createElement('strong'); title.className = 'ti-title';
       const detail = document.createElement('span'); detail.className = 'ti-detail';
       const bar = document.createElement('span'); bar.className = 'ti-bar'; bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', '100'); bar.append(document.createElement('i'));
-      copy.append(title, detail, bar); card.append(orb, copy); host.append(card);
+      const close = document.createElement('button'); close.type = 'button'; close.className = 'ti-close'; close.hidden = true;
+      close.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+      close.addEventListener('click', () => dismiss());
+      copy.append(title, detail, bar); card.append(orb, copy, close); host.append(card);
       let state = '';
+      function dismiss() { card.hidden = true; if (typeof options.onDismiss === 'function') options.onDismiss(); }
       function update(next = {}) {
+        close.setAttribute('aria-label', document.documentElement.lang === 'id' ? 'Tutup' : 'Close');
+        // A new state (or new text) shows a dismissed card again; quiet re-renders (locale) do not.
+        if (!next.quiet && ((next.state && next.state !== state) || ('title' in next && next.title !== title.textContent))) card.hidden = false;
         if (next.state && next.state !== state) {
           state = ['waiting', 'working', 'done', 'error'].includes(next.state) ? next.state : 'working';
           card.dataset.state = state;
           card.setAttribute('role', state === 'error' ? 'alert' : 'status');
           orb.innerHTML = state === 'waiting' ? '<span class="ti-dots"><i></i><i></i><i></i></span>' : state === 'working' ? '<span class="ti-ring"></span>' : icons[state];
+          close.hidden = state === 'waiting' || state === 'working';
         }
         if ('title' in next) title.textContent = clip(next.title, 300);
         if ('detail' in next) detail.textContent = clip(next.detail, 1000);
@@ -110,7 +125,7 @@ export const uiKitScript = `
         return controller;
       }
       const controller = Object.freeze({
-        update, element: card,
+        update, dismiss, element: card,
         wait: (title, detail) => update({ state: 'waiting', title, detail }),
         work: (title, detail, progress) => update({ state: 'working', title, detail, progress }),
         done: (title, detail) => update({ state: 'done', title, detail }),
@@ -122,7 +137,15 @@ export const uiKitScript = `
     function localToast(message) {
       let stack = document.querySelector('.ti-toasts');
       if (!stack) { stack = document.createElement('div'); stack.className = 'ti-toasts'; stack.setAttribute('role', 'status'); stack.setAttribute('aria-live', 'polite'); document.body.append(stack); }
-      const item = document.createElement('div'); item.className = 'ti-toast'; item.textContent = message; stack.append(item);
+      // The same message replaces its earlier copy instead of stacking.
+      for (const existing of Array.from(stack.children)) if (existing.firstElementChild?.textContent === message) existing.remove();
+      const item = document.createElement('div'); item.className = 'ti-toast';
+      const text = document.createElement('span'); text.textContent = message; text.style.flex = '1';
+      const close = document.createElement('button'); close.type = 'button'; close.className = 'ti-close'; close.style.margin = '0';
+      close.setAttribute('aria-label', document.documentElement.lang === 'id' ? 'Tutup' : 'Close');
+      close.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+      close.addEventListener('click', () => item.remove());
+      item.append(text, close); stack.append(item);
       while (stack.children.length > 3) stack.firstElementChild.remove();
       setTimeout(() => item.remove(), 4000);
     }
@@ -182,15 +205,18 @@ export const uiKitScript = `
       const meta = document.createElement('span'); meta.className = 'ti-loader-meta';
       card.element.querySelector('.ti-copy').append(meta);
       let model = { phase: 'waiting', loaded: null, total: null, title: '', detail: '', ...options };
-      let removed = false, busy = false;
-      function render() {
+      let removed = false, busy = false, hideTimer = 0;
+      const autoHide = options.autoHide !== false;
+      function render(event) {
         if (removed) return;
         const copy = loaderCopy[document.documentElement.lang === 'id' ? 'id' : 'en'];
         const phase = model.phase;
         const measurable = ['loading', 'verifying'].includes(phase) && Number.isFinite(model.loaded) && Number.isFinite(model.total) && model.loaded >= 0 && model.total > 0;
         const loaded = measurable ? Math.min(model.loaded, model.total) : 0;
         const percent = measurable ? Math.floor(loaded / model.total * 100) : null;
-        card.update({ state: phase === 'waiting' ? 'waiting' : phase === 'error' ? 'error' : phase === 'done' ? 'done' : 'working', title: model.title || copy[phase], detail: model.detail || (phase === 'error' ? copy.failed : ''), progress: percent });
+        card.update({ state: phase === 'waiting' ? 'waiting' : phase === 'error' ? 'error' : phase === 'done' ? 'done' : 'working', title: model.title || copy[phase], detail: model.detail || (phase === 'error' ? copy.failed : ''), progress: percent, quiet: event instanceof Event });
+        clearTimeout(hideTimer);
+        if (phase === 'done' && autoHide) hideTimer = setTimeout(() => { if (!removed && model.phase === 'done') card.dismiss(); }, 2500);
         meta.textContent = measurable ? formatBytes(loaded) + ' / ' + formatBytes(model.total) + ' · ' + percent + '%' : '';
         if (measurable) card.element.querySelector('[role="progressbar"]').setAttribute('aria-label', model.title || copy[phase]);
       }
@@ -213,7 +239,7 @@ export const uiKitScript = `
           } catch (error) { controller.fail(); throw error; }
           finally { busy = false; }
         },
-        remove() { removed = true; removeEventListener('trick-it:localechange', render); card.remove(); }
+        remove() { removed = true; clearTimeout(hideTimer); removeEventListener('trick-it:localechange', render); card.remove(); }
       });
       update(model); addEventListener('trick-it:localechange', render); return controller;
     }
@@ -244,7 +270,7 @@ export const uiKitScript = `
       function text() {
         const t = copy();
         label.textContent = clip(options.label, 120) || (multiple ? t.labelMany : t.label);
-        const auto = (rules.length ? rules.map(typeLabel).filter((v, i, a) => a.indexOf(v) === i).join(', ') : t.any) + (maxBytes ? ' · ' + t.upTo + ' ' + formatBytes(maxBytes) : '');
+        const auto = (rules.length ? rules.map(typeLabel).map(v => v === 'JPG' ? 'JPEG' : v).filter((v, i, a) => a.indexOf(v) === i).join(', ') : t.any) + (maxBytes ? ' · ' + t.upTo + ' ' + formatBytes(maxBytes) : '');
         hint.textContent = clip(options.hint, 240) || auto;
         button.textContent = clip(options.buttonLabel, 40) || (multiple ? t.chooseMany : t.choose);
         input.setAttribute('aria-label', label.textContent + '. ' + hint.textContent);

@@ -31,6 +31,8 @@ export function dismissToast(id: number) {
 }
 
 export function showToast(message: string, tone: ToastTone = 'info', source?: Toast['source'], duration = 4000) {
+  // An identical notice (same text, tone and tool) replaces its earlier copy instead of stacking.
+  for (const existing of hostUi.toasts) if (existing.message === message && existing.tone === tone && existing.source?.id === source?.id) dismissToast(existing.id);
   const toast: Toast = { id: ++sequence, message, tone, source };
   hostUi.toasts = [...hostUi.toasts, toast];
   while (hostUi.toasts.length > MAX_TOASTS) dismissToast(hostUi.toasts[0].id);
