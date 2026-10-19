@@ -1,5 +1,5 @@
 import type { ToolService } from '../registry/types';
-export type PermissionName = 'clipboard-read' | 'clipboard-write' | 'geolocation' | 'downloads' | 'camera-capture' | 'share-image' | 'external-assets' | 'wasm' | 'workers' | 'services';
+export type PermissionName = 'clipboard-read' | 'clipboard-write' | 'geolocation' | 'downloads' | 'camera-capture' | 'share-image' | 'external-assets' | 'wasm' | 'workers' | 'services' | 'wiki-read';
 export type RuntimePermission = { name: PermissionName; reason: string; required: boolean };
 export type RuntimeAsset = { id: string; url: string; sha256: string; bytes: number; type: 'wasm' | 'script' | 'worker' | 'data'; defer: boolean };
 export type RuntimeTool = {
@@ -170,10 +170,14 @@ export function parseRuntimeRequest(event: Pick<MessageEvent, 'source' | 'data'>
     return { request, asset };
   }
   if (request.operation === 'ui-toast' || request.operation === 'ui-dialog') return parseUi(request);
-  if (!['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'services'].includes(request.operation)) return { request, error: 'unsupported' };
+  if (!['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'services', 'wiki-read'].includes(request.operation)) return { request, error: 'unsupported' };
   if (!declared(request.operation)) return { request, error: 'denied' };
   if ((request.operation === 'clipboard-read' || request.operation === 'geolocation' || request.operation === 'camera-capture') && request.payload !== undefined) return { request, error: 'invalid-request' };
   if (request.operation === 'clipboard-write' && (typeof request.payload !== 'string' || request.payload.length > 1024 * 1024)) return { request, error: 'invalid-request' };
+  if (request.operation === 'wiki-read') {
+    const data = request.payload as {site?: unknown;title?: unknown;endpoint?: unknown} | undefined;
+    if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).some(k => !['site','title','endpoint'].includes(k)) || typeof data.site !== 'string' || data.site.length > 260 || typeof data.title !== 'string' || !data.title.trim() || data.title.length > 180 || typeof data.endpoint !== 'string' || data.endpoint.length > 150) return {request,error:'invalid-request'};
+  }
   if (request.operation === 'services') {
     const data = request.payload as { feature?: unknown; input?: unknown } | undefined;
     if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).some(key => !['feature', 'input'].includes(key)) || typeof data.feature !== 'string' || !tool.services?.some(service => service.id === data.feature) || !data.input || typeof data.input !== 'object' || Array.isArray(data.input)) return { request, error: 'invalid-request' };
