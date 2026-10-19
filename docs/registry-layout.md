@@ -23,7 +23,20 @@ To register a new production tool, **add only** `config/tools/<id>.json`:
 
 The filename must equal the manifest ID. `ref` must be the complete 40-character lowercase commit SHA. `added` is the optional UTC registration time (`YYYY-MM-DDTHH:MM:SSZ`) used by the homepage "Newest first" sort and JSON-LD `datePublished`; keep it unchanged when updating `ref`.
 
-Each tool should also get host-owned clay art: `scripts/assets/tool-icons/<id>.png` (512×512, transparent, used in its social card) and `static/icons/tools/<id>.webp` (160×160, ≤12 kB, used on cards and the tool page). Pick a tile color and symbol no other tool uses. Missing art falls back to the manifest's line icon. There is no copied HTML, release Markdown or tool manifest in trick-it. The tool repository owns source, documentation and release assets. Each registration can be added or updated in an independent PR without modifying a shared `sources` array.
+Each tool owns its catalog art in **its own repository** and declares it in `tool.manifest.json` (schema v3). trick-it holds no copy: `npm run registry:sync` fetches the files at the pinned commit, verifies exact size, SHA-256 and image container, and materialises them at build time.
+
+```json
+"artwork": {
+  "icon": { "file": "assets/icon.webp", "sha256": "<64 hex>", "bytes": 4321 },
+  "card": { "file": "assets/card.png", "sha256": "<64 hex>", "bytes": 98765 }
+}
+```
+
+- `icon` (required when `artwork` is present): 160×160 WebP, ≤12,000 bytes, shown on catalog cards and the tool page. Published as `/icons/tools/<id>.<first-12-hex-of-sha256>.webp`.
+- `card` (optional): 512×512 transparent PNG, ≤400,000 bytes, used only as the source for the tool's social preview. It is never served.
+- Both paths are relative to the repository root, and a changed file is picked up only by re-pinning. Pick a tile colour and symbol no other tool uses. A tool without `artwork` falls back to its manifest line icon.
+
+**Cache busting.** The icon URL contains a content hash, so any art change yields a new URL and `static/_headers` marks `/icons/tools/*`, `/bundles/*` and `/_app/immutable/*` as `immutable` for a year. Bundles are already addressed by their HTML SHA-256, and social images by a digest in the file name. Never add a mutable file under those paths. The generated `static/icons/tools/` and `scripts/.generated-tool-cards/` are ignored build output.
 
 The sync combines validated manifests into `src/lib/registry/generated.json` for the app, route generation and metadata. This file is ignored build output, just like `static/bundles/`; do not edit or commit it. A combined output is useful at runtime, while independent `config/tools/<id>.json` files keep source changes separate and avoid generated-file merge conflicts. CI regenerates the complete catalog from the merged registrations. Worker service policies and generated Wrangler configuration follow the same rule.
 

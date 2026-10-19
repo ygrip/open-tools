@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFile, writeFile, mkdir, mkdtemp, rename, rm, access } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, mkdtemp, rename, rm, access, readdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { localePath, siteOrigin, SEO_LOCALES } from '../src/lib/seo/metadata.js';
@@ -119,10 +119,13 @@ export async function generateSeo({ root = defaultRoot, origin = process.env.PUB
   // Host-owned clay art per tool: WebP for pages, PNG source for social cards.
   const icons = {};
   const iconSources = {};
+  const iconFiles = await readdir(join(staticRoot, 'icons/tools')).catch(() => []);
   for (const tool of tools) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(tool.id)) continue;
-    if (await exists(join(staticRoot, 'icons/tools', `${tool.id}.webp`))) icons[tool.id] = `${base}/icons/tools/${tool.id}.webp`;
-    const source = join(root, 'scripts/assets/tool-icons', `${tool.id}.png`);
+    // Tool-owned, content-addressed art materialised by registry:sync as `<id>.<sha12>.webp`.
+    const iconName = iconFiles.find((name) => name.startsWith(`${tool.id}.`) && new RegExp(`^${tool.id}\\.[a-f0-9]{12}\\.webp$`).test(name));
+    if (iconName) icons[tool.id] = `${base}/icons/tools/${iconName}`;
+    const source = join(root, 'scripts/.generated-tool-cards', `${tool.id}.png`);
     if (await exists(source)) iconSources[tool.id] = `data:image/png;base64,${(await readFile(source)).toString('base64')}`;
   }
   // The home card shows the real trick-it mascot, the same art as the header logo.

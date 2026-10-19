@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { validateManifest } from '../src/lib/registry/contract.js';
-import { createGithubClient, loadSource, verifyBundle, MAX_BUNDLE_BYTES } from '../scripts/lib/bundles.mjs';
+import { createGithubClient, loadSource, verifyBundle, verifyArtwork, artIconName, MAX_BUNDLE_BYTES } from '../scripts/lib/bundles.mjs';
 
 const html = Buffer.from('<!doctype html><html><body>Private tool</body></html>');
 const manifest = {
@@ -123,4 +123,43 @@ test('local scaffold loads offline and prevents symlink traversal', async () => 
     await symlink(join(root, 'secret.html'), join(directory, 'dist/index.html'));
     await assert.rejects(loadSource(local, config, root), /escapes/);
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+const webp = Buffer.concat([Buffer.from('RIFF'), Buffer.from([4, 0, 0, 0]), Buffer.from('WEBPVP8 '), Buffer.alloc(16)]);
+const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(32)]);
+const entry = (file, bytes) => ({ file, sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length });
+
+test('artwork is validated: schema v3 only, exact fields, webp icon and png card', () => {
+  const v3 = {
+    runtimeVersion: 1, appearance: { theme: 'host', protocolVersion: 1 }, icon: 'braces',
+    seo: { title: 'JSON Tools', description: 'Local JSON utilities', keywords: ['json'], robots: 'index' },
+    guide: { summary: 'Format JSON.', steps: ['Paste JSON.'] }, permissions: [], assets: [], translations: {}
+  };
+  Object.assign(v3, { ...manifest, schemaVersion: 3 });
+  const art = { icon: entry('assets/icon.webp', webp), card: entry('assets/card.png', png) };
+  assert.deepEqual(validateManifest({ ...v3, artwork: art }).artwork, art);
+  assert.equal(validateManifest(v3).artwork, undefined);
+  for (const bad of [
+    { icon: { ...art.icon, file: 'assets/icon.png' } }, { icon: { ...art.icon, bytes: 12_001 } }, { icon: { ...art.icon, sha256: 'x' } },
+    { icon: { ...art.icon, file: '../icon.webp' } }, { icon: art.icon, card: { ...art.card, file: 'card.webp' } },
+    { icon: art.icon, card: { ...art.card, bytes: 400_001 } }, { icon: art.icon, extra: 1 }, { card: art.card }
+  ]) assert.throws(() => validateManifest({ ...v3, artwork: bad }), /artwork/, JSON.stringify(bad));
+  assert.throws(() => validateManifest({ ...manifest, artwork: art }), /schemaVersion 3/);
+});
+
+test('artwork bytes must match size, digest and image container', () => {
+  assert.equal(verifyArtwork(webp, entry('a.webp', webp), 'icon'), webp);
+  assert.equal(verifyArtwork(png, entry('a.png', png), 'card'), png);
+  assert.throws(() => verifyArtwork(Buffer.concat([webp, Buffer.from('x')]), entry('a.webp', webp), 'icon'), /size mismatch/);
+  assert.throws(() => verifyArtwork(Buffer.alloc(webp.length), { ...entry('a.webp', webp) }, 'icon'), /integrity mismatch/);
+  assert.throws(() => verifyArtwork(png, entry('a.webp', png), 'icon'), /not a WebP/);
+  assert.throws(() => verifyArtwork(webp, entry('a.png', webp), 'card'), /not a PNG/);
+});
+
+test('icon file names are content-addressed so a changed icon busts caches', () => {
+  const a = { id: 'json-tools', artwork: { icon: entry('a.webp', webp) } };
+  const other = Buffer.concat([webp.subarray(0, -1), Buffer.from([1])]);
+  const b = { id: 'json-tools', artwork: { icon: entry('a.webp', other) } };
+  assert.match(artIconName(a), /^json-tools\.[a-f0-9]{12}\.webp$/);
+  assert.notEqual(artIconName(a), artIconName(b));
 });

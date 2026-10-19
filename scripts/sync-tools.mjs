@@ -1,7 +1,7 @@
 import { readFile, writeFile, mkdir, rm, rename, mkdtemp } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { createGithubClient, loadSource } from './lib/bundles.mjs';
+import { createGithubClient, loadSource, artIconName } from './lib/bundles.mjs';
 import { createCredentialResolver } from './lib/credentials.mjs';
 import { readToolRegistrations } from './lib/registrations.mjs';
 
@@ -55,7 +55,27 @@ try {
   }
   await rm(resolve(root, 'static/bundles'), { recursive: true, force: true });
   await rename(stage, resolve(root, 'static/bundles'));
-  await writeFile(resolve(root, 'src/lib/registry/generated.json'), `${JSON.stringify(loaded.map(({ manifest }) => manifest), null, 2)}\n`);
+  // Tool-owned art is build output. Icons are content-addressed so a changed icon gets a new URL (cache bust);
+  // card sources feed social previews only and are never served.
+  const art = await mkdtemp(resolve(root, 'static/.icons-'));
+  const cards = await mkdtemp(resolve(root, 'scripts/.tool-cards-'));
+  try {
+    for (const { manifest, artwork } of loaded) {
+      if (!artwork) continue;
+      await writeFile(resolve(art, artIconName(manifest)), artwork.icon);
+      if (artwork.card) await writeFile(resolve(cards, `${manifest.id}.png`), artwork.card);
+    }
+    await mkdir(resolve(root, 'static/icons'), { recursive: true });
+    await rm(resolve(root, 'static/icons/tools'), { recursive: true, force: true });
+    await rename(art, resolve(root, 'static/icons/tools'));
+    await rm(resolve(root, 'scripts/.generated-tool-cards'), { recursive: true, force: true });
+    await rename(cards, resolve(root, 'scripts/.generated-tool-cards'));
+  } finally {
+    await rm(art, { recursive: true, force: true });
+    await rm(cards, { recursive: true, force: true });
+  }
+  // Artwork digests are build-time only: keeping them out of the catalog keeps them out of the shared client bundle.
+  await writeFile(resolve(root, 'src/lib/registry/generated.json'), `${JSON.stringify(loaded.map(({ manifest: { artwork, ...manifest } }) => manifest), null, 2)}\n`);
 } finally {
   await rm(stage, { recursive: true, force: true });
 }

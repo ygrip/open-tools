@@ -30,6 +30,12 @@ static/sitemap.xml
 # Generated from validated service metadata
 .wrangler.services.json
 
+# Tool-owned art materialised from pinned tool repositories by registry:sync
+static/icons/tools/
+static/.icons-*/
+scripts/.generated-tool-cards/
+scripts/.tool-cards-*/
+
 # Rebuilt from independent pinned tool registrations
 src/lib/registry/generated.json
 worker/generated-services.json
