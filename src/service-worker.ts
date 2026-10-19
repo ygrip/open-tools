@@ -1,13 +1,13 @@
 /// <reference lib="webworker" />
 import { build, files, prerendered, version, base } from '$service-worker';
-import { precachePath } from './lib/precache.js';
+import { makePrecachePlan } from './lib/pwa-precache.js';
 import { cacheableRequest, cacheableResponse, bundlePath, immutablePath } from './lib/pwa-policy.js';
 
 declare const self: ServiceWorkerGlobalScope;
 const prefix = 'trick-it-shell-';
 const name = `${prefix}${version}`;
 const bundleCache = 'trick-it-bundles-v1';
-const publicPaths = new Set([...build, ...files.map(precachePath).filter((path) => !path.includes('/bundles/') && !path.includes('/og/') && !/\/(?:robots\.txt|sitemap\.xml)$/.test(path) && !/\/(?:404|500|503)\.html$/.test(path)), ...prerendered]);
+const { publicPaths, precachePaths, requiredPaths } = makePrecachePlan(build, files, prerendered, base);
 const offline = `${base}/offline/`;
 const clientVersions = new Map<string, string>();
 
@@ -15,16 +15,21 @@ async function warnCache(detail?: { url: string; reason: string }) {
   for (const client of await self.clients.matchAll()) client.postMessage({ type: 'trick-it:cache-failed', ...detail });
 }
 // Names the asset that broke offline setup; the browser's own error never says which URL it was.
-async function precache(cache: Cache, path: string) {
+async function precache(cache: Cache, path: string, required = false) {
   try {
     const response = await fetch(path, { cache: 'reload', credentials: 'omit', redirect: 'error' });
-    if (!cacheableResponse(response)) throw new Error(`HTTP ${response.status} (${response.type}); offline setup requires public, cacheable successful assets`);
+    if (!cacheableResponse(response)) throw new Error(`HTTP ${response.status} (${response.type}); resource is not publicly cacheable`);
     await cache.put(path, response);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    console.error(`[trick-it sw] precache failed: ${path} — ${reason}`);
+    if (!required) {
+      // Optional pages/icons are best-effort: never invalidate the whole install.
+      console.warn(`[trick-it sw] optional offline asset unavailable: ${path} — ${reason}`);
+      return;
+    }
+    console.error(`[trick-it sw] essential offline asset failed: ${path} — ${reason}`);
     await warnCache({ url: path, reason });
-    throw new Error(`Precache failed for ${path}: ${reason}`, { cause: error });
+    throw new Error(`Essential precache failed for ${path}: ${reason}`, { cause: error });
   }
 }
 async function cleanUnusedShells() {
@@ -42,7 +47,13 @@ self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(name);
     try {
-      for (const path of publicPaths) await precache(cache, path);
+      // Finish only when the runnable shell is present; a missing image or one
+      // prerendered tool page must never leave the PWA stuck installing.
+      for (const path of requiredPaths) await precache(cache, path, true);
+      const optional = [...precachePaths].filter((path) => !requiredPaths.has(path));
+      for (let i = 0; i < optional.length; i += 6) {
+        await Promise.all(optional.slice(i, i + 6).map((path) => precache(cache, path)));
+      }
     } catch (error) { await caches.delete(name); throw error; }
   })());
 });
@@ -87,7 +98,7 @@ self.addEventListener('fetch', (event) => {
     const timeout = setTimeout(() => controller.abort(), navigation ? 4000 : 30_000);
     try {
       const response = await fetch(request, { signal: controller.signal });
-      if (cache && !navigation && (bundlePath(url, base) || immutablePath(url, base)) && cacheableResponse(response)) {
+      if (cache && !navigation && allowed && cacheableResponse(response)) {
         const target = cache;
         event.waitUntil((async () => {
           try {

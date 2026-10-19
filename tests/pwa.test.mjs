@@ -42,3 +42,27 @@ test('static directory index files are precached at their redirect-free director
   assert.ok(worker.includes('`${base}/offline/`'));
   assert.ok(!worker.includes('offline.html'));
 });
+
+test('PWA install skips Cloudflare config and defers nonessential artwork', async () => {
+  const { makePrecachePlan } = await import('../src/lib/pwa-precache.js');
+  const { publicPaths, precachePaths, requiredPaths } = makePrecachePlan(
+    ['/_app/immutable/start.js'],
+    [
+      '/_headers', '/_redirects', '/manifest.webmanifest', '/pwa/icon-192.png',
+      '/illustrations/large.webp', '/offline/index.html', '/id/index.html', '/favicon.svg'
+    ],
+    ['/', '/id/', '/json-tools/']
+  );
+  for (const path of ['/_headers', '/_redirects']) {
+    assert.equal(publicPaths.has(path), false, `${path} is deployment config, not a public URL`);
+    assert.equal(precachePaths.has(path), false);
+  }
+  assert.ok(requiredPaths.has('/'));
+  assert.ok(requiredPaths.has('/offline/'));
+  assert.ok(requiredPaths.has('/_app/immutable/start.js'));
+  assert.ok(precachePaths.has('/manifest.webmanifest'));
+  assert.ok(precachePaths.has('/pwa/icon-192.png'));
+  assert.ok(precachePaths.has('/json-tools/'));
+  assert.equal(precachePaths.has('/illustrations/large.webp'), false, 'large artwork is lazy cached');
+  assert.ok(publicPaths.has('/illustrations/large.webp'), 'visited artwork remains cacheable');
+});

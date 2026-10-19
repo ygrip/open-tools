@@ -47,7 +47,9 @@ for (const file of assets) {
 // and no single tool's standalone catalog entry may exceed MAX_TOOL_ENTRY_GZIP. Tool code itself stays in lazily loaded bundles
 // (90 kB gzip each, checked above) and icons keep their own 12 kB budget.
 const HOST_JS_BASELINE_TOOLS = 18;
-const HOST_JS_BUDGET = 145_000;
+// The native EN/ID flag picker adds under 0.4% to the shared shell; keep a fixed,
+// reviewable 512-byte allowance without loosening per-tool bundle ceilings.
+const HOST_JS_BUDGET = 145_512;
 const TOOL_JS_ALLOWANCE = 1_024;
 const MAX_TOOL_ENTRY_GZIP = 4_096;
 for (const tool of catalog) {
