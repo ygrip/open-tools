@@ -64,6 +64,7 @@ export function validateManifest(manifest) {
 
   // Tool-owned catalog art is build-time content, never a runtime/network permission.
   // Check both the immutable file reference and its exact bytes in loadSource.
+  /** @type {{ icon: { file: string, sha256: string, bytes: number }, card?: { file: string, sha256: string, bytes: number } } | undefined} */
   let artwork;
   if (manifest.artwork !== undefined) {
     if (manifest.schemaVersion !== 3) throw new Error('artwork requires schemaVersion 3');
