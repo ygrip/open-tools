@@ -29,7 +29,7 @@ test('installed shell and an opened tool work offline without hiding missing rou
   await expect(page.getByRole('link', { name: 'Beranda Indonesia' })).toHaveAttribute('href', '/id/');
 });
 
-test('PWA update requires approval and never reloads a running tool', async ({ page }) => {
+test('PWA update waits for approval, installs, then refreshes the app automatically', async ({ page }) => {
   test.setTimeout(60_000);
   const version = (await (await fetch(`${preview}/_app/version.json`)).json()).version as string;
   let updated = false;
@@ -62,10 +62,19 @@ test('PWA update requires approval and never reloads a running tool', async ({ p
     await page.evaluate(() => { (window as unknown as { updateMarker: number }).updateMarker = 42; });
     updated = true;
     await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration())!.update(); });
-    await page.getByRole('button', { name: 'Prepare update', exact: true }).click();
+    await expect(input).toHaveValue('keep this unsaved input');
+    expect(await page.evaluate(() => (window as unknown as { updateMarker: number }).updateMarker)).toBe(42);
+    await Promise.all([
+      page.waitForEvent('framenavigated', frame => frame === page.mainFrame()),
+      page.getByRole('button', { name: 'Prepare update', exact: true }).click()
+    ]);
+    await expect(page).toHaveURL(new RegExp(origin.replace(/[.*+?^${}()|[\]\\]/g, '\\    await page.getByRole('button', { name: 'Prepare update', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Reload to use the update', exact: true })).toBeVisible();
     await expect(input).toHaveValue('keep this unsaved input');
     expect(await page.evaluate(() => (window as unknown as { updateMarker: number }).updateMarker)).toBe(42);
+    const caches = await page.evaluate(() => window.caches.keys());') + '/json-tools/'));
+    expect(await page.evaluate(() => (window as unknown as { updateMarker?: number }).updateMarker)).toBeUndefined();
+    await expect(page.getByRole('button', { name: 'Reload to use the update', exact: true })).toHaveCount(0);
     const caches = await page.evaluate(() => window.caches.keys());
     expect(caches).toContain(`trick-it-shell-${version}`);
     expect(caches).toContain(`trick-it-shell-${version}-test-update`);
