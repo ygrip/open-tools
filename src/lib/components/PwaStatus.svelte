@@ -4,6 +4,7 @@
   import { updated } from '$app/state';
   import { dev, version } from '$app/environment';
   import { m } from '$lib/paraglide/messages.js';
+  import { applyPwaUpdate } from '$lib/pwa-update.js';
   type InstallEvent = Event & { prompt(): Promise<void>; userChoice: Promise<{ outcome: string }> };
   let prompt = $state<InstallEvent | null>(null);
   let waiting = $state<ServiceWorker | null>(null);
@@ -14,6 +15,8 @@
   let mobile = $state(false);
   let iosSafari = $state(false);
   let message = $state('');
+  let updating = $state(false);
+  let updateError = $state('');
   let updateDismissed = $state(false);
   let installDismissed = $state(false);
   let manualInstructions = $state(false);
@@ -112,14 +115,22 @@
   });
 
   async function prepareUpdate() {
-    if (waiting) { waiting.postMessage({ type: 'trick-it:activate', version: 1 }); return; }
+    if (updating) return;
+    if (!navigator.onLine) { updateError = m.pwa_update_offline(); return; }
+    updating = true;
+    updateError = '';
     try {
       const registration = await navigator.serviceWorker?.getRegistration();
-      if (registration) {
-        await registration.update();
-        if (registration.waiting) { waiting = registration.waiting; updateDismissed = false; }
-      }
-    } catch (error) { console.warn('[trick-it] Update failed', error); }
+      if (registration) await applyPwaUpdate(registration);
+      // The browser keeps the installed PWA window open. Reload this window
+      // only after the new shell is fully installed and activated.
+      location.reload();
+    } catch (error) {
+      console.warn('[trick-it] Update failed', error);
+      updateError = m.pwa_update_failed();
+    } finally {
+      updating = false;
+    }
   }
 
   async function install() {
@@ -141,20 +152,24 @@
   <aside class="pwa-card pwa-update" role="region" aria-label={m.pwa_update()}>
     <div class="pwa-icon" aria-hidden="true">✦</div>
     <div class="pwa-copy">
-      <strong>{readyToReload ? m.pwa_ready_title() : m.pwa_update()}</strong>
-      <p>{readyToReload ? m.pwa_ready() : m.pwa_update_description()}</p>
-      <div class="pwa-actions">
-        {#if waiting}
-          <button class="clay-button primary small" type="button" onclick={prepareUpdate}>{m.pwa_activate()}</button>
+      <strong>{updating ? m.pwa_updating_title() : readyToReload ? m.pwa_ready_title() : m.pwa_update()}</strong>
+      <p aria-live="polite">{updateError || (updating ? m.pwa_updating_description() : readyToReload ? m.pwa_ready() : m.pwa_update_description())}</p>
+      <div class="pwa-actions" aria-busy={updating}>
+        {#if updating}
+          <button class="clay-button primary small" type="button" disabled>{m.pwa_updating()}</button>
         {:else if readyToReload}
           <button class="clay-button primary small" type="button" onclick={() => location.reload()}>{m.pwa_reload()}</button>
-        {:else if spaUpdate || updated.current}
-          <button class="clay-button primary small" type="button" onclick={prepareUpdate}>{m.pwa_activate()}</button>
+        {:else}
+          <button class="clay-button primary small" type="button" onclick={prepareUpdate}>{updateError ? m.pwa_retry() : m.pwa_activate()}</button>
         {/if}
-        <button class="pwa-quiet" type="button" onclick={() => updateDismissed = true}>{m.pwa_later()}</button>
+        {#if !updating}
+          <button class="pwa-quiet" type="button" onclick={() => updateDismissed = true}>{m.pwa_later()}</button>
+        {/if}
       </div>
     </div>
-    <button class="pwa-close" type="button" aria-label={m.pwa_later()} onclick={() => updateDismissed = true}>×</button>
+    {#if !updating}
+      <button class="pwa-close" type="button" aria-label={m.pwa_later()} onclick={() => updateDismissed = true}>×</button>
+    {/if}
   </aside>
 {:else if hasUpdate}
   <button type="button" class="pwa-mini" onclick={() => updateDismissed = false}>✦ {readyToReload ? m.pwa_ready_title() : m.pwa_update()}</button>
