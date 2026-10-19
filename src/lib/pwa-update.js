@@ -1,4 +1,16 @@
 /**
+ * Only the catalog is safe to refresh automatically. Tools can contain unsaved
+ * input, so their users must approve a release change explicitly.
+ *
+ * @param {string} pathname
+ * @param {string} base
+ * @param {boolean} busyWithInput Whether a field or modal is active.
+ */
+export function canAutoRefreshCatalog(pathname, base = '', busyWithInput = false) {
+  return !busyWithInput && (pathname === `${base}/` || pathname === `${base}/id/`);
+}
+
+/**
  * Download the current release, then activate it only after the new offline shell
  * has installed. A caller may reload once this resolves. Never clear existing
  * caches first: they are the fallback if the new download fails.
