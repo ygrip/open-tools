@@ -138,7 +138,7 @@
     if (!hasUpdate) { automaticAttempted = false; return; }
     if (automaticAttempted || updating || updateError || updateDismissed || !navigator.onLine || document.visibilityState !== 'visible') return;
     const focused = document.activeElement;
-    const busyWithInput = Boolean(focused?.matches('input, textarea, select, [contenteditable], [contenteditable] *') || document.querySelector('[aria-modal="true"]'));
+    const busyWithInput = Boolean(focused?.matches('input, textarea, select, [contenteditable], [contenteditable] *') || document.querySelector('dialog[open], [aria-modal="true"]'));
     if (!canAutoRefreshCatalog(location.pathname, base, busyWithInput)) return;
     automaticAttempted = true;
     void prepareUpdate();
