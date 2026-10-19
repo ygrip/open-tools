@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, writeFile, mkdir, mkdtemp, rename, rm, access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { artIconName } from './lib/bundles.mjs';
 import { localePath, siteOrigin, SEO_LOCALES } from '../src/lib/seo/metadata.js';
 
 const defaultRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -121,8 +122,12 @@ export async function generateSeo({ root = defaultRoot, origin = process.env.PUB
   const iconSources = {};
   for (const tool of tools) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(tool.id)) continue;
-    if (await exists(join(staticRoot, 'icons/tools', `${tool.id}.webp`))) icons[tool.id] = `${base}/icons/tools/${tool.id}.webp`;
-    const source = join(root, 'scripts/assets/tool-icons', `${tool.id}.png`);
+    // Tool-owned, content-addressed art materialised by registry:sync.
+    if (tool.artwork?.icon) {
+      const name = artIconName(tool);
+      if (await exists(join(staticRoot, 'icons/tools', name))) icons[tool.id] = `${base}/icons/tools/${name}`;
+    }
+    const source = join(root, 'scripts/.generated-tool-cards', `${tool.id}.png`);
     if (await exists(source)) iconSources[tool.id] = `data:image/png;base64,${(await readFile(source)).toString('base64')}`;
   }
   // The home card shows the real trick-it mascot, the same art as the header logo.

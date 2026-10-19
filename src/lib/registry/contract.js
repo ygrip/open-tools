@@ -68,15 +68,21 @@ export function validateManifest(manifest) {
   if (manifest.artwork !== undefined) {
     if (manifest.schemaVersion !== 3) throw new Error('artwork requires schemaVersion 3');
     const art = object(manifest.artwork, 'artwork');
-    if (Object.keys(art).some((key) => key !== 'icon')) throw new Error('unsupported artwork field');
-    const icon = object(art.icon, 'artwork icon');
-    if (Object.keys(icon).some((key) => !['file', 'sha256', 'bytes'].includes(key)) ||
-        typeof icon.file !== 'string' || !/^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.webp$/.test(icon.file) ||
-        typeof icon.sha256 !== 'string' || !digest.test(icon.sha256) ||
-        !Number.isSafeInteger(icon.bytes) || icon.bytes < 16 || icon.bytes > 12_000) {
-      throw new Error('invalid artwork icon');
-    }
-    artwork = { icon: { file: icon.file, sha256: icon.sha256, bytes: icon.bytes } };
+    if (Object.keys(art).some((key) => !['icon', 'card'].includes(key))) throw new Error('unsupported artwork field');
+    /** @param {unknown} value @param {string} label @param {RegExp} file @param {number} limit */
+    const asset = (value, label, file, limit) => {
+      const item = object(value, label);
+      if (Object.keys(item).some((key) => !['file', 'sha256', 'bytes'].includes(key)) ||
+          typeof item.file !== 'string' || !file.test(item.file) ||
+          typeof item.sha256 !== 'string' || !digest.test(item.sha256) ||
+          !Number.isSafeInteger(item.bytes) || item.bytes < 16 || item.bytes > limit) {
+        throw new Error(`invalid ${label}`);
+      }
+      return { file: item.file, sha256: item.sha256, bytes: item.bytes };
+    };
+    // `icon`: 160x160 WebP for catalog cards and tool pages. `card`: 512x512 PNG source for the social preview.
+    artwork = { icon: asset(art.icon, 'artwork icon', /^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.webp$/, 12_000) };
+    if (art.card !== undefined) artwork.card = asset(art.card, 'artwork card', /^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.png$/, 400_000);
   }
 
   const capabilities = texts(manifest.capabilities, 20, 80, 'capabilities');

@@ -13,6 +13,22 @@ export function verifyBundle(bytes, manifest) {
   return html;
 }
 
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/** Verify exact bytes, declared size and real image container of one tool-owned artwork file. */
+export function verifyArtwork(bytes, entry, kind) {
+  if (bytes.length !== entry.bytes) throw new Error(`artwork ${kind} size mismatch`);
+  if (createHash('sha256').update(bytes).digest('hex') !== entry.sha256) throw new Error(`artwork ${kind} integrity mismatch`);
+  const valid = kind === 'icon'
+    ? bytes.subarray(0, 4).toString('latin1') === 'RIFF' && bytes.subarray(8, 12).toString('latin1') === 'WEBP'
+    : bytes.subarray(0, 8).equals(PNG_SIGNATURE);
+  if (!valid) throw new Error(`artwork ${kind} is not a ${kind === 'icon' ? 'WebP' : 'PNG'} image`);
+  return bytes;
+}
+
+/** Content-addressed icon filename: `<id>.<first 12 hex of sha256>.webp`. */
+export const artIconName = (manifest) => `${manifest.id}.${manifest.artwork.icon.sha256.slice(0, 12)}.webp`;
+
 export function createGithubClient(credentials, fetcher = fetch) {
   const scoped = credentials && typeof credentials !== 'string';
   if (scoped && (typeof credentials.forRepository !== 'function' || typeof credentials.forOwner !== 'function')) throw new Error('invalid GitHub credential resolver');
@@ -101,5 +117,9 @@ export async function loadSource(source, config, root, github) {
   const manifest = validateManifest(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(manifestBytes)));
   if (manifest.repository.toLowerCase() !== `https://github.com/${source.repository}`.toLowerCase()) throw new Error('manifest repository does not match source');
   validateAssetOrigins(manifest, config.trustedAssetOrigins);
-  return { manifest, html: verifyBundle(await read(manifest.bundle.file), manifest) };
+  const html = verifyBundle(await read(manifest.bundle.file), manifest);
+  const artwork = manifest.artwork
+    ? Object.fromEntries(await Promise.all(Object.entries(manifest.artwork).map(async ([kind, entry]) => [kind, verifyArtwork(await read(entry.file), entry, kind)])))
+    : undefined;
+  return { manifest, html, ...(artwork ? { artwork } : {}) };
 }

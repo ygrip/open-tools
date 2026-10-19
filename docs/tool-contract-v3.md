@@ -132,6 +132,8 @@ Approval is exact scheme/host/port origin equality, not a suffix, wildcard or UR
 
 ## Releases, validation and caches
 
+Optional `artwork` (`icon` WebP, optional `card` PNG, each with `file`, `sha256`, `bytes`) lets a tool ship its own catalog art from its repository; see [registry layout](registry-layout.md). The host verifies and materialises it at build time with content-hashed URLs.
+
 Existing ID/path/category/status/repository rules still apply. Names are limited to 80 characters, descriptions to 240, and capabilities to twenty strings of at most 80 characters. Reserved routes include the legal pages, bundle/static namespaces, `offline`, `manifest`, `manifest-webmanifest`, `service-worker` and `pwa`; inspect [`contract.js`](../src/lib/registry/contract.js) before choosing an ID.
 
 The bootstrap remains a self-contained UTF-8 HTML file of at most 5 MiB and is subject to the stricter configured gzip budget. Build it, update its SHA-256 from the exact final bytes, and commit the artifact and manifest together. Preserve the tool repository provenance even when the platform display brand changes. Keep credentials build-only.

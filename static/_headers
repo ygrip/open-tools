@@ -1,0 +1,8 @@
+# Cache busting: every path below is content-addressed (hash in the file name),
+# so a changed file always gets a new URL and old URLs can be cached for a year.
+/_app/immutable/*
+  Cache-Control: public, max-age=31536000, immutable
+/bundles/*
+  Cache-Control: public, max-age=31536000, immutable
+/icons/tools/*
+  Cache-Control: public, max-age=31536000, immutable
