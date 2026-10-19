@@ -190,18 +190,47 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
   .recent-list li { flex: 0 0 152px; scroll-snap-align: start; }
 }
 .chips button.active { background: var(--peach); color: var(--text); border-color: var(--line); box-shadow: inset 1px 2px 2px var(--highlight), 0 2px 0 var(--line); }
-.tool-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
-.tool-card { padding: 28px; display: flex; flex-direction: column; min-height: 335px; transition: transform var(--duration-fast) var(--ease-smooth-out); }
+.tool-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 20px; }
+.tool-card {
+  --tool-hue: 24;
+  --tool-hover: hsl(var(--tool-hue) 75% 96%);
+  --tool-arrow: hsl(var(--tool-hue) 72% 87%);
+  display: flex; flex-direction: column; min-width: 0; min-height: 430px; padding: 28px;
+  transition: transform var(--duration-fast) var(--ease-smooth-out), background-color var(--duration-fast) var(--ease-smooth-out), border-color var(--duration-fast) var(--ease-smooth-out), box-shadow var(--duration-fast) var(--ease-smooth-out);
+}
+:root[data-theme='dark'] .tool-card {
+  --tool-hover: hsl(var(--tool-hue) 26% 25%);
+  --tool-arrow: hsl(var(--tool-hue) 33% 36%);
+}
+.tool-card:is(:hover, :focus-visible) {
+  background-color: var(--tool-hover);
+  border-color: hsl(var(--tool-hue) 44% 60%);
+  box-shadow: 0 6px 0 -1px hsl(var(--tool-hue) 45% 62% / .4), 0 22px 38px -20px var(--shadow), inset 2px 3px 2px var(--highlight);
+}
+.tool-card:focus-visible { outline: 3px solid var(--accent-strong); outline-offset: 4px; }
 .tool-grid.single-result .tool-card:first-child { grid-column: span 2; }
 .tool-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; gap: 12px; }
 .tool-card-top .clay-icon { width: 65px; height: 65px; border-radius: 21px; }
 .tool-status { display: inline-flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 850; color: var(--muted); padding: 6px 10px; border-radius: 100px; border: 1px solid var(--line); }
-.tool-card h3 { overflow-wrap: anywhere; font-size: 28px; font-weight: 900; letter-spacing: -.04em; margin-top: 7px; }
-.tool-card p { color: var(--text-secondary); font-size: 14px; max-width: 52ch; margin-top: 10px; line-height: 1.7; }
-.tool-capabilities { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 20px; }
-.tool-capabilities span { font-size: 10px; font-weight: 800; border: 1px solid var(--line); padding: 4px 10px; border-radius: 9px; color: var(--muted); }
-.tool-card-bottom { display: flex; justify-content: space-between; align-items: center; gap: 16px; border-top: 1px solid var(--line); margin-top: 24px; padding-top: 17px; font-size: 13px; font-weight: 900; }
-.round-arrow { display: inline-grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 14px; background: var(--peach); box-shadow: 0 3px 0 var(--line), inset 1px 2px 2px var(--highlight); }
+.tool-card-copy { min-width: 0; flex: 1; }
+.tool-card h3 { overflow-wrap: anywhere; font-size: 28px; font-weight: 900; letter-spacing: -.04em; margin-top: 7px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.tool-card p { color: var(--text-secondary); font-size: 14px; max-width: 52ch; margin-top: 10px; line-height: 1.7; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+/* Two rows of chips, clipped horizontally with a soft fade. The full labels stay in DOM for accessibility. */
+.tool-capabilities {
+  display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, 26px); grid-auto-columns: max-content;
+  gap: 6px; min-width: 0; max-width: 100%; height: 58px; margin-top: 17px;
+  overflow: hidden; align-content: start;
+  -webkit-mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 28px), transparent 100%);
+}
+.tool-capabilities span {
+  display: block; max-width: 175px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 10px; line-height: 16px; font-weight: 800; border: 1px solid var(--line);
+  padding: 4px 10px; border-radius: 9px; color: var(--text-secondary);
+}
+.tool-card-bottom { display: flex; justify-content: space-between; align-items: center; gap: 16px; border-top: 1px solid var(--line); margin-top: 17px; padding-top: 17px; font-size: 13px; font-weight: 900; }
+.round-arrow { display: inline-grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 14px; background: var(--peach); box-shadow: 0 3px 0 var(--line), inset 1px 2px 2px var(--highlight); transition: background-color var(--duration-fast) var(--ease-smooth-out), border-color var(--duration-fast) var(--ease-smooth-out), transform var(--duration-fast) var(--ease-smooth-out); }
+.tool-card:is(:hover, :focus-visible) .round-arrow { background: var(--tool-arrow); border-color: hsl(var(--tool-hue) 44% 60%); }
 .collection-card { padding: 28px; overflow: hidden; }
 .collection-card h3 { font-size: 25px; letter-spacing: -.035em; margin-top: 12px; font-weight: 900; }
 .collection-card p { font-size: 12px; line-height: 1.8; color: var(--text-secondary); margin-top: 12px; }
@@ -325,7 +354,8 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
 .ui-carousel-actions button { min-width: 44px; min-height: 44px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
 
 @media (hover: hover) and (pointer: fine) {
-  .tool-card:hover { transform: translateY(-4px); }
+  .tool-card:hover { transform: translateY(-3px); }
+  .tool-card:hover .round-arrow { transform: translateX(3px); }
   .clay-button:hover, .icon-button:hover, .theme-toggle:hover { transform: translateY(-2px); }
 }
 @media (max-width: 1000px) {
@@ -399,9 +429,9 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
   html { scroll-behavior: auto; }
   .t-modal { transition: none !important; }
   .t-icon-swap .t-icon { transition: none !important; }
-  .clay-button, .icon-button, .theme-toggle, .tool-card { transition: none; }
+  .clay-button, .icon-button, .theme-toggle, .tool-card, .round-arrow { transition: none; }
   .nav-link, .brand img, .footer-col a, .topbar { transition: none; }
-  .tool-card:hover, .clay-button:hover, .icon-button:hover, .theme-toggle:hover { transform: none; }
+  .tool-card:hover, .tool-card:hover .round-arrow, .clay-button:hover, .icon-button:hover, .theme-toggle:hover { transform: none; }
 }
 
 /* Legal language selection, shared across translated static pages. */

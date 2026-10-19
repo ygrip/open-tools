@@ -17,6 +17,13 @@
   import ToolArt from '$lib/components/ToolArt.svelte';
   import { readRecentEntries, relativeTime, clearRecentTools, readToolSort, saveToolSort, sortTools, toolSorts, type ToolSort } from '$lib/recent';
 
+  // Stable per-tool hue: the visual accent follows the tool, not its sort position.
+  function toolHue(id: string) {
+    let hash = 0;
+    for (const character of id) hash = (hash * 33 + character.charCodeAt(0)) >>> 0;
+    return (hash % 12) * 30 + 12;
+  }
+
   const pageSize = 6;
   let currentPage = $state(1);
   let selectedCategory = $state('all');
@@ -158,10 +165,10 @@
       <p class="sr-only" role="status">{filteredTools.length} {m.tools_found()}</p>
       <div class="tool-grid" class:single-result={filteredTools.length === 1}>
         {#each pagedTools as tool (tool.id)}
-          <a class="tool-card surface" href={localizedPath(`${tool.path}/`)}>
+          <a class="tool-card surface" style:--tool-hue={toolHue(tool.id)} href={localizedPath(`${tool.path}/`)}>
             <div class="tool-card-top"><ToolArt id={tool.id} icon={tool.icon} size={60} /><span class="tool-status"><span class="status-dot"></span> {m.tool_ready()}</span></div>
             <div class="tool-card-copy"><span class="eyebrow">{categoryNames[tool.category]}</span><h3>{tool.name}</h3><p>{tool.description}</p></div>
-            <div class="tool-capabilities">{#each tool.capabilities.slice(0, 3) as capability}<span>{capability.replaceAll('-', ' ')}</span>{/each}</div>
+            <div class="tool-capabilities">{#each tool.capabilities as capability}<span>{capability.replaceAll('-', ' ')}</span>{/each}</div>
             <div class="tool-card-bottom"><span>{m.open_tool()} {tool.name}</span><span class="round-arrow"><Icon name="arrow-right" size={21} /></span></div>
           </a>
         {:else}
