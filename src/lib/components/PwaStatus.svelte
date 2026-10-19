@@ -66,11 +66,6 @@
     const failed = (event: MessageEvent) => {
       const source = event.source;
       if (!source || !('scriptURL' in source) || source.scriptURL !== new URL(`${base}/service-worker.js`, location.origin).href) return;
-      if (event.data?.type === 'trick-it:cache-failed') {
-        // Background caching is best-effort. Diagnose it in the console rather
-        // than pinning a warning over a perfectly usable online application.
-        console.warn(`[trick-it pwa] cache failed: ${event.data.url ?? 'unknown asset'} — ${event.data.reason ?? 'unknown reason'}`);
-      }
       if (event.data?.type === 'trick-it:version-request') source.postMessage({ type: 'trick-it:client-ready', appVersion: version });
     };
     window.addEventListener('beforeinstallprompt', install);
@@ -91,7 +86,6 @@
           if (!worker) return;
           const state = () => {
             if (worker.state === 'installed' && navigator.serviceWorker.controller && registration.waiting) { waiting = registration.waiting; updateDismissed = false; }
-            if (worker.state === 'redundant') console.warn('[trick-it pwa] service worker install did not complete; the online app remains available');
           };
           worker.addEventListener('statechange', state);
           cleanup.push(() => worker.removeEventListener('statechange', state));
@@ -99,7 +93,7 @@
         registration.addEventListener('updatefound', watch);
         cleanup.push(() => registration.removeEventListener('updatefound', watch));
         watch();
-      }).catch((error) => { if (!disposed) console.warn('[trick-it pwa] service worker registration failed:', error); }); };
+      }).catch((error) => { if (!disposed) console.warn('[trick-it] Service worker registration failed', error); }); };
       // Do not compete with the first page's image/font loading.
       if (document.readyState === 'complete') register();
       else window.addEventListener('load', register, { once: true });
@@ -125,7 +119,7 @@
         await registration.update();
         if (registration.waiting) { waiting = registration.waiting; updateDismissed = false; }
       }
-    } catch (error) { console.warn('[trick-it pwa] update preparation failed:', error); }
+    } catch (error) { console.warn('[trick-it] Update failed', error); }
   }
 
   async function install() {
