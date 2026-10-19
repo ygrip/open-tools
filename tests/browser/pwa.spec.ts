@@ -97,22 +97,16 @@ test('install affordance floats above the footer and respects the native install
   await expect(card).toHaveCount(0);
 });
 
-test('desktop language dropdown shows flags and preserves the current route', async ({ page }) => {
+test('desktop language picker shows flags and preserves the current route', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/?from=language#tools');
   const switcher = page.locator('.header-actions > .language-switcher');
-  const trigger = switcher.getByRole('button', { name: /Languages: English/ });
-  await expect(trigger).toBeVisible();
-  await expect(switcher.locator('.language-trigger .language-flag')).toHaveText('🇬🇧');
-  await trigger.click();
-  const options = switcher.locator('.language-menu');
-  await expect(options.locator('a[hreflang="en"] .language-flag')).toHaveText('🇬🇧');
-  await expect(options.locator('a[hreflang="id"] .language-flag')).toHaveText('🇮🇩');
-  await page.keyboard.press('Escape');
-  await expect(options).toBeHidden();
-  await expect(trigger).toBeFocused();
-  await trigger.click();
-  await options.locator('a[hreflang="id"]').click();
+  const select = switcher.getByRole('combobox', { name: /Languages: English/ });
+  await expect(select).toBeVisible();
+  await expect(switcher.locator('.language-native-select .language-flag')).toHaveText('🇬🇧');
+  await expect(select.locator('option[value="en"]')).toHaveText('🇬🇧 English');
+  await expect(select.locator('option[value="id"]')).toHaveText('🇮🇩 Bahasa Indonesia');
+  await select.selectOption('id');
   await expect(page).toHaveURL(/\/id\/\?from=language#tools$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'id');
 });
