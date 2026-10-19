@@ -6,6 +6,7 @@ test.use({ serviceWorkers: 'block' });
 test('shared table controls search, sort, paginate, hide columns and copy without leaking data', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await mountFixture(page);
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
   const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
   await frame.evaluate(() => {
     const mount = document.createElement('div');
@@ -57,6 +58,7 @@ test('shared table controls search, sort, paginate, hide columns and copy withou
 
 test('table escapes untrusted values and has useful empty and updated states', async ({ page }) => {
   await mountFixture(page);
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
   const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
   await frame.evaluate(() => {
     const mount = document.createElement('div'); mount.id = 'grid'; document.body.append(mount);
