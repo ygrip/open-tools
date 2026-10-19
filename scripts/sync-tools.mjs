@@ -74,7 +74,8 @@ try {
     await rm(art, { recursive: true, force: true });
     await rm(cards, { recursive: true, force: true });
   }
-  await writeFile(resolve(root, 'src/lib/registry/generated.json'), `${JSON.stringify(loaded.map(({ manifest }) => manifest), null, 2)}\n`);
+  // Artwork digests are build-time only: keeping them out of the catalog keeps them out of the shared client bundle.
+  await writeFile(resolve(root, 'src/lib/registry/generated.json'), `${JSON.stringify(loaded.map(({ manifest: { artwork, ...manifest } }) => manifest), null, 2)}\n`);
 } finally {
   await rm(stage, { recursive: true, force: true });
 }
