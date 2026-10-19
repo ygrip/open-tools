@@ -4,10 +4,12 @@ import { cacheableRequest, cacheableResponse } from '../src/lib/pwa-policy.js';
 import { readFile } from 'node:fs/promises';
 
 const origin = 'https://trick-it.example';
-const paths = new Set(['/', '/id/', '/_app/immutable/a.js']);
+const paths = new Set(['/', '/id/', '/_app/immutable/a.js', '/_app/version.json', '/service-worker.js']);
 const accepts = (path, method, auth) => cacheableRequest(new URL(path, origin), origin, paths, method, auth);
 test('offline cache accepts only explicit public files or digest-pinned tool releases', () => {
   assert.ok(accepts('/id/'));
+  assert.equal(accepts('/_app/version.json'), false, 'SvelteKit release metadata must bypass the offline cache');
+  assert.equal(accepts('/service-worker.js'), false, 'worker updates must bypass the offline cache');
   assert.ok(accepts(`/bundles/json-tools/${'a'.repeat(64)}.json?version=0.3.0`));
   for (const path of ['/private', '/?token=secret', 'https://models.example/model.wasm', `/bundles/x/${'a'.repeat(64)}.json?version=1.0.0&token=secret`, '/bundles/x/latest.json']) assert.equal(accepts(path), false);
   assert.equal(accepts('/', 'POST'), false);
@@ -65,4 +67,11 @@ test('PWA install skips Cloudflare config and defers nonessential artwork', asyn
   assert.ok(precachePaths.has('/json-tools/'));
   assert.equal(precachePaths.has('/illustrations/large.webp'), false, 'large artwork is lazy cached');
   assert.ok(publicPaths.has('/illustrations/large.webp'), 'visited artwork remains cacheable');
+});
+
+test('Cloudflare never stores mutable deployment discovery URLs', async () => {
+  const headers = await readFile(new URL('../static/_headers', import.meta.url), 'utf8');
+  assert.match(headers, /\\/_app\\/version\\.json\\s+Cache-Control: no-store/);
+  assert.match(headers, /\\/service-worker\\.js\\s+Cache-Control: no-cache/);
+  assert.match(headers, /\\/bundles\\/\\*\\s+Cache-Control: public, max-age=31536000, immutable/);
 });
