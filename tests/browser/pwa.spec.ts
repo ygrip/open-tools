@@ -96,3 +96,35 @@ test('install affordance floats above the footer and respects the native install
   await expect.poll(() => page.evaluate(() => (window as unknown as { __installInvoked?: boolean }).__installInvoked)).toBe(true);
   await expect(card).toHaveCount(0);
 });
+
+test('desktop language dropdown shows flags and preserves the current route', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/?from=language#tools');
+  const switcher = page.locator('.header-actions > .language-switcher');
+  const trigger = switcher.getByRole('button', { name: /Languages: English/ });
+  await expect(trigger).toBeVisible();
+  await expect(switcher.locator('.language-trigger .language-flag')).toHaveText('🇬🇧');
+  await trigger.click();
+  const options = switcher.locator('.language-menu');
+  await expect(options.locator('a[hreflang="en"] .language-flag')).toHaveText('🇬🇧');
+  await expect(options.locator('a[hreflang="id"] .language-flag')).toHaveText('🇮🇩');
+  await page.keyboard.press('Escape');
+  await expect(options).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await options.locator('a[hreflang="id"]').click();
+  await expect(page).toHaveURL(/\/id\/\?from=language#tools$/);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'id');
+});
+
+test('mobile quick settings keeps a flagged two-choice language switcher', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  const settings = page.locator('.header-actions > .quick-settings');
+  await settings.locator('.qs-trigger').click();
+  const choices = settings.locator('.qs-panel .language-switcher');
+  await expect(choices.locator('a[hreflang="en"] .language-flag')).toHaveText('🇬🇧');
+  await expect(choices.locator('a[hreflang="id"] .language-flag')).toHaveText('🇮🇩');
+  await choices.locator('a[hreflang="id"]').click();
+  await expect(page).toHaveURL(/\/id\/$/);
+});
