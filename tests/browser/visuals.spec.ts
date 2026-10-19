@@ -92,3 +92,39 @@ for (const theme of ['light', 'dark'] as const) {
     });
   }
 }
+
+test('catalog cards have equal heights, two capability rows, and an accessible themed focus', async ({ page }) => {
+  for (const width of [320, 375, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+    await page.goto('/');
+    const cards = page.locator('.tool-grid .tool-card');
+    await expect(cards).toHaveCount(6);
+    await page.evaluate(() => document.fonts.ready);
+    const layout = await cards.evaluateAll((items) => items.map((card) => {
+      const chips = card.querySelector('.tool-capabilities');
+      if (!chips) throw new Error('No capability preview');
+      const computed = getComputedStyle(chips);
+      return { height: Math.round(card.getBoundingClientRect().height), previewHeight: chips.getBoundingClientRect().height, rows: computed.gridTemplateRows, overflow: computed.overflowX, mask: computed.maskImage, hue: getComputedStyle(card).getPropertyValue('--tool-hue') };
+    }));
+    expect(Math.max(...layout.map((x) => x.height)) - Math.min(...layout.map((x) => x.height))).toBeLessThanOrEqual(1);
+    for (const card of layout) {
+      expect(card.previewHeight).toBeLessThanOrEqual(59);
+      expect(card.rows.split(' ').length).toBe(2);
+      expect(card.overflow).toBe('hidden');
+      expect(card.mask).toContain('linear-gradient');
+    }
+    expect(new Set(layout.map((x) => x.hue)).size).toBeGreaterThan(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const first = cards.first();
+    const before = await first.evaluate((el) => getComputedStyle(el).backgroundColor);
+    await page.keyboard.press('Tab');
+    await first.focus();
+    await expect(first).toBeFocused();
+    const after = await first.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(after).not.toBe(before);
+    await expect(first).toHaveCSS('outline-style', 'solid');
+    await first.hover();
+    await expect(first).toHaveCSS('transition-duration', /0s/);
+  }
+});
