@@ -73,6 +73,29 @@ Finished status cards (done/error) show a close button. `job.dismiss()` hides a 
 
 The shared picker, status card and close buttons defend their own layout and typography (15px base, centred column) against a tool's global `label`, `button`, `input`, `span` or `.settings label` rules, so every tool looks the same. Do not restyle them with structural overrides; change tokens (`--ot-*`) or the surrounding container only.
 
+### Shared table and control pane
+
+Use `ui.table(target, options)` for tabular data in standalone tools. It renders a responsive, horizontally scrollable table and a host-owned control pane with localized search, column visibility, ascending/descending sort, rows per page (10/25/50/100 by default), density and pagination. No server calls, third-party grid dependencies or extra permissions are needed. The table is injected into the isolated tool frame, uses the host theme, and never sends rows to the parent. UI remains navigable on narrow screens.
+
+```js
+const grid = trickIt.ui.table('#result', {
+  caption: 'Generated records',
+  columns: [{ key: 'name', label: 'Name' }, { key: 'score', label: 'Score', sortable: true }],
+  rows: [{ name: 'Example', score: 12 }],
+  pageSize: 10, pageSizes: [10, 25, 50, 100], // optional
+  density: 'comfortable',                     // or 'compact'
+  onCopy(value, columnKey, row) {
+    // No clipboard bypass: request the declared capability from the tool action.
+    return trickIt.request('clipboard-write', String(value ?? ''));
+  }
+});
+grid.update({ rows: updatedRows, columns: updatedColumns });
+grid.setPage(1);
+grid.remove();
+```
+
+The copy action is an icon button with a localized tooltip and accessible label, not a text button squeezed into each cell. Set `copyable: false` on a column to hide it, `sortable: false` to disable sorting, `searchable: false` to omit a column from search, and `visible: false` to hide a column initially. A `format(value, row)` function changes display text only; `onCopy` still receives the original raw value. Values are inserted with `textContent`, never HTML. Searching/sorting/pagination only affect the viewport, not the source array or exports. Locale/theme changes preserve search, sorting, density and the current page.
+
 ### Deferred/external asset loader
 
 Use `ui.loader(target, options)` for resource loading rather than building another spinner. It reuses the clay status card, shows real byte counts/percentages when known, and has localized waiting/loading/verifying/initializing/done/error labels. Unknown progress stays indeterminate—never estimate a percentage from elapsed time.

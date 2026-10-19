@@ -1,5 +1,6 @@
 import { isTheme, type Theme } from '../theme';
 import { uiKitScript, uiKitStyles } from './ui-kit';
+import { tableScript, tableStyles } from './ui-table';
 
 // The policy precedes tool markup and cannot be relaxed by a later meta tag.
 // Opaque-origin sandboxing is also mandatory: never add allow-same-origin.
@@ -106,6 +107,7 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
         catch { clearTimeout(timer); pending.delete(id); reject(new Error('Invalid capability payload.')); }
       });
     }
+${tableScript}
 ${uiKitScript}
     Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, ui, asset: (id, options = {}) => request('asset', { id }, options.onProgress), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
   })();`;
@@ -150,5 +152,5 @@ ${uiKitScript}
   else start();
 })();
 `;
-  return `<!doctype html><html lang="${locale}" data-theme="${theme}" style="color-scheme:${theme}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}${uiKitStyles}</style><script>${themeBootstrap}${sdk}</script><script>${resizeBootstrap}</script></head><body>${html}</body></html>`;
+  return `<!doctype html><html lang="${locale}" data-theme="${theme}" style="color-scheme:${theme}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}${uiKitStyles}${tableStyles}</style><script>${themeBootstrap}${sdk}</script><script>${resizeBootstrap}</script></head><body>${html}</body></html>`;
 }
