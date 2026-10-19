@@ -53,7 +53,9 @@ const HOST_JS_BASELINE_TOOLS = 18;
 // to the shared host, with no additional per-tool JavaScript.
 // Scoped MediaWiki CORS browser-read broker adds <=768 gzip bytes to the shared host;
 // the per-tool entry, iframe bundle and artwork ceilings remain unchanged.
-const HOST_JS_BUDGET = 145_512 + 768 + 768;
+// Scoped wiki picture broker and DNS-over-HTTPS (dns-query) broker add <=2,048 gzip bytes to the shared host
+// (measured +1,719); per-tool entry, iframe bundle and artwork ceilings remain unchanged.
+const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048;
 const TOOL_JS_ALLOWANCE = 1_024;
 const MAX_TOOL_ENTRY_GZIP = 4_096;
 for (const tool of catalog) {
