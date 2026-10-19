@@ -67,7 +67,7 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
   if (permissions.includes('workers')) policy = policy.replace("worker-src 'none'", 'worker-src blob:');
   if (permissions.includes('workers') || (permissions.includes('external-assets') && options.scriptAssets)) policy = policy.replace("script-src 'unsafe-inline'", "script-src 'unsafe-inline' blob:");
   const token = /^[a-zA-Z0-9_-]{16,128}$/.test(options.token ?? '') ? options.token! : '';
-  const config = JSON.stringify({ token, permissions: permissions.filter((name) => ['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'external-assets', 'wasm', 'workers', 'services'].includes(name)) }).replaceAll('<', '\\u003c');
+  const config = JSON.stringify({ token, permissions: permissions.filter((name) => ['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'external-assets', 'wasm', 'workers', 'services', 'wiki-read'].includes(name)) }).replaceAll('<', '\\u003c');
   const sdk = `(() => {
     const config = ${config};
     const pending = new Map(); let sequence = 0;
