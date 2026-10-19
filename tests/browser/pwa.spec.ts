@@ -68,11 +68,7 @@ test('PWA update waits for approval, installs, then refreshes the app automatica
       page.waitForEvent('framenavigated', frame => frame === page.mainFrame()),
       page.getByRole('button', { name: 'Prepare update', exact: true }).click()
     ]);
-    await expect(page).toHaveURL(new RegExp(origin.replace(/[.*+?^${}()|[\]\\]/g, '\\    await page.getByRole('button', { name: 'Prepare update', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Reload to use the update', exact: true })).toBeVisible();
-    await expect(input).toHaveValue('keep this unsaved input');
-    expect(await page.evaluate(() => (window as unknown as { updateMarker: number }).updateMarker)).toBe(42);
-    const caches = await page.evaluate(() => window.caches.keys());') + '/json-tools/'));
+    await expect(page).toHaveURL(`${origin}/json-tools/`);
     expect(await page.evaluate(() => (window as unknown as { updateMarker?: number }).updateMarker)).toBeUndefined();
     await expect(page.getByRole('button', { name: 'Reload to use the update', exact: true })).toHaveCount(0);
     const caches = await page.evaluate(() => window.caches.keys());
