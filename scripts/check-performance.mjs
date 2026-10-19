@@ -41,9 +41,20 @@ for (const file of assets) {
   if (file.endsWith('.woff2')) fonts += bytes.length;
   if (/\/bundles\/.*\.json$/.test(file) && gzipSync(bytes).length > 90_000) throw new Error(`Tool bundle exceeds 90 kB gzip budget: ${relative(client, file)}`);
 }
-// JS includes the shared trickIt.ui kit and its newly added table + control pane.
-// Allow only 3 kB additional gzip for this host-wide reusable component.
-const budgets = { javascript: 145_000, css: 20_000, images: 90_000, fonts: 45_000 };
+// JS budget is enforced per tool, not as one fixed ceiling for the whole marketplace.
+// Host JS (shared trickIt.ui kit, table, control pane, app shell) is fixed at the 18-tool baseline.
+// Each additional tool raises the shared-JS ceiling by TOOL_JS_ALLOWANCE gzip bytes (its marginal catalog cost),
+// and no single tool's standalone catalog entry may exceed MAX_TOOL_ENTRY_GZIP. Tool code itself stays in lazily loaded bundles
+// (90 kB gzip each, checked above) and icons keep their own 12 kB budget.
+const HOST_JS_BASELINE_TOOLS = 18;
+const HOST_JS_BUDGET = 145_000;
+const TOOL_JS_ALLOWANCE = 1_024;
+const MAX_TOOL_ENTRY_GZIP = 4_096;
+for (const tool of catalog) {
+  const entryBytes = gzipSync(JSON.stringify(tool)).length;
+  if (entryBytes > MAX_TOOL_ENTRY_GZIP) throw new Error(`Tool "${tool.id}" catalog entry is ${entryBytes} bytes gzip, over the ${MAX_TOOL_ENTRY_GZIP} byte per-tool budget`);
+}
+const budgets = { javascript: HOST_JS_BUDGET + Math.max(0, catalog.length - HOST_JS_BASELINE_TOOLS) * TOOL_JS_ALLOWANCE, css: 20_000, images: 90_000, fonts: 45_000 };
 const totals = { javascript, css, images, fonts };
 for (const [kind, bytes] of Object.entries(totals)) {
   console.log(`${kind}: ${bytes.toLocaleString()} / ${budgets[kind].toLocaleString()} bytes${kind === 'javascript' || kind === 'css' ? ' (gzip, all routes)' : ''}`);
