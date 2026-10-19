@@ -46,6 +46,9 @@ Recorded at the shared-UI migration. “Picker/status/popup/loader” mean a rea
 | encoder-decoder, text-manipulation, time-wizard | n/a | text-manipulation only | yes | n/a | n/a | Copy uses the clipboard permission; no files or jobs. |
 | fake-data-generator, id-generator, json-tools, jwt-tools | n/a | yes | yes | n/a | n/a | No files; cards report generation/parsing outcomes. |
 | seo-checker | n/a | yes | yes | n/a | n/a | Host service verification stays host-owned; dashboard charts are tool-owned. Its own browser suite is in the tool repository. |
+| save-my-wiki | n/a | yes | yes | help via `ui.info` | n/a | URL entry and previews are tool-owned; pictures use the host `wiki-read` broker. Browser suite in the tool repository. |
+| markdown-studio | yes | yes | yes | help via `ui.info`, reset via `ui.confirm` | n/a | WYSIWYG editor and inline link/picture panels are tool-owned; the picker is the shared `ui.fileInput`. |
+| link-checker | n/a | yes | yes | help via `ui.info` | n/a | DNS records use `ui.table`; DNS goes through the host `dns-query` broker. |
 
 ## Evidence required before commit/push
 

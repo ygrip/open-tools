@@ -1,5 +1,5 @@
 import type { ToolService } from '../registry/types';
-export type PermissionName = 'clipboard-read' | 'clipboard-write' | 'geolocation' | 'downloads' | 'camera-capture' | 'share-image' | 'external-assets' | 'wasm' | 'workers' | 'services' | 'wiki-read';
+export type PermissionName = 'clipboard-read' | 'clipboard-write' | 'geolocation' | 'downloads' | 'camera-capture' | 'share-image' | 'external-assets' | 'wasm' | 'workers' | 'services' | 'wiki-read' | 'dns-query';
 export type RuntimePermission = { name: PermissionName; reason: string; required: boolean };
 export type RuntimeAsset = { id: string; url: string; sha256: string; bytes: number; type: 'wasm' | 'script' | 'worker' | 'data'; defer: boolean };
 export type RuntimeTool = {
@@ -170,11 +170,20 @@ export function parseRuntimeRequest(event: Pick<MessageEvent, 'source' | 'data'>
     return { request, asset };
   }
   if (request.operation === 'ui-toast' || request.operation === 'ui-dialog') return parseUi(request);
-  if (!['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'services', 'wiki-read'].includes(request.operation)) return { request, error: 'unsupported' };
+  if (!['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'services', 'wiki-read', 'dns-query'].includes(request.operation)) return { request, error: 'unsupported' };
   if (!declared(request.operation)) return { request, error: 'denied' };
   if ((request.operation === 'clipboard-read' || request.operation === 'geolocation' || request.operation === 'camera-capture') && request.payload !== undefined) return { request, error: 'invalid-request' };
   if (request.operation === 'clipboard-write' && (typeof request.payload !== 'string' || request.payload.length > 1024 * 1024)) return { request, error: 'invalid-request' };
+  if (request.operation === 'dns-query') {
+    const data = request.payload as { name?: unknown; type?: unknown } | undefined;
+    if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).some(k => !['name', 'type'].includes(k)) || typeof data.name !== 'string' || data.name.length > 253 || typeof data.type !== 'string' || data.type.length > 8) return { request, error: 'invalid-request' };
+  }
   if (request.operation === 'wiki-read') {
+    const image = request.payload as { site?: unknown; image?: unknown } | undefined;
+    if (image && typeof image === 'object' && !Array.isArray(image) && 'image' in image) {
+      if (Object.keys(image).some(k => !['site', 'image'].includes(k)) || typeof image.site !== 'string' || image.site.length > 260 || typeof image.image !== 'string' || image.image.length > 1500) return { request, error: 'invalid-request' };
+      return { request };
+    }
     const data = request.payload as {site?: unknown;title?: unknown;endpoint?: unknown} | undefined;
     if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).some(k => !['site','title','endpoint'].includes(k)) || typeof data.site !== 'string' || data.site.length > 260 || typeof data.title !== 'string' || !data.title.trim() || data.title.length > 180 || typeof data.endpoint !== 'string' || data.endpoint.length > 150) return {request,error:'invalid-request'};
   }

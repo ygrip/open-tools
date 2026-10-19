@@ -171,3 +171,13 @@ test('SEO service client preserves zero scores, handles quota and aborts stale w
   const abort = controller(); abort.abort();
   await assert.rejects(runService('/api/tools/seo-checker/audit', payload, abort.signal), error => error.code === 'aborted');
 });
+
+test('dns-query broker requires its grant and validates a narrow payload', () => {
+  const frame = {}; const token = 'secure-session';
+  const dnsTool = { ...tool, permissions: [{ name: 'dns-query', required: false, reason: 'Look up DNS records' }] };
+  const request = { type: 'trick-it:request', version: 1, token, id: 'dns-1', operation: 'dns-query', payload: { name: 'example.com', type: 'A' } };
+  const parse = (payload, grants = ['dns-query']) => parseRuntimeRequest({ source: frame, data: { ...request, payload } }, frame, token, dnsTool, grants);
+  assert.equal(parse(request.payload).error, undefined);
+  assert.equal(parse(request.payload, []).error, 'denied');
+  for (const payload of [{ name: 'example.com' }, { ...request.payload, url: 'https://evil.example' }, { name: 5, type: 'A' }, undefined]) assert.equal(parse(payload).error, 'invalid-request');
+});

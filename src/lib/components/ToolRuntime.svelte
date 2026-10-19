@@ -5,7 +5,8 @@
   import { documentTheme } from '$lib/theme';
   import { loadAsset, loadBundle, runService, parseRuntimeRequest, RuntimeFailure, type RuntimeAsset, type RuntimeRequest, type RuntimeTool, type PermissionName, type CacheWarning } from '$lib/runtime/core';
   import ServiceChallenge from './ServiceChallenge.svelte';
-  import { fetchWikiArticle, wikiOrigin, type WikiReadRequest } from '$lib/runtime/wiki';
+  import { fetchDns, type DnsQueryRequest } from '$lib/runtime/dns';
+  import { fetchWikiArticle, fetchWikiImage, wikiOrigin, wikiImageUrl, type WikiReadRequest, type WikiImageRequest } from '$lib/runtime/wiki';
   import { runtimeStrings } from '$lib/runtime/strings';
   import { openDialog, closeDialog, hostUi, showToast } from '$lib/ui/host-ui.svelte';
   import { readDecisions, saveDecisions, clearDecisions, type Decisions } from '$lib/permissions';
@@ -382,7 +383,14 @@
       } else if (request.operation === 'clipboard-write') {
         if (!navigator.clipboard?.writeText) throw new RuntimeFailure('unsupported');
         await navigator.clipboard.writeText(request.payload as string);
+      } else if (request.operation === 'dns-query') {
+        value = await fetchDns(request.payload as DnsQueryRequest, controller!.signal);
       } else if (request.operation === 'wiki-read') {
+        if ('image' in (request.payload as object)) {
+          const image = await fetchWikiImage(request.payload as WikiImageRequest, controller!.signal);
+          if (current === generation) reply(request, true, image, undefined, [image.bytes]);
+          return;
+        }
         value = await fetchWikiArticle(request.payload as WikiReadRequest, controller!.signal);
       } else if (request.operation === 'services') {
         value = await runService(serviceEndpoint(service!.id), { version: tool.version, sha256: tool.bundle.sha256, input: (request.payload as { input: unknown }).input, ...(service!.turnstile ? { turnstileToken: tokenForAction } : {}) }, controller!.signal);
@@ -469,6 +477,16 @@
       verificationToken = '';
       inFlight.add(request.id);
       // Protected services confirm the exact URL and security check every time; nothing to remember.
+      if (request.operation === 'wiki-read' && 'image' in (request.payload as object)) {
+        // Pictures are only served for a wiki origin the user already approved this session.
+        const payload = request.payload as WikiImageRequest;
+        let allowed = false;
+        try { wikiImageUrl(payload); allowed = approvedWikiOrigins.has(wikiOrigin({ site: payload.site, title: 'x', endpoint: '/w/api.php' })); } catch { allowed = false; }
+        if (!allowed) { inFlight.delete(request.id); reply(request, false, undefined, 'denied'); return; }
+        pending = request; pendingAsk = false;
+        void approvePending();
+        return;
+      }
       if (request.operation === 'wiki-read') {
         try { wikiOrigin(request.payload as WikiReadRequest); }
         catch { inFlight.delete(request.id); reply(request, false, undefined, 'invalid-request'); return; }
@@ -576,6 +594,7 @@
     <p>{pendingAsk ? text.rememberHelp : text.confirmHelp}</p>
     {#if pendingService && pendingInput}<p>{text.seoHelp}</p><pre>{pendingInput.url}</pre><p>{pendingInput.strategy === 'mobile' ? text.seoMobile : text.seoDesktop} · {text.serviceLimit}: {pendingService.rateLimit.limit} / {pendingService.rateLimit.periodSeconds}s</p>{#if pendingService.turnstile}<ServiceChallenge endpoint={serviceEndpoint(pendingService.id)} version={tool.version} sha256={tool.bundle.sha256} {locale} onToken={(token) => verificationToken = token} />{/if}{/if}
     {#if pending.operation === 'clipboard-write'}<pre>{(pending.payload as string).slice(0, 240)}</pre>{/if}
+    {#if pending.operation === 'dns-query'}<p>{locale === 'id' ? 'Nama host dikirim ke resolver DNS-over-HTTPS publik (Cloudflare, termasuk resolver keamanannya, dan Google). Situs itu sendiri tidak dihubungi.' : 'The hostname is sent to public DNS-over-HTTPS resolvers (Cloudflare, including its security-filtering resolver, and Google). The site itself is not contacted.'}</p>{/if}
     {#if pending.operation === 'wiki-read'}<p>{locale === 'id' ? 'Situs tujuan akan menerima permintaan dari browser Anda. Tidak ada proxy server.' : 'Your browser will contact this wiki directly. No server proxy is used.'}</p><pre>{(pending.payload as WikiReadRequest).site}
 {(pending.payload as WikiReadRequest).title}</pre>{/if}
     {#if pending.operation === 'downloads'}<p>{(pending.payload as { filename: string }).filename} · {(pending.payload as { mime: string }).mime} · {((pending.payload as { bytes: ArrayBuffer }).bytes.byteLength / 1024).toFixed(1)} KiB</p>{/if}

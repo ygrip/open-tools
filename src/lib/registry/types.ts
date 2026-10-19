@@ -1,6 +1,6 @@
 export type ToolCategory = 'media' | 'developer' | 'data' | 'productivity' | 'other';
 export type ToolIcon = 'braces' | 'toolbox' | 'grid' | 'sparkles' | 'bolt' | 'heart' | 'filter' | 'lock' | 'shield' | 'search';
-export type ToolPermissionName = 'clipboard-read' | 'clipboard-write' | 'geolocation' | 'downloads' | 'camera-capture' | 'share-image' | 'external-assets' | 'wasm' | 'workers' | 'services' | 'wiki-read';
+export type ToolPermissionName = 'clipboard-read' | 'clipboard-write' | 'geolocation' | 'downloads' | 'camera-capture' | 'share-image' | 'external-assets' | 'wasm' | 'workers' | 'services' | 'wiki-read' | 'dns-query';
 export type ToolPermission = { name: ToolPermissionName; reason: string; required: boolean };
 export type ToolAsset = { id: string; url: string; sha256: string; bytes: number; type: 'wasm' | 'script' | 'worker' | 'data'; defer: boolean };
 export type ToolService = { id: string; handler: 'pagespeed-seo'; rateLimit: { limit: number; periodSeconds: 10 | 60 }; turnstile: boolean };
