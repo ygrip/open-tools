@@ -1,3 +1,5 @@
+import { tableStyles, tableScript } from './ui-table';
+
 /**
  * Host-owned clay UI kit injected into every tool sandbox as `trickIt.ui`.
  *
@@ -78,6 +80,7 @@ export const uiKitStyles = `
 @keyframes ti-draw { to { stroke-dashoffset: 0; } }
 @keyframes ti-shake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
 @media (prefers-reduced-motion: reduce) { .ti-status, .ti-toast, .ti-dots i, .ti-ring, .ti-status[data-state="done"] .ti-orb svg, .ti-drop, .ti-file { animation: none; stroke-dashoffset: 0; transition: none; } }
+${tableStyles}
 `;
 
 /**
@@ -326,5 +329,6 @@ export const uiKitScript = `
         remove() { removeEventListener('trick-it:localechange', text); for (const url of previews) URL.revokeObjectURL(url); zone.remove(); }
       });
     }
-    const ui = Object.freeze({ status, loader, fileInput, toast, dialog, confirm, info });
+${tableScript}
+    const ui = Object.freeze({ status, loader, fileInput, table, toast, dialog, confirm, info });
 `;
