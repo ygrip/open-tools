@@ -23,4 +23,4 @@ Offline pages successfully saved during precaching use their saved locale HTML. 
 
 Serve `service-worker.js` with JavaScript MIME type and `Cache-Control: no-cache`; registration also uses `updateViaCache: none`. Serve bundle JSON as `application/json`. Preserve version query strings in CDN cache keys. Prefer immutable caching for content-hashed JS/CSS/fonts/social images; never immutable-cache mutable HTML or manifest aliases. Error responses need their actual status plus `Cache-Control: no-store`. The platform cannot configure your CDN automatically.
 
-Verification: `npm test` covers release URL cache exclusions, update headers, catalog-only auto-refresh rules, and worker state transitions. `npm run test:e2e` covers offline reload, localized offline routes, and explicit approval before refreshing an open tool.
+Verification: `npm test` covers release URL cache exclusions, update headers, catalog-only auto-refresh rules, and worker state transitions. `npm run test:e2e` covers offline reload, localized offline routes, automatic idle-catalog refresh, and explicit approval before refreshing an open tool.
