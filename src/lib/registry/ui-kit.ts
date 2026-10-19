@@ -326,5 +326,5 @@ export const uiKitScript = `
         remove() { removeEventListener('trick-it:localechange', text); for (const url of previews) URL.revokeObjectURL(url); zone.remove(); }
       });
     }
-    const ui = Object.freeze({ status, loader, fileInput, toast, dialog, confirm, info });
+    const ui = Object.freeze({ status, loader, fileInput, table: typeof table === 'function' ? table : undefined, toast, dialog, confirm, info });
 `;
