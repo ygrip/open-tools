@@ -1,3 +1,12 @@
+# The release probe and worker script are mutable aliases. Never make browsers
+# or intermediary caches hold a previous deployment's update metadata.
+/_app/version.json
+  Cache-Control: no-store
+/service-worker.js
+  Cache-Control: no-cache, max-age=0, must-revalidate
+/manifest.webmanifest
+  Cache-Control: no-cache, max-age=0, must-revalidate
+
 # Cache busting: every path below is content-addressed (hash in the file name),
 # so a changed file always gets a new URL and old URLs can be cached for a year.
 /_app/immutable/*
