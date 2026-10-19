@@ -210,8 +210,10 @@ export const tableScript = `
           if ('rows' in next) rows = Array.isArray(next.rows) ? next.rows.slice() : [];
           if ('columns' in next) {
             const previous = visible;
+            const known = new Set(columns.filter(col => col && typeof col.key === 'string').map(col => col.key));
             columns = Array.isArray(next.columns) ? next.columns.slice() : [];
-            visible = new Set(columns.filter(col => col && typeof col.key === 'string' && (previous.has(col.key) || (col.visible !== false && !previous.size))).map(col => col.key));
+            visible = new Set(columns.filter(col => col && typeof col.key === 'string' &&
+              (known.has(col.key) ? previous.has(col.key) : col.visible !== false)).map(col => col.key));
             if (!visible.size && columns.length) visible.add(columns[0].key);
             if (!columns.some(col => col.key === sortKey)) sortKey = '';
             renderColumnToggles();
