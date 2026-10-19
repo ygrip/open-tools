@@ -14,8 +14,9 @@ function moduleUrl(source) {
 const themeUrl = moduleUrl(await readFile(new URL('../src/lib/theme.ts', import.meta.url), 'utf8'));
 const theme = await import(themeUrl);
 const uiKitUrl = moduleUrl(await readFile(new URL('../src/lib/registry/ui-kit.ts', import.meta.url), 'utf8'));
+const tableUrl = moduleUrl(await readFile(new URL('../src/lib/registry/ui-table.ts', import.meta.url), 'utf8'));
 const sandboxSource = (await readFile(new URL('../src/lib/registry/sandbox.ts', import.meta.url), 'utf8'))
-  .replace("from '../theme'", `from '${themeUrl}'`).replace("from './ui-kit'", `from '${uiKitUrl}'`);
+  .replace("from '../theme'", `from '${themeUrl}'`).replace("from './ui-kit'", `from '${uiKitUrl}'`).replace("from './ui-table'", `from '${tableUrl}'`);
 const { sandboxDocument, bundlePolicy } = await import(moduleUrl(sandboxSource));
 
 test('sandbox theme is an enum and host policy precedes untrusted markup', () => {
