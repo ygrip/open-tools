@@ -40,7 +40,7 @@
   </nav>
   <div class="header-actions">
     <button class="icon-button search-nav" type="button" onclick={onsearch} aria-label={m.search_label()}><Icon name="search" /></button>
-    <LanguageSwitcher />
+    <LanguageSwitcher dropdown />
     <ThemeToggle />
     <QuickSettings share {catalog} />
     <ShareButton {catalog} />
