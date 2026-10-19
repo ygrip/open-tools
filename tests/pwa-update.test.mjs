@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyPwaUpdate } from '../src/lib/pwa-update.js';
+import { applyPwaUpdate, canAutoRefreshCatalog } from '../src/lib/pwa-update.js';
 
 class FakeWorker extends EventTarget {
   constructor(state) { super(); this.state = state; this.messages = []; }
@@ -48,4 +48,14 @@ test('activation that never finishes raises a retryable timeout', async () => {
     { update: async () => {}, installing: null, waiting: worker },
     { activationTimeoutMs: 10 }
   ), /Timed out/);
+});
+
+test('automatic refresh is limited to an idle catalog, never a running tool', () => {
+  assert.equal(canAutoRefreshCatalog('/'), true);
+  assert.equal(canAutoRefreshCatalog('/id/'), true);
+  assert.equal(canAutoRefreshCatalog('/tools/', '/tools'), true);
+  assert.equal(canAutoRefreshCatalog('/tools/id/', '/tools'), true);
+  assert.equal(canAutoRefreshCatalog('/', '', true), false);
+  assert.equal(canAutoRefreshCatalog('/json-tools/'), false);
+  assert.equal(canAutoRefreshCatalog('/id/json-tools/'), false);
 });
