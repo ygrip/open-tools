@@ -28,6 +28,7 @@ test('shared table controls search, sort, paginate, hide columns and copy withou
   await expect(tool.locator('.ti-grid tbody tr')).toHaveCount(1);
   await expect(tool.locator('.ti-grid tbody tr')).toContainText('Person 31');
   await tool.getByRole('searchbox', { name: 'Search records' }).fill('');
+  await tool.getByRole('button', { name: /Sort ascending: Score/ }).click();
   await tool.getByRole('button', { name: /Sort descending: Score/ }).click();
   await expect(tool.locator('.ti-grid tbody tr').first()).toContainText('31');
   await tool.locator('.ti-grid-columns summary').click();
