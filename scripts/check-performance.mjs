@@ -41,8 +41,11 @@ for (const file of assets) {
   if (file.endsWith('.woff2')) fonts += bytes.length;
   if (/\/bundles\/.*\.json$/.test(file) && gzipSync(bytes).length > 90_000) throw new Error(`Tool bundle exceeds 90 kB gzip budget: ${relative(client, file)}`);
 }
-// JS includes the shared trickIt.ui kit (file input, status, toast, popups) injected into every tool.
-const budgets = { javascript: 142_000, css: 20_000, images: 90_000, fonts: 45_000 };
+// JS includes the shared trickIt.ui kit and its newly added table + control pane.
+// Allow only 3 kB additional gzip for this host-wide reusable component.
+// Growing the marketplace adds catalog metadata to the shared JS bundle.
+// Preserve the 18-tool baseline and allow 512 gzip bytes per additional tool.
+const budgets = { javascript: 145_000 + Math.max(0, catalog.length - 18) * 512, css: 20_000, images: 90_000, fonts: 45_000 };
 const totals = { javascript, css, images, fonts };
 for (const [kind, bytes] of Object.entries(totals)) {
   console.log(`${kind}: ${bytes.toLocaleString()} / ${budgets[kind].toLocaleString()} bytes${kind === 'javascript' || kind === 'css' ? ' (gzip, all routes)' : ''}`);
