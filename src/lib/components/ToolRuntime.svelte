@@ -5,6 +5,7 @@
   import { documentTheme } from '$lib/theme';
   import { loadAsset, loadBundle, runService, parseRuntimeRequest, RuntimeFailure, type RuntimeAsset, type RuntimeRequest, type RuntimeTool, type PermissionName, type CacheWarning } from '$lib/runtime/core';
   import ServiceChallenge from './ServiceChallenge.svelte';
+  import { fetchWikiArticle, wikiOrigin, type WikiReadRequest } from '$lib/runtime/wiki';
   import { runtimeStrings } from '$lib/runtime/strings';
   import { openDialog, closeDialog, hostUi, showToast } from '$lib/ui/host-ui.svelte';
   import { readDecisions, saveDecisions, clearDecisions, type Decisions } from '$lib/permissions';
@@ -59,6 +60,8 @@
   let loadedAssets = new Map<string, Promise<Uint8Array>>();
   const assetRequests = new Map<string, string>(); // request ID → declared asset ID
   const downloadUrls = new Set<string>();
+  // Remember approved wiki origins for this tool session only, never globally.
+  const approvedWikiOrigins = new Set<string>();
   // Startup permissions change the sandbox policy, so they are chosen before launch.
   // Runtime permissions are asked on first use. Both are remembered per tool.
   const STARTUP: PermissionName[] = ['wasm', 'workers', 'external-assets'];
@@ -345,7 +348,7 @@
     stopCamera();
     stopLocation();
     brokerBusy = false;
-    if (pending && pendingAsk) remember(pending.operation, 'denied');
+    if (pending && pendingAsk && pending.operation !== 'wiki-read') remember(pending.operation, 'denied');
     pendingAsk = false;
     if (pending) {
       reply(pending, false, undefined, 'denied');
@@ -357,7 +360,10 @@
   async function approvePending() {
     const request = pending;
     if (!request) return;
-    if (pendingAsk) { remember(request.operation, 'granted'); pendingAsk = false; }
+    if (pendingAsk) {
+      if (request.operation === 'wiki-read') approvedWikiOrigins.add(wikiOrigin(request.payload as WikiReadRequest));
+      remember(request.operation, 'granted'); pendingAsk = false;
+    }
     if (request.operation === 'camera-capture') { await startCamera(request); return; }
     if (request.operation === 'geolocation') { await startLocation(request); return; }
     const service = pendingService;
@@ -376,6 +382,8 @@
       } else if (request.operation === 'clipboard-write') {
         if (!navigator.clipboard?.writeText) throw new RuntimeFailure('unsupported');
         await navigator.clipboard.writeText(request.payload as string);
+      } else if (request.operation === 'wiki-read') {
+        value = await fetchWikiArticle(request.payload as WikiReadRequest, controller!.signal);
       } else if (request.operation === 'services') {
         value = await runService(serviceEndpoint(service!.id), { version: tool.version, sha256: tool.bundle.sha256, input: (request.payload as { input: unknown }).input, ...(service!.turnstile ? { turnstileToken: tokenForAction } : {}) }, controller!.signal);
       } else if (request.operation === 'share-image') {
@@ -461,7 +469,11 @@
       verificationToken = '';
       inFlight.add(request.id);
       // Protected services confirm the exact URL and security check every time; nothing to remember.
-      pendingAsk = request.operation !== 'services' && decisions[request.operation] !== 'granted';
+      if (request.operation === 'wiki-read') {
+        try { wikiOrigin(request.payload as WikiReadRequest); }
+        catch { inFlight.delete(request.id); reply(request, false, undefined, 'invalid-request'); return; }
+      }
+      pendingAsk = request.operation !== 'services' && (request.operation === 'wiki-read' ? !approvedWikiOrigins.has(wikiOrigin(request.payload as WikiReadRequest)) : decisions[request.operation] !== 'granted');
       pending = request;
       // Remembered grants run straight away; camera and location still show their
       // live preview, and protected services still need their security check.
@@ -564,6 +576,8 @@
     <p>{pendingAsk ? text.rememberHelp : text.confirmHelp}</p>
     {#if pendingService && pendingInput}<p>{text.seoHelp}</p><pre>{pendingInput.url}</pre><p>{pendingInput.strategy === 'mobile' ? text.seoMobile : text.seoDesktop} · {text.serviceLimit}: {pendingService.rateLimit.limit} / {pendingService.rateLimit.periodSeconds}s</p>{#if pendingService.turnstile}<ServiceChallenge endpoint={serviceEndpoint(pendingService.id)} version={tool.version} sha256={tool.bundle.sha256} {locale} onToken={(token) => verificationToken = token} />{/if}{/if}
     {#if pending.operation === 'clipboard-write'}<pre>{(pending.payload as string).slice(0, 240)}</pre>{/if}
+    {#if pending.operation === 'wiki-read'}<p>{locale === 'id' ? 'Situs tujuan akan menerima permintaan dari browser Anda. Tidak ada proxy server.' : 'Your browser will contact this wiki directly. No server proxy is used.'}</p><pre>{(pending.payload as WikiReadRequest).site}
+{(pending.payload as WikiReadRequest).title}</pre>{/if}
     {#if pending.operation === 'downloads'}<p>{(pending.payload as { filename: string }).filename} · {(pending.payload as { mime: string }).mime} · {((pending.payload as { bytes: ArrayBuffer }).bytes.byteLength / 1024).toFixed(1)} KiB</p>{/if}
     {#if pending.operation === 'camera-capture' && cameraStage !== 'off'}
       <p>{locale === 'id' ? 'Foto hanya dikirim ke alat setelah Anda menekan Ambil foto.' : 'Only the photo you capture is sent to this tool.'}</p>
