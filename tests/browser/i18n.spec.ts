@@ -4,7 +4,8 @@ test('English pages retain the original unprefixed URLs', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.getByRole('heading', { name: /what can we help with/i })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Bahasa Indonesia' })).toHaveAttribute('href', '/id/');
+  const languagePicker = page.getByRole('combobox', { name: /Languages: English/ });
+  await expect(languagePicker.locator('option[value="id"]')).toHaveText('🇮🇩 Bahasa Indonesia');
 });
 
 test('Indonesian catalog and legal pages are prerendered at /id/', async ({ page }) => {
