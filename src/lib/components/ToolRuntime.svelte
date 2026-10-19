@@ -480,9 +480,10 @@
       if (request.operation === 'wiki-read' && 'image' in (request.payload as object)) {
         // Pictures are only served for a wiki origin the user already approved this session.
         const payload = request.payload as WikiImageRequest;
-        let allowed = false;
-        try { wikiImageUrl(payload); allowed = approvedWikiOrigins.has(wikiOrigin({ site: payload.site, title: 'x', endpoint: '/w/api.php' })); } catch { allowed = false; }
-        if (!allowed) { inFlight.delete(request.id); reply(request, false, undefined, 'denied'); return; }
+        // A URL the broker will never serve is an invalid request for that picture; only an unapproved wiki is a refusal.
+        let valid = true, approved = false;
+        try { wikiImageUrl(payload); approved = approvedWikiOrigins.has(wikiOrigin({ site: payload.site, title: 'x', endpoint: '/w/api.php' })); } catch { valid = false; }
+        if (!valid || !approved) { inFlight.delete(request.id); reply(request, false, undefined, valid ? 'denied' : 'invalid-request'); return; }
         pending = request; pendingAsk = false;
         void approvePending();
         return;

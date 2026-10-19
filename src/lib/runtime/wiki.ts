@@ -85,7 +85,7 @@ export function wikiImageUrl(request: WikiImageRequest): string {
   try { url = new URL(request.image); } catch { throw new RuntimeFailure('invalid-request'); }
   const siteHost = new URL(origin).hostname.toLowerCase();
   const host = url.hostname.toLowerCase();
-  const allowed = host === siteHost || (WIKIMEDIA_SITE.test(siteHost) && host === 'upload.wikimedia.org');
+  const allowed = host === siteHost || (WIKIMEDIA_SITE.test(siteHost) && /^(?:[a-z0-9-]+\.)?wikimedia\.org$/.test(host));
   if (url.protocol !== 'https:' || url.username || url.password || url.port || !allowed || request.image.length > 1500 || /[\u0000-\u001f\u007f\s]/.test(request.image)) throw new RuntimeFailure('invalid-request');
   url.hash = '';
   return url.href;

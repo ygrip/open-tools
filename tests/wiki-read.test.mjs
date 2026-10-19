@@ -32,6 +32,7 @@ test('rejects malformed, oversize and invalid responses',async()=>{
  for(const response of mocks)await assert.rejects(fetchWikiArticle(input,new AbortController().signal,async()=>response));
 });
 
+test('Wikimedia project hosts such as maps.wikimedia.org are allowed for Wikimedia wikis',()=>{assert.ok(wikiImageUrl({site:'https://en.wikipedia.org',image:'https://maps.wikimedia.org/img/a.png'}));assert.throws(()=>wikiImageUrl({site:'https://en.wikipedia.org',image:'https://evilwikimedia.org/a.png'}));});
 test('image broker only serves raster images from the approved wiki or Wikimedia upload host',async()=>{
  const site='https://en.wikipedia.org';
  assert.equal(wikiImageUrl({site,image:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Ada.jpg/220px-Ada.jpg'}).startsWith('https://upload.wikimedia.org/'),true);
