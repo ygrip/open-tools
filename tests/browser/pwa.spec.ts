@@ -109,7 +109,7 @@ test('desktop language dropdown shows flags and preserves the current route', as
   await expect(options.locator('a[hreflang="en"] .language-flag')).toHaveText('🇬🇧');
   await expect(options.locator('a[hreflang="id"] .language-flag')).toHaveText('🇮🇩');
   await page.keyboard.press('Escape');
-  await expect(options).toHaveCount(0);
+  await expect(options).toBeHidden();
   await expect(trigger).toBeFocused();
   await trigger.click();
   await options.locator('a[hreflang="id"]').click();
