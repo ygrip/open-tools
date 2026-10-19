@@ -61,6 +61,24 @@ export function validateManifest(manifest) {
   if (!['stable', 'beta', 'experimental'].includes(manifest.status)) throw new Error('invalid status');
   if (typeof manifest.repository !== 'string' || !/^https:\/\/github\.com\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(manifest.repository)) throw new Error('invalid repository');
   if (typeof manifest.version !== 'string' || manifest.version.length > 80 || !/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(manifest.version)) throw new Error('invalid version');
+
+  // Tool-owned catalog art is build-time content, never a runtime/network permission.
+  // Check both the immutable file reference and its exact bytes in loadSource.
+  let artwork;
+  if (manifest.artwork !== undefined) {
+    if (manifest.schemaVersion !== 3) throw new Error('artwork requires schemaVersion 3');
+    const art = object(manifest.artwork, 'artwork');
+    if (Object.keys(art).some((key) => key !== 'icon')) throw new Error('unsupported artwork field');
+    const icon = object(art.icon, 'artwork icon');
+    if (Object.keys(icon).some((key) => !['file', 'sha256', 'bytes'].includes(key)) ||
+        typeof icon.file !== 'string' || !/^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.webp$/.test(icon.file) ||
+        typeof icon.sha256 !== 'string' || !digest.test(icon.sha256) ||
+        !Number.isSafeInteger(icon.bytes) || icon.bytes < 16 || icon.bytes > 12_000) {
+      throw new Error('invalid artwork icon');
+    }
+    artwork = { icon: { file: icon.file, sha256: icon.sha256, bytes: icon.bytes } };
+  }
+
   const capabilities = texts(manifest.capabilities, 20, 80, 'capabilities');
   const bundle = manifest.bundle;
   if (!bundle || bundle.format !== 'html' || typeof bundle.file !== 'string' || !/^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.html$/.test(bundle.file)) throw new Error('bundle must be a relative, self-contained HTML file');
@@ -134,7 +152,8 @@ export function validateManifest(manifest) {
     schemaVersion: manifest.schemaVersion, runtimeVersion: 1, locales: [...locales], appearance: { theme: 'host', protocolVersion: 1 },
     id: manifest.id, name, description, path: manifest.path, category: manifest.category, repository: manifest.repository,
     version: manifest.version, status: manifest.status, capabilities, icon, seo: toolSeo, guide: toolGuide, permissions, assets, services, translations,
-    bundle: { format: 'html', file: bundle.file, sha256: bundle.sha256 }
+    bundle: { format: 'html', file: bundle.file, sha256: bundle.sha256 },
+    ...(artwork ? { artwork } : {})
   };
 }
 
