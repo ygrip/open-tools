@@ -85,6 +85,7 @@ Supported permission names:
 - `clipboard-read` and `clipboard-write`: host-mediated text access with a remembered first-use permission decision.
 - `geolocation`: host-routed position access. The host shows the browser/OS prompt when needed, guidance when the site is blocked, a preview, and a precise/approximate choice before anything reaches the tool.
 - `services`: invoke only features declared in the optional `services` array through the host broker. Each declares an allowlisted handler, a per-feature native rate limit and a Turnstile requirement. The Worker enforces the generated policy; see [protected services](protected-services.md).
+- `wiki-read`: a consent-mediated browser-only fetch of a specific public MediaWiki article. The host validates the HTTPS wiki origin, article title, restricted Action API paths and CORS response; no arbitrary tool network access or server proxy. Each origin needs approval per runtime session. Unsupported wiki CORS fails closed.
 - `downloads`: a confirmed host download of bounded bytes, including PNG and SVG; never a remote URL.
 - `camera-capture`: a one-shot host camera preview that captures a bounded PNG only after user approval; the opaque iframe never gets the camera stream.
 - `share-image`: native share sheet for a generated PNG only, with a remembered first-use permission decision and browser fallback.
