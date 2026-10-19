@@ -1,5 +1,5 @@
 export const reservedIds = new Set(['api', 'policy', 'privacy', 'terms', 'bundles', 'icons', 'brand', 'illustrations', 'index', '404', '500', '503', '_app', 'offline', 'manifest', 'manifest-webmanifest', 'service-worker', 'pwa', 'id', 'og', 'robots', 'sitemap']);
-export const permissionNames = new Set(['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'external-assets', 'wasm', 'workers', 'services']);
+export const permissionNames = new Set(['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'external-assets', 'wasm', 'workers', 'services', 'wiki-read']);
 export const iconNames = new Set(['braces', 'toolbox', 'grid', 'sparkles', 'bolt', 'heart', 'filter', 'lock', 'shield', 'search']);
 export const MAX_ASSET_BYTES = 64 * 1024 * 1024;
 export const MAX_TOTAL_ASSET_BYTES = 128 * 1024 * 1024;

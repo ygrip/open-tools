@@ -51,7 +51,9 @@ const HOST_JS_BASELINE_TOOLS = 18;
 // reviewable 512-byte allowance without loosening per-tool bundle ceilings.
 // User-approved PWA reinstall/activation + automatic refresh adds under 768 bytes gzip
 // to the shared host, with no additional per-tool JavaScript.
-const HOST_JS_BUDGET = 145_512 + 768;
+// Scoped MediaWiki CORS browser-read broker adds <=768 gzip bytes to the shared host;
+// the per-tool entry, iframe bundle and artwork ceilings remain unchanged.
+const HOST_JS_BUDGET = 145_512 + 768 + 768;
 const TOOL_JS_ALLOWANCE = 1_024;
 const MAX_TOOL_ENTRY_GZIP = 4_096;
 for (const tool of catalog) {
