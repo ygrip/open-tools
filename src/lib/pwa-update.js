@@ -10,9 +10,10 @@
  */
 function waitForState(worker, completed, timeoutMs, start) {
   return new Promise((resolve, reject) => {
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
     let timer;
     const cleanup = () => {
-      clearTimeout(timer);
+      if (timer !== undefined) clearTimeout(timer);
       worker.removeEventListener('statechange', check);
     };
     const check = () => {
@@ -21,7 +22,7 @@ function waitForState(worker, completed, timeoutMs, start) {
         reject(new Error('The replacement service worker could not install.'));
       } else if (completed(worker.state)) {
         cleanup();
-        resolve();
+        resolve(undefined);
       }
     };
     worker.addEventListener('statechange', check);
