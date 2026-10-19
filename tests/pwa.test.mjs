@@ -21,7 +21,7 @@ test('private, varying, and failed responses never enter the offline cache', () 
   for (const status of [401, 404, 500, 503]) assert.equal(cacheableResponse(new Response('error', { status })), false);
   for (const headers of [{ 'cache-control': 'no-store' }, { 'cache-control': 'private' }, { vary: 'Cookie' }, { vary: '*' }, { 'set-cookie': 'private=yes' }]) assert.equal(cacheableResponse(new Response('private', { headers })), false);
 });
-test('PWA metadata and service-worker lifecycle require an explicit update action', async () => {
+test('PWA metadata and service-worker lifecycle protect existing tool sessions', async () => {
   const manifest = JSON.parse(await readFile(new URL('../static/manifest.webmanifest', import.meta.url), 'utf8'));
   assert.equal(manifest.name, 'trick-it');
   assert.equal(manifest.display, 'standalone');
@@ -71,7 +71,7 @@ test('PWA install skips Cloudflare config and defers nonessential artwork', asyn
 
 test('Cloudflare never stores mutable deployment discovery URLs', async () => {
   const headers = await readFile(new URL('../static/_headers', import.meta.url), 'utf8');
-  assert.match(headers, /\\/_app\\/version\\.json\\s+Cache-Control: no-store/);
-  assert.match(headers, /\\/service-worker\\.js\\s+Cache-Control: no-cache/);
-  assert.match(headers, /\\/bundles\\/\\*\\s+Cache-Control: public, max-age=31536000, immutable/);
+  assert.match(headers, /\/_app\/version\.json\s+Cache-Control: no-store/);
+  assert.match(headers, /\/service-worker\.js\s+Cache-Control: no-cache/);
+  assert.match(headers, /\/bundles\/\*\s+Cache-Control: public, max-age=31536000, immutable/);
 });
