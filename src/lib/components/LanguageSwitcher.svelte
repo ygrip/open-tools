@@ -9,7 +9,8 @@
   let { dropdown = false }: { dropdown?: boolean } = $props();
   const labels: Record<string, string> = { en: 'English', id: 'Bahasa Indonesia' };
   const flags: Record<string, string> = { en: '🇬🇧', id: '🇮🇩' };
-  const listId = `${$props.id()}-languages`;
+  const uid = $props.id();
+  const listId = `${uid}-languages`;
   let open = $state(false);
   let root: HTMLElement | undefined;
   let trigger: HTMLButtonElement | undefined;
