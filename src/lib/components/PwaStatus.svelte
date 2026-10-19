@@ -4,7 +4,7 @@
   import { updated } from '$app/state';
   import { dev, version } from '$app/environment';
   import { m } from '$lib/paraglide/messages.js';
-  import { applyPwaUpdate } from '$lib/pwa-update.js';
+  import { applyPwaUpdate, canAutoRefreshCatalog } from '$lib/pwa-update.js';
   type InstallEvent = Event & { prompt(): Promise<void>; userChoice: Promise<{ outcome: string }> };
   let prompt = $state<InstallEvent | null>(null);
   let waiting = $state<ServiceWorker | null>(null);
@@ -30,24 +30,40 @@
   onMount(() => {
     let disposed = false;
     const cleanup: (() => void)[] = [];
-    // SvelteKit version polling covers SPA-only releases; the worker owns offline-shell updates.
-    let lastVersionCheck = Date.now();
-    const checkSpaVersion = () => {
-      if (disposed || dev || !navigator.onLine || document.visibilityState !== 'visible' || Date.now() - lastVersionCheck < 60_000) return;
-      lastVersionCheck = Date.now();
+    // Check both build version metadata and the worker itself. A registry-only
+    // change can produce a new offline shell without any user navigation.
+    // The previous implementation waited for focus after one minute and then
+    // polled only every five minutes, leaving installed catalogs stale.
+    let lastUpdateCheck = 0;
+    const checkDeployment = () => {
+      if (disposed || dev || !navigator.onLine || document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastUpdateCheck < 60_000) return;
+      lastUpdateCheck = now;
       void updated.check().then((isNew) => {
-        if (!disposed && isNew) {
-          spaUpdate = true; updateDismissed = false;
-          if (navigator.serviceWorker?.controller) void navigator.serviceWorker.getRegistration().then((r) => r?.update()).catch(() => {});
-        }
-      }).catch(() => { /* Offline version checks must not interrupt a tool. */ });
+        if (!disposed && isNew) { spaUpdate = true; updateDismissed = false; }
+      }).catch(() => { /* Offline or transient network failures are nonfatal. */ });
+      // Do not rely on the SPA version probe alone: check for a waiting worker
+      // even when an old release's version.json was once cached locally.
+      if (navigator.serviceWorker?.controller) {
+        void navigator.serviceWorker.getRegistration().then((registration) => {
+          if (!disposed && registration && !registration.waiting && !registration.installing) return registration.update();
+        }).catch(() => { /* Keep the currently working offline release. */ });
+      }
     };
-    window.addEventListener('focus', checkSpaVersion);
-    document.addEventListener('visibilitychange', checkSpaVersion);
-    const versionTimer = window.setInterval(checkSpaVersion, 5 * 60_000);
+    const resumedOnline = () => { lastUpdateCheck = 0; checkDeployment(); };
+    window.addEventListener('focus', checkDeployment);
+    document.addEventListener('visibilitychange', checkDeployment);
+    window.addEventListener('online', resumedOnline);
+    const versionTimer = window.setInterval(checkDeployment, 60_000);
+    // Do not delay the initial check for an entire poll interval on a stale tab.
+    if (document.readyState === 'complete') checkDeployment();
+    else window.addEventListener('load', checkDeployment, { once: true });
     cleanup.push(() => {
-      window.removeEventListener('focus', checkSpaVersion);
-      document.removeEventListener('visibilitychange', checkSpaVersion);
+      window.removeEventListener('focus', checkDeployment);
+      document.removeEventListener('visibilitychange', checkDeployment);
+      window.removeEventListener('online', resumedOnline);
+      window.removeEventListener('load', checkDeployment);
       clearInterval(versionTimer);
     });
     controlled = Boolean(navigator.serviceWorker?.controller);
@@ -112,6 +128,20 @@
       navigator.serviceWorker?.removeEventListener('message', failed);
       for (const remove of cleanup) remove();
     };
+  });
+
+  // A homepage/catalog has no running tool frame. Apply newly published tools
+  // without forcing visitors to clear caches or click an update button. When a
+  // tool is open, or a search/modal is in use, the normal approval UI remains.
+  let automaticAttempted = false;
+  $effect(() => {
+    if (!hasUpdate) { automaticAttempted = false; return; }
+    if (automaticAttempted || updating || updateError || updateDismissed || !navigator.onLine || document.visibilityState !== 'visible') return;
+    const focused = document.activeElement;
+    const busyWithInput = Boolean(focused?.matches('input, textarea, select, [contenteditable], [contenteditable] *') || document.querySelector('[aria-modal="true"]'));
+    if (!canAutoRefreshCatalog(location.pathname, base, busyWithInput)) return;
+    automaticAttempted = true;
+    void prepareUpdate();
   });
 
   async function prepareUpdate() {
