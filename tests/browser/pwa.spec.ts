@@ -82,6 +82,53 @@ test('PWA update waits for approval, installs, then refreshes the app automatica
 });
 
 
+test('idle catalog automatically installs a waiting release', async ({ page }) => {
+  test.setTimeout(90_000);
+  const version = (await (await fetch(`${preview}/_app/version.json`)).json()).version as string;
+  let updated = false;
+  const server = createServer(async (request, response) => {
+    try {
+      const upstream = await fetch(`${preview}${request.url?.startsWith('/') ? request.url : '/'}`);
+      let body = Buffer.from(await upstream.arrayBuffer());
+      if (request.url === '/service-worker.js' && updated) {
+        const source = body.toString('utf8');
+        if (!source.includes(version)) throw new Error('Compiled worker version missing');
+        body = Buffer.from(source.replaceAll(version, `${version}-catalog-update`));
+      }
+      const headers = Object.fromEntries(upstream.headers);
+      delete headers['content-encoding']; delete headers['transfer-encoding']; delete headers['content-length'];
+      if (request.url === '/service-worker.js') headers['cache-control'] = 'no-store';
+      response.writeHead(upstream.status, { ...headers, 'content-length': String(body.length) });
+      response.end(body);
+    } catch { response.writeHead(503); response.end('Test proxy unavailable'); }
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('Test server missing');
+  const origin = `http://127.0.0.1:${address.port}`;
+  try {
+    await page.goto(`${origin}/`);
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    // The first visit installs the worker; a reload creates a controlled, older catalog tab.
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+    await page.evaluate(() => { (window as unknown as { updateMarker: number }).updateMarker = 42; });
+    updated = true;
+    await Promise.all([
+      page.waitForEvent('framenavigated', frame => frame === page.mainFrame()),
+      page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration())!.update(); })
+    ]);
+    await expect(page).toHaveURL(`${origin}/`);
+    expect(await page.evaluate(() => (window as unknown as { updateMarker?: number }).updateMarker)).toBeUndefined();
+    const caches = await page.evaluate(() => window.caches.keys());
+    expect(caches).toContain(`trick-it-shell-${version}-catalog-update`);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+
 test('install affordance floats above the footer and respects the native install result', async ({ page }) => {
   await page.goto('/');
   const card = page.getByRole('button', { name: 'Install trick-it' });
