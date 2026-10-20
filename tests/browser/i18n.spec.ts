@@ -34,8 +34,7 @@ test('language switching preserves tool route and isolated bundle', async ({ pag
   await expect(page.locator('html')).toHaveAttribute('lang', 'id');
   await expect(page.getByRole('link', { name: 'Kembali ke kotak alat' })).toBeVisible();
   await expect(page.locator('iframe[sandbox="allow-scripts"]')).toBeVisible();
-  await page.getByRole('button', { name: 'Bahasa: Bahasa Indonesia' }).click();
-  await page.getByRole('group', { name: 'Bahasa' }).getByRole('link', { name: 'English' }).click();
+  await page.getByRole('link', { name: 'English' }).click();
   await expect(page).toHaveURL(/\/json-tools\/?$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });
