@@ -1,4 +1,5 @@
 import type { ToolService } from '../registry/types';
+import { pruneAssetCaches, touchAssetCache } from './asset-cache.js';
 export type PermissionName = 'clipboard-read' | 'clipboard-write' | 'geolocation' | 'downloads' | 'camera-capture' | 'share-image' | 'external-assets' | 'wasm' | 'workers' | 'services' | 'wiki-read' | 'dns-query';
 export type RuntimePermission = { name: PermissionName; reason: string; required: boolean };
 export type RuntimeAsset = { id: string; url: string; sha256: string; bytes: number; type: 'wasm' | 'script' | 'worker' | 'data'; defer: boolean };
@@ -93,9 +94,11 @@ async function readAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetO
   const url = assetRequestUrl(asset);
   const name = `trick-it-assets-${tool.id}-${tool.version}-${tool.bundle.sha256}`;
   let cache: Cache | undefined;
+  let storage: CacheStorage | null | undefined;
   try {
-    const storage = options.cacheStorage === undefined ? globalThis.caches : options.cacheStorage;
+    storage = options.cacheStorage === undefined ? globalThis.caches : options.cacheStorage;
     if (!storage) throw new Error('CacheStorage unavailable');
+    await pruneAssetCaches(storage, name).catch(() => undefined);
     cache = await storage.open(name);
   } catch { onWarning?.('cache-unavailable'); }
   if (cache) {
@@ -108,6 +111,7 @@ async function readAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetO
         onProgress?.(bytes.length, 'verifying');
         if (await sha256(bytes) !== asset.sha256) throw new RuntimeFailure('integrity');
         checkAbort(signal);
+        touchAssetCache(name);
         return bytes;
       } catch (error) {
         if (signal.aborted) throw new RuntimeFailure('aborted');
@@ -127,8 +131,11 @@ async function readAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetO
   if (await sha256(bytes) !== asset.sha256) throw new RuntimeFailure('integrity');
   checkAbort(signal);
   if (cache && !/no-store|private/i.test(response.headers.get('cache-control') || '')) {
-    try { await cache.put(url, new Response(new Uint8Array(bytes), { headers: { 'content-type': 'application/octet-stream' } })); }
-    catch { onWarning?.('cache-unavailable'); }
+    try {
+      await cache.put(url, new Response(new Uint8Array(bytes), { headers: { 'content-type': 'application/octet-stream', 'x-trick-it-asset-bytes': String(bytes.byteLength) } }));
+      touchAssetCache(name);
+      if (storage) await pruneAssetCaches(storage, name).catch(() => undefined);
+    } catch { onWarning?.('cache-unavailable'); }
   } else if (cache) onWarning?.('cache-unavailable');
   return bytes;
 }
