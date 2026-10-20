@@ -94,7 +94,7 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
       if (request.focusTarget?.isConnected && document.hasFocus() && document.activeElement === document.body) focusElement.call(request.focusTarget, { preventScroll: true });
       if (data.ok === true) request.resolve(data.value); else request.reject(Object.assign(new Error('The requested capability was denied or could not complete.'), { code: typeof data.error === 'string' ? data.error : 'request' }));
     });
-    function request(operation, payload, onProgress) {
+    function request(operation, payload, onProgress, transfer = []) {
       const hostUi = operation === 'ui-toast' || operation === 'ui-dialog';
       if (!config.token || (!hostUi && operation !== 'asset' && !config.permissions.includes(operation)) || (operation === 'asset' && !config.permissions.includes('external-assets'))) return Promise.reject(new Error('Permission not granted.'));
       if (pending.size >= 16) return Promise.reject(new Error('Too many pending requests.'));
@@ -103,13 +103,36 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
         const timer = setTimeout(() => { pending.delete(id); reject(new Error('Capability request timed out.')); }, 330000);
         const focusTarget = operation !== 'asset' && operation !== 'ui-toast' && document.activeElement instanceof HTMLElement ? document.activeElement : null;
         pending.set(id, { resolve, reject, timer, operation, onProgress, focusTarget });
-        try { parent.postMessage({ type: 'trick-it:request', version: 1, token: config.token, id, operation, payload }, '*'); }
+        try { parent.postMessage({ type: 'trick-it:request', version: 1, token: config.token, id, operation, payload }, '*', transfer); }
         catch { clearTimeout(timer); pending.delete(id); reject(new Error('Invalid capability payload.')); }
       });
     }
 ${tableScript}
 ${uiKitScript}
-    Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, ui, asset: (id, options = {}) => request('asset', { id }, options.onProgress), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
+    async function downloadStream({ filename, mime, size, chunks }) {
+      if (!config.permissions.includes('downloads')) throw new Error('Download permission was not declared.');
+      if (!chunks || typeof chunks[Symbol.asyncIterator] !== 'function') throw new Error('chunks must be an async iterable.');
+      const { streamId } = await request('download-begin', { filename, mime, size });
+      try {
+        let sent = 0;
+        for await (const part of chunks) {
+          const view = part instanceof ArrayBuffer ? new Uint8Array(part) : part;
+          if (!(view instanceof Uint8Array)) throw new Error('Invalid export chunk.');
+          for (let start = 0; start < view.byteLength; start += 1048576) {
+            const buffer = view.slice(start, start + 1048576).buffer;
+            sent += buffer.byteLength;
+            if (sent > size) throw new Error('Export exceeds declared size.');
+            await request('download-chunk', { streamId, bytes: buffer }, undefined, [buffer]);
+          }
+        }
+        if (sent !== size) throw new Error('Export size does not match declaration.');
+        await request('download-end', { streamId });
+      } catch (error) {
+        await request('download-cancel', { streamId }).catch(() => undefined);
+        throw error;
+      }
+    }
+    Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, downloadStream, ui, asset: (id, options = {}) => request('asset', { id }, options.onProgress), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
   })();`;
   // The parent cannot measure an opaque sandbox. Send only the height of the
   // tool's rendered document, never DOM/content, through the session channel.
