@@ -13,7 +13,8 @@
   let { popover = false }: { popover?: boolean } = $props();
   type Locale = (typeof locales)[number];
   const labels: Record<Locale, string> = { en: 'English', id: 'Bahasa Indonesia' };
-  const panelId = $props.id() + '-language-panel';
+  const uid = $props.id();
+  const panelId = uid + '-language-panel';
   let open = $state(false);
   let root: HTMLElement;
   let trigger: HTMLButtonElement;
