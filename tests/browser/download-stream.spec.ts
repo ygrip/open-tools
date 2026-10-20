@@ -33,6 +33,19 @@ test('streams a 17 MiB export in acknowledged chunks without crossing the legacy
   expect(await result).toBe(true);
   expect(await page.evaluate(() => (window as unknown as { __downloadBytes: number }).__downloadBytes)).toBe(17 * 1024 * 1024);
   expect(await page.evaluate(() => (window as unknown as { __closed: boolean }).__closed)).toBe(true);
+
+  // The grant is remembered, but the host must still present a trusted click
+  // for Chrome's save-file picker on every subsequent export.
+  const again = frame.evaluate(async () => {
+    const { trickIt } = window as unknown as { trickIt: { downloadStream(options: unknown): Promise<void> } };
+    async function* chunks() { yield new Uint8Array([5, 6]); }
+    await trickIt.downloadStream({ filename: 'again.zip', mime: 'application/zip', size: 2, chunks: chunks() });
+    return true;
+  });
+  await expect(page.getByRole('dialog', { name: 'Allow this tool action?' })).toContainText('again.zip');
+  await page.getByRole('button', { name: 'Allow', exact: true }).click();
+  expect(await again).toBe(true);
+  expect(await page.evaluate(() => (window as unknown as { __downloadBytes: number }).__downloadBytes)).toBe(17 * 1024 * 1024 + 2);
 });
 
 test('a short stream is rejected and aborts its pending writable', async ({ page }) => {
