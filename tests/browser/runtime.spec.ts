@@ -359,6 +359,36 @@ test('tools show centred host popups, toasts and inline clay status through tric
   expect(await frame.evaluate(() => { const p = document.createElement('p'); p.textContent = 'https://developer.chrome.com/docs/' + 'x'.repeat(400); document.body.append(p); return document.documentElement.scrollWidth <= document.documentElement.clientWidth; })).toBe(true);
 });
 
+for (const reducedMotion of ['reduce', 'no-preference'] as const) {
+  test(`confirmation dismissal restores tool focus before resolving (${reducedMotion})`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion });
+    await mountFixture(page);
+    const inner = page.frameLocator('iframe');
+    await expect(inner.getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+    const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+    await frame.evaluate(() => {
+      const button = document.createElement('button');
+      button.id = 'confirm-focus';
+      button.textContent = 'Open confirmation';
+      button.addEventListener('click', async () => {
+        const sdk = (window as unknown as { trickIt: { ui: { confirm: (options: unknown) => Promise<boolean> } } }).trickIt;
+        const confirmed = await sdk.ui.confirm({ title: 'Confirm focus lifecycle' });
+        button.dataset.answer = String(confirmed);
+        button.dataset.focusedAtResponse = String(document.hasFocus() && document.activeElement === button);
+      });
+      document.body.append(button);
+    });
+    const action = inner.locator('#confirm-focus');
+    await action.click();
+    await expect(page.getByRole('dialog', { name: 'Confirm focus lifecycle' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(action).toHaveAttribute('data-answer', 'false');
+    await expect(action).toHaveAttribute('data-focused-at-response', 'true');
+    await expect(action).toBeFocused();
+    await expect(page.locator('dialog[open]')).toHaveCount(0);
+  });
+}
+
 test('shared toasts and status cards never duplicate and can be closed', async ({ page }) => {
   await mountFixture(page);
   await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();

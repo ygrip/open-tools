@@ -11,6 +11,22 @@
   let closing: ReturnType<typeof setTimeout> | undefined;
   const dialog = $derived(hostUi.dialog);
 
+  function dismissDialog(value: boolean) {
+    if (closing) return;
+    phase = 'is-closing';
+    let duration = 150;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) duration = 0;
+    closing = setTimeout(() => {
+      closing = undefined;
+      element?.close();
+      phase = '';
+      if (returnFocus?.isConnected) returnFocus.focus();
+      // Reply only after the modal releases focus. Otherwise its delayed close
+      // overwrites the tool control restored by the SDK's response handler.
+      closeDialog(value);
+    }, duration);
+  }
+
   $effect(() => {
     if (!element) return;
     if (dialog) {
@@ -40,7 +56,7 @@
 </div>
 
 <dialog bind:this={element} class="host-dialog surface t-modal {phase}" aria-labelledby="host-dialog-title" data-tone={dialog?.tone ?? 'default'}
-  oncancel={(event) => { event.preventDefault(); closeDialog(false); }}>
+  oncancel={(event) => { event.preventDefault(); dismissDialog(false); }}>
   {#if dialog}
     {#if dialog.source}
       <p class="host-dialog-source"><ToolArt id={dialog.source.id} icon={(dialog.source.icon ?? 'sparkles') as ToolIcon} size={28} /> {m.ui_from_tool({ tool: dialog.source.name })}</p>
@@ -53,8 +69,8 @@
       </svelte:element>
     {/if}
     <div class="host-dialog-actions">
-      {#if dialog.kind === 'confirm'}<button class="clay-button" type="button" onclick={() => closeDialog(false)}>{dialog.cancelLabel || m.ui_cancel()}</button>{/if}
-      <button class="clay-button primary" class:danger={dialog.tone === 'danger'} type="button" onclick={() => closeDialog(true)}>{dialog.confirmLabel || (dialog.kind === 'info' ? m.ui_got_it() : m.ui_continue())}</button>
+      {#if dialog.kind === 'confirm'}<button class="clay-button" type="button" onclick={() => dismissDialog(false)}>{dialog.cancelLabel || m.ui_cancel()}</button>{/if}
+      <button class="clay-button primary" class:danger={dialog.tone === 'danger'} type="button" onclick={() => dismissDialog(true)}>{dialog.confirmLabel || (dialog.kind === 'info' ? m.ui_got_it() : m.ui_continue())}</button>
     </div>
   {/if}
 </dialog>
