@@ -7,7 +7,7 @@ export type RuntimeTool = {
   permissions?: RuntimePermission[]; assets?: RuntimeAsset[]; services?: ToolService[];
   guide?: { summary: string; steps: string[] };
 };
-export type RuntimeErrorCode = 'request' | 'invalid-bundle' | 'integrity' | 'size' | 'invalid-asset' | 'aborted' | 'denied' | 'invalid-request' | 'busy' | 'unsupported' | 'timeout' | 'quota' | 'audit-failed' | 'verification' | 'stale-release';
+export type RuntimeErrorCode = 'request' | 'invalid-bundle' | 'integrity' | 'size' | 'invalid-asset' | 'aborted' | 'denied' | 'invalid-request' | 'busy' | 'unsupported' | 'timeout' | 'quota' | 'unavailable' | 'audit-failed' | 'verification' | 'stale-release';
 export type CacheWarning = 'cache-unavailable' | 'cache-corrupt';
 export class RuntimeFailure extends Error {
   constructor(public code: RuntimeErrorCode, public status?: number) { super(code); this.name = 'RuntimeFailure'; }
@@ -225,7 +225,7 @@ export async function runService(endpoint: string, payload: unknown, signal: Abo
       let code: unknown;
       if (response.status === 403) { try { code = (JSON.parse(new TextDecoder().decode(await readBounded(response, 1024, controller.signal))) as { error?: unknown })?.error; } catch { code = undefined; } }
       await response.body?.cancel().catch(() => undefined);
-      throw new RuntimeFailure(response.status === 429 ? 'quota' : response.status === 403 ? (code === 'verification' ? 'verification' : 'request') : response.status === 409 ? 'stale-release' : response.status === 504 ? 'timeout' : 'audit-failed', response.status);
+      throw new RuntimeFailure(response.status === 429 ? 'quota' : response.status === 403 ? (code === 'verification' ? 'verification' : 'request') : response.status === 409 ? 'stale-release' : response.status === 504 ? 'timeout' : response.status === 400 ? 'invalid-request' : response.status === 503 ? 'unavailable' : 'audit-failed', response.status);
     }
     const data = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await readBounded(response, 512 * 1024, controller.signal)));
     if (!data || typeof data !== 'object' || Array.isArray(data)) throw new RuntimeFailure('request');

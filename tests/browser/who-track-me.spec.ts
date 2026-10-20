@@ -143,6 +143,8 @@ test('Indonesian errors appear in host toasts, not just inside the iframe',async
 for(const scenario of [
   {name:'rate limit',status:429,error:'rate-limit',message:'Batas pemeriksaan tercapai. Coba lagi nanti.'},
   {name:'expired security check',status:403,error:'verification',message:'Verifikasi keamanan gagal atau kedaluwarsa.'},
+  {name:'rejected URL',status:400,error:'invalid-url',message:'URL ditolak.'},
+  {name:'service unavailable',status:503,error:'unavailable',message:'Layanan pemeriksaan sementara tidak tersedia.'},
   {name:'unreachable site',status:502,error:'audit-failed',message:'Pemeriksaan situs tidak selesai.'}
 ]){
   test('Indonesian ' + scenario.name + ' response explains failure and keeps URL',async({page})=>{
