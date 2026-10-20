@@ -17,6 +17,7 @@ test('streams a 17 MiB export in acknowledged chunks without crossing the legacy
     });
   });
   await mountFixture(page, { permissions: [{ name: 'downloads', reason: 'Save an export.', required: false }] });
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
   const frame = page.frames().find(item => item !== page.mainFrame())!;
   const result = frame.evaluate(async () => {
     const { trickIt } = window as unknown as {
@@ -61,6 +62,7 @@ test('a short stream is rejected and aborts its pending writable', async ({ page
     });
   });
   await mountFixture(page, { permissions: [{ name: 'downloads', reason: 'Save an export.', required: false }] });
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
   const frame = page.frames().find(item => item !== page.mainFrame())!;
   const task = frame.evaluate(async () => {
     const { trickIt } = window as unknown as { trickIt: { downloadStream(options: unknown): Promise<void> } };
