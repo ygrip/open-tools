@@ -128,3 +128,46 @@ test('Indonesian copy covers a finished scan and switches language without losin
   await expect(tool.locator('#table-title')).toHaveText('Domain dan pelacak teridentifikasi');
   expect(requests).toBe(1);
 });
+
+
+test('Indonesian errors appear in host toasts, not just inside the iframe',async({page})=>{
+  await page.goto('/id/who-track-me/');
+  const tool=page.frameLocator('iframe');
+  await expect(tool.locator('#run-audit')).toHaveText('Periksa situs →');
+  await tool.locator('#website').fill('localhost');
+  await tool.locator('#run-audit').click();
+  await expect(page.getByRole('alert').filter({hasText:'Masukkan URL situs publik'})).toBeVisible();
+  await expect(tool.locator('#run-audit')).toBeEnabled();
+});
+
+for(const scenario of [
+  {name:'rate limit',status:429,error:'rate-limit',message:'Batas pemeriksaan tercapai. Coba lagi nanti.'},
+  {name:'expired security check',status:403,error:'verification',message:'Verifikasi keamanan gagal atau kedaluwarsa.'},
+  {name:'unreachable site',status:502,error:'audit-failed',message:'Pemeriksaan situs tidak selesai.'}
+]){
+  test('Indonesian ' + scenario.name + ' response explains failure and keeps URL',async({page})=>{
+    await page.route('**/api/tools/who-track-me/audit/config?*',route=>route.fulfill({
+      json:{sitekey:'test-sitekey',action:'svc_whotrackme_test',turnstile:true,rateLimit:{limit:4,periodSeconds:60}}
+    }));
+    await page.route('https://challenges.cloudflare.com/turnstile/v0/api.js?*',route=>route.fulfill({
+      contentType:'application/javascript',
+      body:'window.turnstile={render(container,options){const b=document.createElement("button");b.textContent="Verify test";b.type="button";b.onclick=()=>options.callback("test-token");container.append(b);return "widget";},remove(){},reset(){}};'
+    }));
+    let requests=0;
+    await page.route('**/api/tools/who-track-me/audit',route=>{
+      requests++;
+      return route.fulfill({status:scenario.status,json:{error:scenario.error}});
+    });
+    await page.goto('/id/who-track-me/');
+    const tool=page.frameLocator('iframe');
+    await tool.locator('#website').fill('example.org');
+    await tool.locator('#run-audit').click();
+    await page.getByRole('button',{name:'Verify test',exact:true}).click();
+    await page.getByRole('button',{name:'Izinkan',exact:true}).click();
+    await expect(page.getByRole('alert').filter({hasText:scenario.message})).toBeVisible();
+    await expect(tool.locator('#job')).toContainText('Pemeriksaan belum selesai');
+    await expect(tool.locator('#website')).toHaveValue('example.org');
+    await expect(tool.locator('#run-audit')).toBeEnabled();
+    expect(requests).toBe(1);
+  });
+}
