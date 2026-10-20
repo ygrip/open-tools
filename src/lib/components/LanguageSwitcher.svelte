@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { tick } from 'svelte';
   import { page } from '$app/state';
   import { browser } from '$app/environment';
   import { getLocale, locales } from '$lib/paraglide/runtime.js';
@@ -33,12 +32,6 @@
     if (event.key === 'Escape' && open) {
       event.preventDefault();
       close(true);
-      return;
-    }
-    if (!open && event.target === trigger && event.key === 'ArrowDown') {
-      event.preventDefault();
-      open = true;
-      void tick().then(() => root.querySelector<HTMLAnchorElement>('.language-option')?.focus());
       return;
     }
     if (!open || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
