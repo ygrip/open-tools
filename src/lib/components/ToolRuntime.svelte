@@ -484,7 +484,8 @@
       pending = request;
       // Remembered grants run straight away; camera and location still show their
       // live preview, and protected services still need their security check.
-      if (!pendingAsk && request.operation !== 'services') void approvePending();
+      // A native save picker needs fresh user activation even when the downloads grant is remembered.
+      if (!pendingAsk && request.operation !== 'services' && request.operation !== 'download-begin') void approvePending();
     }
   }
 
@@ -580,7 +581,7 @@
 <dialog bind:this={operationDialog} class="operation-dialog surface" aria-labelledby="runtime-operation-title" oncancel={(event) => { event.preventDefault(); denyPending(); }}>
   {#if pending}
     <h2 id="runtime-operation-title">{text.confirm}</h2>
-    <p><strong>{tool.name}: {text.labels[pending.operation as keyof typeof text.labels]}</strong></p>
+    <p><strong>{tool.name}: {text.labels[(pending.operation === 'download-begin' ? 'downloads' : pending.operation) as keyof typeof text.labels]}</strong></p>
     <p>{pendingAsk ? text.rememberHelp : text.confirmHelp}</p>
     {#if pendingService && pendingInput}<p>{pendingService.handler === 'tracker-audit' ? (locale === 'id' ? 'URL publik akan diperiksa oleh Google PageSpeed Insights dan Worker trick-it. Google dapat memuat skrip halaman dalam browser uji terisolasi. Jangan gunakan URL privat atau bertanda tangan.' : 'The public URL is sent to Google PageSpeed Insights and inspected by the trick-it Worker. Google may load page scripts in an isolated test browser. Do not submit private or signed URLs.') : text.seoHelp}</p><pre>{pendingInput.url}</pre><p>{pendingInput.strategy === 'mobile' ? text.seoMobile : text.seoDesktop} · {text.serviceLimit}: {pendingService.rateLimit.limit} / {pendingService.rateLimit.periodSeconds}s</p>{#if pendingService.turnstile}<ServiceChallenge endpoint={serviceEndpoint(pendingService.id)} version={tool.version} sha256={tool.bundle.sha256} {locale} onToken={(token) => verificationToken = token} />{/if}{/if}
     {#if pending.operation === 'clipboard-write'}<pre>{(pending.payload as string).slice(0, 240)}</pre>{/if}
