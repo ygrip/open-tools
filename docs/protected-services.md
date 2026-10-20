@@ -53,6 +53,8 @@ Do not deploy only static assets or run the base config when services are enable
 
 `TURNSTILE_SECRET` is an existing Worker secret. It must never enter source, the public tool schema, frontend variables, generated config or logs. The setup created a managed widget for `tools.readynaz.com`, `localhost` and `127.0.0.1`, and stored its secret directly in the existing `trick-it` Worker. Production `TURNSTILE_HOSTNAMES` is **only** `tools.readynaz.com`; local development requires a separate ignored `.dev.vars` configuration or Cloudflare test credentials. Never allow local hostnames in production validation.
 
+The `pagespeed-seo` handler also reads the approved page once (`worker/page-inspect.mjs`): the document, `/robots.txt` and `/llms.txt`, with GET only, no cookies, at most five redirects (every hop re-validated by `worker/url-target.mjs`), a 15 s timeout, a 512 kB document cap and an allow-list of reported response headers. Only extracted, bounded facts are returned; the Worker is still not a general URL proxy and the tool input shape is unchanged. The consent text tells the user that trick-it reads the page.
+
 Google's optional `PAGESPEED_API_KEY` also belongs only in the Worker secret store. Keyless shared quota may be exhausted. Turnstile does not increase Google quota or guarantee provider availability.
 
 ## Verification

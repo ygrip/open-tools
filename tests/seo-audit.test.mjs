@@ -18,10 +18,14 @@ test('normalization keeps only category audits, nullable scores and inert bounde
   assert.throws(() => normalizeReport({ lighthouseResult: { categories: { seo: { score: null } } } }));
 });
 test('endpoint contacts only fixed Google API, with locale, category and server-side secret', async () => {
+  const pageRequests = [];
   const response = await handleAudit(req(), { ...env, PAGESPEED_API_KEY: 'test-key' }, async (url, options) => {
+    // The page itself is read by page-inspect.mjs with plain string URLs; PageSpeed gets a URL object.
+    if (typeof url === 'string') { pageRequests.push(url); return new Response('<html lang="en"><title>Hi</title>', { headers: { 'content-type': 'text/html' } }); }
     assert.equal(url.origin, 'https://www.googleapis.com');
     assert.equal(url.pathname, '/pagespeedonline/v5/runPagespeed');
     assert.equal(url.searchParams.get('category'), 'SEO');
+    assert.deepEqual(url.searchParams.getAll('category'), ['SEO', 'PERFORMANCE', 'BEST_PRACTICES', 'ACCESSIBILITY']);
     assert.equal(url.searchParams.get('locale'), 'id');
     assert.equal(url.searchParams.get('key'), 'test-key');
     // Workers' fetch throws on 'error'; a redirect must surface as a non-ok response.
@@ -30,7 +34,15 @@ test('endpoint contacts only fixed Google API, with locale, category and server-
   });
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('cache-control'), 'no-store');
-  assert.equal((await response.json()).score, 72);
+  const body = await response.json();
+  assert.equal(body.score, 72);
+  assert.equal(body.page.title, 'Hi');
+  assert.deepEqual(pageRequests.sort(), ['https://example.com/', 'https://example.com/llms.txt', 'https://example.com/robots.txt']);
+});
+test('an unreadable page never fails the Lighthouse audit', async () => {
+  const response = await handleAudit(req(), env, async url => { if (typeof url === 'string') throw new Error('network'); return Response.json(result); });
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).page, { error: 'page-unreachable' });
 });
 test('endpoint rejects cross-origin, extra fields, private URLs and oversized bodies without provider calls', async () => {
   let calls = 0; const fetcher = async () => { calls++; return Response.json(result); };

@@ -1,16 +1,13 @@
-// A fixed-provider SEO service. Never fetch the supplied URL in this Worker.
+// A fixed-provider SEO service. The supplied URL is sent to Google PageSpeed Insights and read once by
+// page-inspect.mjs, which only issues bounded, redirect-validated GET requests to that public site and
+// returns extracted facts, never the document. This Worker is not a general-purpose URL proxy.
+import { AuditFailure, validateTarget } from './url-target.mjs';
+import { text, normalizeAudit, normalizeGroup, normalizePerformance, normalizeField, networkUrls } from './psi-categories.mjs';
+import { inspectPage } from './page-inspect.mjs';
+import { detectTechnology } from './tech-detect.mjs';
+export { AuditFailure, validateTarget };
+const CATEGORIES = ['SEO', 'PERFORMANCE', 'BEST_PRACTICES', 'ACCESSIBILITY'];
 const API = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
-export class AuditFailure extends Error { constructor(code, status = 502) { super(code); this.status = status; } }
-const text = (value, max = 2000) => typeof value === 'string' ? value.slice(0, max) : '';
-export function validateTarget(value) {
-  if (typeof value !== 'string' || value.length > 2048 || /[\s\\\u0000-\u001f]/.test(value)) throw new AuditFailure('invalid-url', 400);
-  let url; try { url = new URL(value); } catch { throw new AuditFailure('invalid-url', 400); }
-  const host = url.hostname.toLowerCase().replace(/\.$/, '');
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.port || !host.includes('.') || /[:\[\]]/.test(host) || /^[\d.]+$/.test(host) || /(?:^|\.)(?:localhost|local|internal|test|invalid|example|onion|home|lan)$/.test(host)) throw new AuditFailure('invalid-url', 400);
-  // URLs are sent to Google: avoid common accidental credential-bearing links.
-  if ([...url.searchParams.keys()].some(key => /^(?:token|access_token|api_key|key|password|secret|authorization|code|signature|sig)$/i.test(key))) throw new AuditFailure('invalid-url', 400);
-  url.hash = ''; return url.href;
-}
 export async function readJson(response, maximum) {
   if (!response.body) throw new AuditFailure('invalid-report');
   const reader = response.body.getReader(); const chunks = []; let size = 0;
@@ -29,22 +26,19 @@ export async function readJson(response, maximum) {
 export function normalizeReport(data) {
   const lh = data?.lighthouseResult; const category = lh?.categories?.seo;
   if (lh?.runtimeError || !category || typeof category.score !== 'number' || !Number.isFinite(category.score) || category.score < 0 || category.score > 1 || !Array.isArray(category.auditRefs) || !category.auditRefs.length || category.auditRefs.length > 80) throw new AuditFailure('audit-failed');
-  const audits = category.auditRefs.map(ref => {
-    const audit = lh.audits?.[ref.id];
-    if (!audit) return { id: text(ref.id, 100), score: null, mode: 'error', title: '', description: '', evidence: [] };
-    const evidence = [];
-    for (const row of (Array.isArray(audit.details?.items) ? audit.details.items : []).slice(0, 8)) {
-      for (const value of Object.values(row)) {
-        const sample = typeof value === 'string' ? value : value?.snippet ?? value?.nodeLabel ?? value?.explanation;
-        if (typeof sample === 'string' && sample.trim()) evidence.push(sample.slice(0, 512));
-        if (evidence.length >= 8) break;
-      }
-      if (evidence.length >= 8) break;
-    }
-    return { id: text(ref.id, 100), score: typeof audit.score === 'number' && Number.isFinite(audit.score) && audit.score >= 0 && audit.score <= 1 ? audit.score : null,
-      mode: text(audit.scoreDisplayMode, 40), title: text(audit.title, 300), description: text(audit.description), displayValue: text(audit.displayValue, 300), evidence };
-  });
-  return { score: Math.round(category.score * 100), url: text(lh.finalUrl, 2048), fetchedAt: text(lh.fetchTime, 80), version: text(lh.lighthouseVersion, 40), warnings: Array.isArray(lh.runWarnings) ? lh.runWarnings.length : 0, audits };
+  const audits = category.auditRefs.map(ref => normalizeAudit(lh, ref));
+  const network = networkUrls(lh);
+  return {
+    score: Math.round(category.score * 100), url: text(lh.finalUrl, 2048), fetchedAt: text(lh.fetchTime, 80), version: text(lh.lighthouseVersion, 40), warnings: Array.isArray(lh.runWarnings) ? lh.runWarnings.length : 0, audits,
+    performance: normalizePerformance(lh), bestPractices: normalizeGroup(lh, 'best-practices'), accessibility: normalizeGroup(lh, 'accessibility'), field: normalizeField(data),
+    requests: network.requests, networkUrls: network.urls
+  };
+}
+/** Merge technologies seen on the page with those only visible in Lighthouse's network log. */
+export function mergeTechnology(page, urls) {
+  const known = new Set((page?.technology ?? []).map(item => item.name));
+  const fromNetwork = detectTechnology({ urls }).filter(item => !known.has(item.name));
+  return [...(page?.technology ?? []), ...fromNetwork].slice(0, 60);
 }
 export const json = (body, status = 200) => Response.json(body, { status, headers: { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', ...(status === 429 ? { 'retry-after': '60' } : {}) } });
 export async function handleAudit(request, env, fetcher = fetch) {
@@ -57,13 +51,17 @@ export async function handleAudit(request, env, fetcher = fetch) {
     if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['url', 'strategy', 'locale'].includes(key)) || !['mobile', 'desktop'].includes(body.strategy) || !['en', 'id'].includes(body.locale)) throw new AuditFailure('invalid-request', 400);
     const target = validateTarget(body.url);
     const url = new URL(API);
-    url.searchParams.set('url', target); url.searchParams.set('category', 'SEO'); url.searchParams.set('strategy', body.strategy); url.searchParams.set('locale', body.locale);
+    url.searchParams.set('url', target); for (const name of CATEGORIES) url.searchParams.append('category', name); url.searchParams.set('strategy', body.strategy); url.searchParams.set('locale', body.locale);
     if (env.PAGESPEED_API_KEY) url.searchParams.set('key', env.PAGESPEED_API_KEY);
     controller = new AbortController(); timer = setTimeout(() => controller.abort(), 90_000);
+    // The page inspection never rejects: a page we cannot read must not fail the Lighthouse audit.
+    const pageRead = inspectPage(target, fetcher).catch(() => ({ error: 'page-unreadable' }));
     const response = await fetcher(url, { method: 'GET', redirect: 'manual', signal: controller.signal, headers: { accept: 'application/json' } });
     if (!response.ok) { await response.body?.cancel(); throw new AuditFailure(response.status === 429 ? 'provider-quota' : 'provider-failed', response.status === 429 ? 429 : 502); }
-    const report = normalizeReport(await readJson(response, 4 * 1024 * 1024));
-    return json({ ...report, requestedUrl: target, strategy: body.strategy, locale: body.locale });
+    const { networkUrls: urls, ...report } = normalizeReport(await readJson(response, 4 * 1024 * 1024));
+    const page = await pageRead;
+    const { technology: pageTechnology, ...pageWithoutTechnology } = page;
+    return json({ ...report, technology: mergeTechnology({ technology: pageTechnology }, urls), page: pageWithoutTechnology, requestedUrl: target, strategy: body.strategy, locale: body.locale });
   } catch (error) {
     // Do not forward provider errors, keys, submitted URLs or exception stacks.
     if (controller?.signal.aborted) return json({ error: 'timeout' }, 504);
