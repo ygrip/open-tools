@@ -164,6 +164,7 @@ test('SEO service client preserves zero scores, handles quota and aborts stale w
     assert.equal(url, '/api/tools/seo-checker/audit'); assert.equal(options.credentials, 'omit'); assert.equal(options.redirect, 'error');
     assert.deepEqual(JSON.parse(options.body), payload); return response(report);
   })).score, 0);
+  const payload = { url: 'https://example.com/', strategy: 'mobile', locale: 'en' };
   await assert.rejects(runService('/api/tools/seo-checker/audit', payload, controller().signal, async () => new Response('secret', { status: 429 })), error => error.code === 'quota');
   await assert.rejects(runService('/api/tools/seo-checker/audit', payload, controller().signal, async () => response(null)), error => error.code === 'request');
   await assert.rejects(runService('/api/tools/seo-checker/audit', payload, controller().signal, async () => Response.json({ error: 'verification' }, { status: 403 })), error => error.code === 'verification');
