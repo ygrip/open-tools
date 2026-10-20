@@ -75,3 +75,56 @@ test('pressing Enter in the URL field starts the same audit, with bare domains s
   await expect(tool.locator('#run-audit')).toBeEnabled();
   expect(requestedUrl).toBe('');
 });
+
+
+test('Indonesian copy covers a finished scan and switches language without losing results', async ({ page }) => {
+  let requests = 0;
+  await page.route('**/api/tools/who-track-me/audit/config?*', route => route.fulfill({
+    json: { sitekey: 'test-sitekey', action: 'svc_whotrackme_test', turnstile: true, rateLimit: { limit: 4, periodSeconds: 60 } }
+  }));
+  await page.route('https://challenges.cloudflare.com/turnstile/v0/api.js?*', route => route.fulfill({
+    contentType: 'application/javascript',
+    body: 'window.turnstile={render(container,options){const button=document.createElement("button");button.textContent="Verify test";button.type="button";button.onclick=()=>options.callback("test-token");container.append(button);return "widget";},remove(){},reset(){}};'
+  }));
+  await page.route('**/api/tools/who-track-me/audit', async route => {
+    requests++;
+    expect(route.request().postDataJSON().input.locale).toBe('id');
+    await route.fulfill({ json: {
+      source:'automatic',page:'https://example.org/',at:'2026-10-20T00:00:00Z',
+      scripts:[],resources:[{url:'https://www.google-analytics.com/g/collect',initiator:'Lighthouse request'}],
+      cookies:[{name:'_ga',type:'Google Analytics / Ads',risk:'medium',sameSite:'Lax',httpOnly:false,secure:true}],
+      events:[],gtm:['GTM-EXAMPLE1'],flags:['dataLayer referenced'],storage:{local:[],session:[]},
+      coverage:{html:true,network:true,cookies:true},notes:[]
+    }});
+  });
+  await page.goto('/id/who-track-me/');
+  const tool = page.frameLocator('iframe');
+  await expect(tool.locator('#run-audit')).toHaveText('Periksa situs →');
+  await expect(tool.getByText('Situs mana yang ingin diperiksa?')).toBeVisible();
+  await tool.locator('#website').fill('example.org');
+  await tool.locator('#run-audit').click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('button', { name: 'Verify test', exact: true }).click();
+  await page.getByRole('button', { name: 'Izinkan', exact: true }).click();
+  await expect(tool.locator('#results')).toBeVisible();
+  await expect(tool.locator('#n-trackers')).toHaveText('1');
+  await expect(tool.locator('#table-title')).toHaveText('Domain dan pelacak teridentifikasi');
+  await expect(tool.locator('#findings-note')).toContainText('Nol temuan bukan bukti');
+  await page.evaluate(() => {
+    document.querySelector('iframe')?.contentWindow?.postMessage(
+      { type: 'trick-it:locale', version: 1, locale: 'en' }, '*'
+    );
+  });
+  await expect(tool.locator('#run-audit')).toHaveText('Analyze website →');
+  await expect(tool.locator('#table-title')).toHaveText('Identified hosts and trackers');
+  await expect(tool.locator('#n-trackers')).toHaveText('1');
+  await expect(tool.locator('#website')).toHaveValue('example.org');
+  await page.evaluate(() => {
+    document.querySelector('iframe')?.contentWindow?.postMessage(
+      { type: 'trick-it:locale', version: 1, locale: 'id' }, '*'
+    );
+  });
+  await expect(tool.locator('#run-audit')).toHaveText('Periksa situs →');
+  await expect(tool.locator('#table-title')).toHaveText('Domain dan pelacak teridentifikasi');
+  expect(requests).toBe(1);
+});
