@@ -24,7 +24,7 @@ export class DownloadSessionManager {
     const pick = this.picker ?? (window as Window & { showSaveFilePicker?: SavePicker }).showSaveFilePicker;
     let writable: FileSystemWritableFileStream | undefined;
     if (pick) {
-      try { writable = await pick({ suggestedName: metadata.filename }).then(file => file.createWritable()); }
+      try { writable = await pick.call(window, { suggestedName: metadata.filename }).then(file => file.createWritable()); }
       catch (error) { throw new RuntimeFailure((error as Error)?.name === 'AbortError' ? 'denied' : 'unsupported'); }
     } else if (metadata.size > MEMORY_LIMIT) {
       throw new RuntimeFailure('unsupported');
