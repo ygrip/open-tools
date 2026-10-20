@@ -5,6 +5,7 @@
   import { documentTheme } from '$lib/theme';
   import { loadAsset, loadBundle, parseRuntimeRequest, RuntimeFailure, type RuntimeAsset, type RuntimeRequest, type RuntimeTool, type PermissionName, type CacheWarning } from '$lib/runtime/core';
   import { executeCapability } from '$lib/runtime/handlers';
+  import { DownloadSessionManager, type StreamStart, type StreamPiece } from '$lib/runtime/downloads';
   import ServiceChallenge from './ServiceChallenge.svelte';
   import { type DnsQueryRequest } from '$lib/runtime/dns';
   import { wikiOrigin, wikiImageUrl, type WikiReadRequest, type WikiImageRequest } from '$lib/runtime/wiki';
@@ -62,6 +63,7 @@
   let loadedAssets = new Map<string, Promise<Uint8Array>>();
   const assetRequests = new Map<string, string>(); // request ID → declared asset ID
   const downloadUrls = new Set<string>();
+  const downloadSessions = new DownloadSessionManager(downloadUrls);
   // Remember approved wiki origins for this tool session only, never globally.
   const approvedWikiOrigins = new Set<string>();
   // Startup permissions change the sandbox policy, so they are chosen before launch.
@@ -302,6 +304,7 @@
     stopCamera();
     stopLocation();
     controller?.abort();
+    void downloadSessions.cancel();
     generation++;
     pending = null;
     frameDocument = '';
@@ -350,7 +353,7 @@
     stopCamera();
     stopLocation();
     brokerBusy = false;
-    if (pending && pendingAsk && pending.operation !== 'wiki-read') remember(pending.operation, 'denied');
+    if (pending && pendingAsk && pending.operation !== 'wiki-read') remember(pending.operation === 'download-begin' ? 'downloads' : pending.operation, 'denied');
     pendingAsk = false;
     if (pending) {
       reply(pending, false, undefined, 'denied');
@@ -364,7 +367,7 @@
     if (!request) return;
     if (pendingAsk) {
       if (request.operation === 'wiki-read') approvedWikiOrigins.add(wikiOrigin(request.payload as WikiReadRequest));
-      remember(request.operation, 'granted'); pendingAsk = false;
+      remember(request.operation === 'download-begin' ? 'downloads' : request.operation, 'granted'); pendingAsk = false;
     }
     if (request.operation === 'camera-capture') { await startCamera(request); return; }
     if (request.operation === 'geolocation') { await startLocation(request); return; }
@@ -376,13 +379,15 @@
     pending = null;
     brokerBusy = true;
     try {
-      const { value, transfer } = await executeCapability(request, {
-        tool,
-        signal: controller!.signal,
-        serviceEndpoint,
-        verificationToken: tokenForAction,
-        downloadUrls
-      });
+      const { value, transfer } = request.operation === 'download-begin'
+        ? { value: await downloadSessions.begin(request.payload as StreamStart), transfer: [] }
+        : await executeCapability(request, {
+            tool,
+            signal: controller!.signal,
+            serviceEndpoint,
+            verificationToken: tokenForAction,
+            downloadUrls
+          });
       if (current === generation) reply(request, true, value, undefined, transfer);
     } catch (error) {
       if (current === generation) reply(request, false, undefined, error instanceof RuntimeFailure ? error.code : 'denied');
@@ -442,6 +447,19 @@
         failedAsset = parsed.asset;
         reply(request, false, undefined, assetFailure.code);
       } finally { if (current === generation) { progress = null; inFlight.delete(request.id); assetRequests.delete(request.id); } }
+    } else if (['download-chunk', 'download-end', 'download-cancel'].includes(request.operation)) {
+      if (pending || brokerBusy) { reply(request, false, undefined, 'busy'); return; }
+      inFlight.add(request.id);
+      const current = generation;
+      try {
+        const payload = request.payload as StreamPiece & { streamId: string };
+        if (request.operation === 'download-chunk') await downloadSessions.append(payload);
+        else if (request.operation === 'download-end') await downloadSessions.finish(payload.streamId);
+        else await downloadSessions.cancel(payload.streamId);
+        if (current === generation) reply(request, true);
+      } catch (error) {
+        if (current === generation) reply(request, false, undefined, error instanceof RuntimeFailure ? error.code : 'request');
+      } finally { if (current === generation) inFlight.delete(request.id); }
     } else if (pending || brokerBusy) reply(request, false, undefined, 'busy');
     else {
       verificationToken = '';
@@ -462,7 +480,7 @@
         try { wikiOrigin(request.payload as WikiReadRequest); }
         catch { inFlight.delete(request.id); reply(request, false, undefined, 'invalid-request'); return; }
       }
-      pendingAsk = request.operation !== 'services' && (request.operation === 'wiki-read' ? !approvedWikiOrigins.has(wikiOrigin(request.payload as WikiReadRequest)) : decisions[request.operation] !== 'granted');
+      pendingAsk = request.operation !== 'services' && (request.operation === 'wiki-read' ? !approvedWikiOrigins.has(wikiOrigin(request.payload as WikiReadRequest)) : decisions[request.operation === 'download-begin' ? 'downloads' : request.operation] !== 'granted');
       pending = request;
       // Remembered grants run straight away; camera and location still show their
       // live preview, and protected services still need their security check.
@@ -480,6 +498,7 @@
       stopCamera();
       stopLocation();
       controller?.abort();
+      void downloadSessions.cancel();
       observer.disconnect();
       window.removeEventListener('message', receive);
       for (const url of downloadUrls) URL.revokeObjectURL(url);
@@ -568,6 +587,7 @@
     {#if pending.operation === 'dns-query'}<p>{locale === 'id' ? 'Nama host dikirim ke resolver DNS-over-HTTPS publik (Cloudflare, termasuk resolver keamanannya, dan Google). Situs itu sendiri tidak dihubungi.' : 'The hostname is sent to public DNS-over-HTTPS resolvers (Cloudflare, including its security-filtering resolver, and Google). The site itself is not contacted.'}</p>{/if}
     {#if pending.operation === 'wiki-read'}<p>{locale === 'id' ? 'Situs tujuan akan menerima permintaan dari browser Anda. Tidak ada proxy server.' : 'Your browser will contact this wiki directly. No server proxy is used.'}</p><pre>{(pending.payload as WikiReadRequest).site}
 {(pending.payload as WikiReadRequest).title}</pre>{/if}
+    {#if pending.operation === 'download-begin'}<p>{(pending.payload as StreamStart).filename} · {((pending.payload as StreamStart).size / 1024 / 1024).toFixed(1)} MiB</p>{/if}
     {#if pending.operation === 'downloads'}<p>{(pending.payload as { filename: string }).filename} · {(pending.payload as { mime: string }).mime} · {((pending.payload as { bytes: ArrayBuffer }).bytes.byteLength / 1024).toFixed(1)} KiB</p>{/if}
     {#if pending.operation === 'camera-capture' && cameraStage !== 'off'}
       <p>{locale === 'id' ? 'Foto hanya dikirim ke alat setelah Anda menekan Ambil foto.' : 'Only the photo you capture is sent to this tool.'}</p>
