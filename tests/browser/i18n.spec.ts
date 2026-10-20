@@ -56,7 +56,8 @@ test('desktop language popover supports keyboard controls and click-away', async
   await page.goto('/');
   const trigger = page.getByRole('button', { name: 'Languages: English' });
   await trigger.focus();
-  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
   const languages = page.getByRole('group', { name: 'Languages' });
   await expect(languages.getByRole('link', { name: 'English' })).toBeFocused();
   await page.keyboard.press('ArrowDown');
