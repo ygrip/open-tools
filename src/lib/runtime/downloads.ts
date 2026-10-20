@@ -16,21 +16,38 @@ type Active = {
  */
 export class DownloadSessionManager {
   private active: Active | null = null;
+  private starting = false;
+  private epoch = 0;
   constructor(private readonly objectUrls: Set<string>, private readonly picker?: SavePicker) {}
 
   async begin(metadata: StreamStart): Promise<{ streamId: string; mode: 'stream' | 'buffered' }> {
-    if (this.active) throw new RuntimeFailure('busy');
-    const id = crypto.randomUUID();
-    const pick = this.picker ?? (window as Window & { showSaveFilePicker?: SavePicker }).showSaveFilePicker;
+    if (this.active || this.starting) throw new RuntimeFailure('busy');
+    // Save pickers can outlive tool navigation. Never attach a handle opened
+    // for an iframe session that has since been cancelled.
+    const epoch = this.epoch;
+    this.starting = true;
     let writable: FileSystemWritableFileStream | undefined;
-    if (pick) {
-      try { writable = await pick.call(window, { suggestedName: metadata.filename }).then(file => file.createWritable()); }
-      catch (error) { throw new RuntimeFailure((error as Error)?.name === 'AbortError' ? 'denied' : 'unsupported'); }
-    } else if (metadata.size > MEMORY_LIMIT) {
-      throw new RuntimeFailure('unsupported');
+    try {
+      const id = crypto.randomUUID();
+      const pick = this.picker ?? (window as Window & { showSaveFilePicker?: SavePicker }).showSaveFilePicker;
+      if (pick) {
+        try { writable = await pick.call(window, { suggestedName: metadata.filename }).then(file => file.createWritable()); }
+        catch (error) {
+          if (epoch !== this.epoch) throw new RuntimeFailure('aborted');
+          throw new RuntimeFailure((error as Error)?.name === 'AbortError' ? 'denied' : 'unsupported');
+        }
+      } else if (metadata.size > MEMORY_LIMIT) {
+        throw new RuntimeFailure('unsupported');
+      }
+      if (epoch !== this.epoch) {
+        try { await writable?.abort(); } catch { /* Picker already closed */ }
+        throw new RuntimeFailure('aborted');
+      }
+      this.active = { id, metadata, received: 0, ...(writable ? { writable } : { chunks: [] }) };
+      return { streamId: id, mode: writable ? 'stream' : 'buffered' };
+    } finally {
+      this.starting = false;
     }
-    this.active = { id, metadata, received: 0, ...(writable ? { writable } : { chunks: [] }) };
-    return { streamId: id, mode: writable ? 'stream' : 'buffered' };
   }
 
   async append({ streamId, bytes }: StreamPiece): Promise<void> {
@@ -70,7 +87,10 @@ export class DownloadSessionManager {
 
   async cancel(streamId?: string): Promise<void> {
     const active = this.active;
-    if (!active || (streamId && active.id !== streamId)) return;
+    if (streamId && (!active || active.id !== streamId)) return;
+    // Invalidate an in-progress save picker even before it yields a handle.
+    this.epoch++;
+    if (!active) return;
     this.active = null;
     try { await active.writable?.abort(); } catch { /* Tab closing */ }
   }
