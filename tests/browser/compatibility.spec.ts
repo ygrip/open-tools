@@ -22,7 +22,7 @@ for (const tool of catalog) {
 
     await page.goto(`/${tool.id}/`);
     await expect(page.getByRole('heading', { name: tool.translations?.en?.name ?? tool.name, level: 1 })).toBeVisible();
-    const startup = tool.permissions.filter(p => ['external-assets', 'wasm', 'workers'].includes(p.name));
+    const startup = (tool.permissions ?? []).filter(p => ['external-assets', 'wasm', 'workers'].includes(p.name));
     if (startup.length) {
       // Never silently approve external engines during CI. Verify the host
       // presents consent and does not start an unapproved sandbox.

@@ -96,7 +96,7 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
     });
     function request(operation, payload, onProgress, transfer = []) {
       const hostUi = operation === 'ui-toast' || operation === 'ui-dialog';
-      if (!config.token || (!hostUi && operation !== 'asset' && !config.permissions.includes(operation)) || (operation === 'asset' && !config.permissions.includes('external-assets'))) return Promise.reject(new Error('Permission not granted.'));
+      if (!config.token || (!hostUi && operation !== 'asset' && !config.permissions.includes(operation) && !(operation.startsWith('download-') && config.permissions.includes('downloads'))) || (operation === 'asset' && !config.permissions.includes('external-assets'))) return Promise.reject(new Error('Permission not granted.'));
       if (pending.size >= 16) return Promise.reject(new Error('Too many pending requests.'));
       const id = String(++sequence);
       return new Promise((resolve, reject) => {
