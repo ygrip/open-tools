@@ -68,3 +68,7 @@ For **each applicable row**, record its source integration and a passing behavio
 Do not push or re-pin a nonconforming release. Fix the existing tool in its own repository first. Report blocked checks explicitly; do not mark a migration complete with failing or unexecuted checks.
 
 This gate is enforced by the scaffold/migration workflow, review and behavioral tests. Registry schema/checksum validation does **not** execute arbitrary tool code or certify UI compliance; do not weaken sandbox isolation or introduce a misleading source-regex “certificate” to make that claim.
+
+## Host-to-published-tool compatibility gate
+
+The host's `tests/browser/compatibility.spec.ts` checks **every registered immutable tool bundle**, rather than only a hard-coded example: published SHA-256 bytes, manifest/version identity, prerendered route, and opaque sandbox SDK (or consent gate when startup privileges are declared). New registrations are automatically included in this browser check. Tool-owned workflow and transformation tests remain in the tool repositories using the shared host test harness; CI mocks fixed-provider external services separately. This suite deliberately does not authorize expensive model downloads or treat a passing host smoke test as proof of a tool's own behavior.

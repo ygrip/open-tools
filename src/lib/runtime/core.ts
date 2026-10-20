@@ -1,4 +1,6 @@
 import type { ToolService } from '../registry/types';
+import { pruneAssetCaches, touchAssetCache } from './asset-cache.js';
+import { DOWNLOAD_LIMITS } from './download-policy';
 export type PermissionName = 'clipboard-read' | 'clipboard-write' | 'geolocation' | 'downloads' | 'camera-capture' | 'share-image' | 'external-assets' | 'wasm' | 'workers' | 'services' | 'wiki-read' | 'dns-query';
 export type RuntimePermission = { name: PermissionName; reason: string; required: boolean };
 export type RuntimeAsset = { id: string; url: string; sha256: string; bytes: number; type: 'wasm' | 'script' | 'worker' | 'data'; defer: boolean };
@@ -93,9 +95,11 @@ async function readAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetO
   const url = assetRequestUrl(asset);
   const name = `trick-it-assets-${tool.id}-${tool.version}-${tool.bundle.sha256}`;
   let cache: Cache | undefined;
+  let storage: CacheStorage | null | undefined;
   try {
-    const storage = options.cacheStorage === undefined ? globalThis.caches : options.cacheStorage;
+    storage = options.cacheStorage === undefined ? globalThis.caches : options.cacheStorage;
     if (!storage) throw new Error('CacheStorage unavailable');
+    await pruneAssetCaches(storage, name).catch(() => undefined);
     cache = await storage.open(name);
   } catch { onWarning?.('cache-unavailable'); }
   if (cache) {
@@ -108,6 +112,7 @@ async function readAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetO
         onProgress?.(bytes.length, 'verifying');
         if (await sha256(bytes) !== asset.sha256) throw new RuntimeFailure('integrity');
         checkAbort(signal);
+        touchAssetCache(name);
         return bytes;
       } catch (error) {
         if (signal.aborted) throw new RuntimeFailure('aborted');
@@ -127,12 +132,21 @@ async function readAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetO
   if (await sha256(bytes) !== asset.sha256) throw new RuntimeFailure('integrity');
   checkAbort(signal);
   if (cache && !/no-store|private/i.test(response.headers.get('cache-control') || '')) {
-    try { await cache.put(url, new Response(new Uint8Array(bytes), { headers: { 'content-type': 'application/octet-stream' } })); }
-    catch { onWarning?.('cache-unavailable'); }
+    try {
+      if (storage) await pruneAssetCaches(storage, name, { incomingBytes: bytes.byteLength }).catch(() => undefined);
+      const cachedResponse = () => new Response(new Uint8Array(bytes), { headers: { 'content-type': 'application/octet-stream', 'x-trick-it-asset-bytes': String(bytes.byteLength) } });
+      try { await cache.put(url, cachedResponse()); }
+      catch (error) {
+        if (!(error instanceof Error) || error.name !== 'QuotaExceededError' || !storage) throw error;
+        await pruneAssetCaches(storage, name, { incomingBytes: bytes.byteLength, reclaim: true }).catch(() => undefined);
+        await cache.put(url, cachedResponse());
+      }
+      touchAssetCache(name);
+    } catch { onWarning?.('cache-unavailable'); }
   } else if (cache) onWarning?.('cache-unavailable');
   return bytes;
 }
-export type RuntimeRequest = { type: 'trick-it:request'; version: 1; token: string; id: string; operation: PermissionName | 'asset' | 'ui-toast' | 'ui-dialog'; payload?: unknown };
+export type RuntimeRequest = { type: 'trick-it:request'; version: 1; token: string; id: string; operation: PermissionName | 'download-begin' | 'download-chunk' | 'download-end' | 'download-cancel' | 'asset' | 'ui-toast' | 'ui-dialog'; payload?: unknown };
 export type UiToast = { message: string; tone: 'info' | 'success' | 'error' };
 export type UiDialog = { kind: 'info' | 'confirm'; title: string; message: string; items: string[]; ordered: boolean; confirmLabel: string; cancelLabel: string; tone: 'default' | 'danger' };
 export type ParsedRequest = { request: RuntimeRequest; error?: RuntimeErrorCode; asset?: RuntimeAsset; toast?: UiToast; dialog?: UiDialog };
@@ -168,6 +182,18 @@ export function parseRuntimeRequest(event: Pick<MessageEvent, 'source' | 'data'>
     if (!asset) return { request, error: 'invalid-request' };
     if (asset.type === 'wasm' && !declared('wasm') || asset.type === 'worker' && !declared('workers')) return { request, error: 'denied' };
     return { request, asset };
+  }
+  if (['download-begin', 'download-chunk', 'download-end', 'download-cancel'].includes(request.operation)) {
+    if (!declared('downloads')) return { request, error: 'denied' };
+    const data = request.payload as Record<string, unknown> | undefined;
+    if (!plainObject(data, request.operation === 'download-begin' ? ['filename', 'mime', 'size'] : request.operation === 'download-chunk' ? ['streamId', 'bytes'] : ['streamId'])) return { request, error: 'invalid-request' };
+    if (request.operation === 'download-begin') {
+      if (!validDownloadFile(data) || !Number.isSafeInteger(data.size) || (data.size as number) < 1 || (data.size as number) > DOWNLOAD_LIMITS.maxBytes) return { request, error: 'invalid-request' };
+    } else {
+      if (typeof data.streamId !== 'string' || !ID.test(data.streamId)) return { request, error: 'invalid-request' };
+      if (request.operation === 'download-chunk' && (!(data.bytes instanceof ArrayBuffer) || data.bytes.byteLength < 1 || data.bytes.byteLength > DOWNLOAD_LIMITS.chunkBytes)) return { request, error: 'invalid-request' };
+    }
+    return { request };
   }
   if (request.operation === 'ui-toast' || request.operation === 'ui-dialog') return parseUi(request);
   if (!['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'services', 'wiki-read', 'dns-query'].includes(request.operation)) return { request, error: 'unsupported' };
@@ -206,9 +232,15 @@ export function parseRuntimeRequest(event: Pick<MessageEvent, 'source' | 'data'>
   }
   if (request.operation === 'downloads') {
     const data = request.payload as { filename?: unknown; bytes?: unknown; mime?: unknown } | undefined;
-    if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).some((key) => !['bytes', 'filename', 'mime'].includes(key)) || typeof data.filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_. -]{0,119}$/.test(data.filename) || !(data.bytes instanceof ArrayBuffer) || data.bytes.byteLength > 16 * 1024 * 1024 || typeof data.mime !== 'string' || !/^(?:text\/(?:plain|csv|html)|application\/(?:json|octet-stream|pdf)|image\/(?:png|svg\+xml))$/.test(data.mime)) return { request, error: 'invalid-request' };
+    if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).some((key) => !['bytes', 'filename', 'mime'].includes(key)) || !validDownloadFile(data) || !(data.bytes instanceof ArrayBuffer) || data.bytes.byteLength > DOWNLOAD_LIMITS.inlineBytes) return { request, error: 'invalid-request' };
   }
   return { request };
+}
+
+const DOWNLOAD_MIME = /^(?:text\/(?:plain|csv|html)|application\/(?:json|octet-stream|pdf|zip)|image\/(?:png|svg\+xml|gif|jpeg|webp|avif)|audio\/(?:mpeg|wav|ogg)|video\/webm)$/;
+function validDownloadFile(data: { filename?: unknown; mime?: unknown }) {
+  return typeof data.filename === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_. -]{0,119}$/.test(data.filename) &&
+    typeof data.mime === 'string' && DOWNLOAD_MIME.test(data.mime);
 }
 
 /** Same-origin, fixed-provider service. The sandbox never receives network access. */

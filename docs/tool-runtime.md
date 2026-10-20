@@ -6,7 +6,7 @@ Use this guide after [creating a standalone tool](scaffold-tool.md). [Contract v
 
 The iframe remains `sandbox="allow-scripts"`, with an opaque origin. Never add `allow-same-origin`. It cannot read the platform DOM, cookies or storage and cannot fetch arbitrary network URLs. The host installs `window.trickIt` before tool scripts run; it is the supported bridge for declared capabilities and assets, not an escape from isolation.
 
-The SDK is available only when hosted. For standalone development, feature-detect it and disable hosted-only features rather than inventing an insecure network fallback. Tools start immediately. Only **startup** permissions (`wasm`, `workers`, `external-assets`) change the sandbox policy, so a tool declaring them shows one host popup with reasons and resource disclosure before launch. **Runtime** permissions (clipboard, downloads, location, camera, share) are asked the first time the tool uses them. Every answer is remembered per tool in the user's browser and is not asked again; **Reset access** in the tool bar clears it. Optional features must work gracefully when declined.
+The SDK is available only when hosted. For standalone development, feature-detect it and disable hosted-only features rather than inventing an insecure network fallback. Tools start immediately. Only **startup** permissions (`wasm`, `workers`, `external-assets`) change the sandbox policy, so a tool declaring them shows one host popup with reasons and resource disclosure before launch. **Runtime** permissions (clipboard, downloads, location, camera, share) are asked the first time the tool uses them. Every answer is remembered per tool in the user's browser; streamed exports still require a fresh confirmation click for each file; **Reset access** in the tool bar clears it. Optional features must work gracefully when declined.
 
 ## Tool-owned workspace layout
 
@@ -168,7 +168,7 @@ await window.trickIt.request('downloads', {
 });
 ```
 
-Do not request these sequentially at startup; the snippet only documents their payloads. Clipboard text is capped at 1 MiB. Downloads are capped at 16 MiB, use a simple filename of at most 120 characters without path separators, and accept the supported MIME types `text/plain`, `text/csv`, `text/html`, `application/json`, `application/octet-stream`, `application/pdf`, `image/png` and `image/svg+xml`. Downloads never accept arbitrary remote URLs. Location results contain only the host's bounded position data `{ latitude, longitude, accuracy }`; do not assume a native `GeolocationPosition` object crosses the bridge. The host routes the whole location flow: it triggers the browser prompt, explains how to unblock a site-level denial, previews the fix and lets the user share it precisely or approximately (rounded to about 1 km, `accuracy` at least 1100 m). A blocked or cancelled request rejects with `denied`; a slow fix rejects with `timeout`; an unavailable position rejects with `unsupported`.
+Do not request these sequentially at startup; the snippet only documents their payloads. Clipboard text is capped at 1 MiB. Downloads support up to 8 GiB through a native file picker, or 256 MiB through the buffered browser fallback. The SDK automatically routes existing `request('downloads', …)` calls larger than 16 MiB through the same chunked protocol; 16 MiB is only the inline message threshold. Use `downloadStream` for incremental generation and progress. Filenames are limited to 120 characters without path separators. Supported MIME types include text, JSON, PDF, ZIP, PNG, SVG, GIF, JPEG, WebP, AVIF, MP3, WAV, OGG and WebM; see the host allowlist for exact MIME strings. Downloads never accept arbitrary remote URLs. Location results contain only the host's bounded position data `{ latitude, longitude, accuracy }`; do not assume a native `GeolocationPosition` object crosses the bridge. The host routes the whole location flow: it triggers the browser prompt, explains how to unblock a site-level denial, previews the fix and lets the user share it precisely or approximately (rounded to about 1 km, `accuracy` at least 1100 m). A blocked or cancelled request rejects with `denied`; a slow fix rejects with `timeout`; an unavailable position rejects with `unsupported`.
 
 User cancellation, denial, an unsupported API, an insecure context, a concurrent request, revocation or navigation can reject a promise. Catch failures, announce a friendly explanation and preserve user work. The host does not display raw exception details or pretend that platform approval overrides browser/OS policy. Camera still capture is available as `trickIt.request('camera-capture')` with no payload, returning `{ bytes: ArrayBuffer, mime: 'image/png' }`. The host controls the preview and stops camera tracks on cancel or revoke. PNG and SVG are accepted by downloads; `share-image` accepts `{ filename, mime: 'image/png', bytes: ArrayBuffer }` for native sharing where supported. Microphone and direct network access remain unsupported; `wiki-read` is a dedicated, limited wiki reader rather than general network access.
 
@@ -220,3 +220,34 @@ Decisions are stored per tool ID in the user's own browser (`localStorage`, neve
 The host checks the release JSON identity and bootstrap HTML digest before embedding. A release/version mismatch, unsupported runtime, invalid digest, oversized resource or missing grant fails closed with a retry/recovery path. The platform's PWA update flow must ask before reloading an active workspace. A user's approval to download a model is not permission to silently replace it with bytes from a mutable URL.
 
 For every release, test accepted and declined permissions, browser-native denial, revocation during a request, cache corruption, offline startup, optional model failure, mobile focus behavior, and preservation of input/output during language/theme changes. No live private GitHub or model endpoint is considered verified solely because a mocked test passes.
+
+## Streamed exports and progress
+
+All tools use the same browser-aware export policy: up to **8 GiB** when the host supports a native file picker, otherwise **256 MiB** with the bounded Blob fallback. Existing `trickIt.request('downloads', { filename, mime, bytes })` calls above the 16 MiB inline transport threshold automatically use acknowledged chunks. Incremental producers should call `trickIt.downloadStream` to avoid first assembling a whole output buffer. Both APIs require the existing `downloads` permission. For example:
+
+```js
+async function* chunksFromBlob(blob) {
+  const reader = blob.stream().getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) return;
+      yield value;
+    }
+  } finally { reader.releaseLock(); }
+}
+const abortController = new AbortController();
+await trickIt.downloadStream({
+  filename: 'render.gif',
+  mime: 'image/gif',
+  size: exportedBlob.size,
+  chunks: chunksFromBlob(exportedBlob),
+  signal: abortController.signal,
+  onProgress({ loaded, total, phase }) {
+    // loaded advances only after a host acknowledgement.
+    updateProgress(loaded / total * 100, phase);
+  }
+});
+```
+
+Read `trickIt.downloadLimits.maxBytes` for this browser’s actual ceiling; `bufferedMaxBytes`, `chunkBytes` and `inlineBytes` expose the shared policy. Each message transfers at most 1 MiB, and the host enforces sequential writes and exact declared totals even for direct protocol callers. Native saves write incrementally to disk; the fallback assembles a Blob and can use substantial memory. The host displays filename, acknowledged bytes, percentage, finishing/completion status and cancellation in English or Indonesian. `onProgress` reports `{ loaded, total, phase }`, where phase is `saving`, `finishing` or `complete`; completion occurs only after the sink closes or the browser download starts. Cancellation is available before finalization; disable tool cancellation during `finishing` because native close commits atomically. Cancellation/revocation/reload abort the active session, and unrelated capability prompts cannot block transfer cleanup. Each streamed export needs a fresh confirmation click, including when downloads were previously granted. Tools may feature-detect the stream API for older hosts and must preserve generated work on any rejection. The sandbox never receives direct filesystem access.

@@ -3,10 +3,13 @@
   import { base } from '$app/paths';
   import { sandboxDocument, themeMessageType } from '$lib/registry/sandbox';
   import { documentTheme } from '$lib/theme';
-  import { loadAsset, loadBundle, runService, parseRuntimeRequest, RuntimeFailure, type RuntimeAsset, type RuntimeRequest, type RuntimeTool, type PermissionName, type CacheWarning } from '$lib/runtime/core';
+  import { loadAsset, loadBundle, parseRuntimeRequest, RuntimeFailure, type RuntimeAsset, type RuntimeRequest, type RuntimeTool, type PermissionName, type CacheWarning } from '$lib/runtime/core';
+  import { executeCapability } from '$lib/runtime/handlers';
+  import { DownloadSessionManager, type StreamStart, type StreamPiece, type DownloadProgress } from '$lib/runtime/downloads';
+  import { DOWNLOAD_LIMITS } from '$lib/runtime/download-policy';
   import ServiceChallenge from './ServiceChallenge.svelte';
-  import { fetchDns, type DnsQueryRequest } from '$lib/runtime/dns';
-  import { fetchWikiArticle, fetchWikiImage, wikiOrigin, wikiImageUrl, type WikiReadRequest, type WikiImageRequest } from '$lib/runtime/wiki';
+  import { type DnsQueryRequest } from '$lib/runtime/dns';
+  import { wikiOrigin, wikiImageUrl, type WikiReadRequest, type WikiImageRequest } from '$lib/runtime/wiki';
   import { runtimeStrings } from '$lib/runtime/strings';
   import { openDialog, closeDialog, hostUi, showToast } from '$lib/ui/host-ui.svelte';
   import { readDecisions, saveDecisions, clearDecisions, type Decisions } from '$lib/permissions';
@@ -61,6 +64,19 @@
   let loadedAssets = new Map<string, Promise<Uint8Array>>();
   const assetRequests = new Map<string, string>(); // request ID → declared asset ID
   const downloadUrls = new Set<string>();
+  let downloadProgress = $state<DownloadProgress | null>(null);
+  const downloadSessions = new DownloadSessionManager(downloadUrls, undefined, value => { downloadProgress = value; });
+  async function cancelDownload() {
+    if (downloadProgress?.phase !== 'saving') return;
+    const streamId = downloadProgress.streamId;
+    const cancelled = downloadSessions.cancel(streamId);
+    // Only the user's explicit cancellation interrupts a stalled producer.
+    // Sink failures retain their actual error in the request acknowledgement.
+    frame?.contentWindow?.postMessage({ type: 'trick-it:download-cancelled', version: 1, token, streamId }, '*');
+    await cancelled;
+  }
+  const nativeDownloads = () => typeof (window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker === 'function';
+  const formatBytes = (bytes: number) => bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(2)} GiB` : `${(bytes / 1024 ** 2).toFixed(1)} MiB`;
   // Remember approved wiki origins for this tool session only, never globally.
   const approvedWikiOrigins = new Set<string>();
   // Startup permissions change the sandbox policy, so they are chosen before launch.
@@ -164,7 +180,7 @@
       for (const asset of assets) {
         if (!asset.defer && assetAllowed(asset, grants)) await getAsset(asset, current, signal);
       }
-      if (current === generation && !signal.aborted) frameDocument = sandboxDocument(html, documentTheme(document), { locale: frameLocale, token, permissions: [...grants], scriptAssets: assets.some((asset) => asset.type === 'script') });
+      if (current === generation && !signal.aborted) frameDocument = sandboxDocument(html, documentTheme(document), { locale: frameLocale, token, permissions: [...grants], scriptAssets: assets.some((asset) => asset.type === 'script'), nativeDownloads: nativeDownloads() });
     } catch (error) {
       if (current === generation && !signal.aborted) failure = fail(error);
     } finally {
@@ -301,6 +317,7 @@
     stopCamera();
     stopLocation();
     controller?.abort();
+    void downloadSessions.cancel();
     generation++;
     pending = null;
     frameDocument = '';
@@ -349,7 +366,7 @@
     stopCamera();
     stopLocation();
     brokerBusy = false;
-    if (pending && pendingAsk && pending.operation !== 'wiki-read') remember(pending.operation, 'denied');
+    if (pending && pendingAsk && pending.operation !== 'wiki-read') remember(pending.operation === 'download-begin' ? 'downloads' : pending.operation, 'denied');
     pendingAsk = false;
     if (pending) {
       reply(pending, false, undefined, 'denied');
@@ -363,7 +380,7 @@
     if (!request) return;
     if (pendingAsk) {
       if (request.operation === 'wiki-read') approvedWikiOrigins.add(wikiOrigin(request.payload as WikiReadRequest));
-      remember(request.operation, 'granted'); pendingAsk = false;
+      remember(request.operation === 'download-begin' ? 'downloads' : request.operation, 'granted'); pendingAsk = false;
     }
     if (request.operation === 'camera-capture') { await startCamera(request); return; }
     if (request.operation === 'geolocation') { await startLocation(request); return; }
@@ -375,45 +392,16 @@
     pending = null;
     brokerBusy = true;
     try {
-      let value: unknown;
-      if (request.operation === 'clipboard-read') {
-        if (!navigator.clipboard?.readText) throw new RuntimeFailure('unsupported');
-        value = await navigator.clipboard.readText();
-        if (typeof value !== 'string' || value.length > 1024 * 1024) throw new RuntimeFailure('size');
-      } else if (request.operation === 'clipboard-write') {
-        if (!navigator.clipboard?.writeText) throw new RuntimeFailure('unsupported');
-        await navigator.clipboard.writeText(request.payload as string);
-      } else if (request.operation === 'dns-query') {
-        value = await fetchDns(request.payload as DnsQueryRequest, controller!.signal);
-      } else if (request.operation === 'wiki-read') {
-        if ('image' in (request.payload as object)) {
-          const image = await fetchWikiImage(request.payload as WikiImageRequest, controller!.signal);
-          if (current === generation) reply(request, true, image, undefined, [image.bytes]);
-          return;
-        }
-        value = await fetchWikiArticle(request.payload as WikiReadRequest, controller!.signal);
-      } else if (request.operation === 'services') {
-        value = await runService(serviceEndpoint(service!.id), { version: tool.version, sha256: tool.bundle.sha256, input: (request.payload as { input: unknown }).input, ...(service!.turnstile ? { turnstileToken: tokenForAction } : {}) }, controller!.signal);
-      } else if (request.operation === 'share-image') {
-        const data = request.payload as { bytes: ArrayBuffer; filename: string; mime: 'image/png' };
-        if (!navigator.share || !navigator.canShare) throw new RuntimeFailure('unsupported');
-        const file = new File([data.bytes], data.filename, { type: data.mime });
-        if (!navigator.canShare({ files: [file] })) throw new RuntimeFailure('unsupported');
-        await navigator.share({ files: [file], title: tool.name });
-      } else if (request.operation === 'downloads') {
-        const data = request.payload as { bytes: ArrayBuffer; filename: string; mime: string };
-        const url = URL.createObjectURL(new Blob([data.bytes], { type: data.mime }));
-        downloadUrls.add(url);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = data.filename;
-        link.hidden = true;
-        document.body.append(link);
-        link.click();
-        link.remove();
-        setTimeout(() => { URL.revokeObjectURL(url); downloadUrls.delete(url); }, 1000);
-      }
-      if (current === generation) reply(request, true, value);
+      const { value, transfer } = request.operation === 'download-begin'
+        ? { value: await downloadSessions.begin(request.payload as StreamStart), transfer: [] }
+        : await executeCapability(request, {
+            tool,
+            signal: controller!.signal,
+            serviceEndpoint,
+            verificationToken: tokenForAction,
+            downloadUrls
+          });
+      if (current === generation) reply(request, true, value, undefined, transfer);
     } catch (error) {
       if (current === generation) reply(request, false, undefined, error instanceof RuntimeFailure ? error.code : 'denied');
     } finally { if (current === generation) { brokerBusy = false; inFlight.delete(request.id); } }
@@ -440,7 +428,7 @@
     if (seen.size >= 1024) seen.delete(seen.values().next().value!);
     seen.add(request.id);
     if (parsed.error) { reply(request, false, undefined, parsed.error); return; }
-    if (inFlight.size >= 16) { reply(request, false, undefined, 'busy'); return; }
+    if (inFlight.size >= 16 && request.operation !== 'download-cancel') { reply(request, false, undefined, 'busy'); return; }
     const source = { id: tool.id, name: tool.name, icon: tool.icon };
     if (parsed.toast) { showToast(parsed.toast.message, parsed.toast.tone, source); reply(request, true); return; }
     if (parsed.dialog) {
@@ -472,6 +460,19 @@
         failedAsset = parsed.asset;
         reply(request, false, undefined, assetFailure.code);
       } finally { if (current === generation) { progress = null; inFlight.delete(request.id); assetRequests.delete(request.id); } }
+    } else if (['download-chunk', 'download-end', 'download-cancel'].includes(request.operation)) {
+      // Cleanup and sequential chunks remain available during unrelated prompts.
+      inFlight.add(request.id);
+      const current = generation;
+      try {
+        const payload = request.payload as StreamPiece & { streamId: string };
+        if (request.operation === 'download-chunk') await downloadSessions.append(payload);
+        else if (request.operation === 'download-end') await downloadSessions.finish(payload.streamId);
+        else await downloadSessions.cancel(payload.streamId);
+        if (current === generation) reply(request, true);
+      } catch (error) {
+        if (current === generation) reply(request, false, undefined, error instanceof RuntimeFailure ? error.code : 'request');
+      } finally { if (current === generation) inFlight.delete(request.id); }
     } else if (pending || brokerBusy) reply(request, false, undefined, 'busy');
     else {
       verificationToken = '';
@@ -492,11 +493,12 @@
         try { wikiOrigin(request.payload as WikiReadRequest); }
         catch { inFlight.delete(request.id); reply(request, false, undefined, 'invalid-request'); return; }
       }
-      pendingAsk = request.operation !== 'services' && (request.operation === 'wiki-read' ? !approvedWikiOrigins.has(wikiOrigin(request.payload as WikiReadRequest)) : decisions[request.operation] !== 'granted');
+      pendingAsk = request.operation !== 'services' && (request.operation === 'wiki-read' ? !approvedWikiOrigins.has(wikiOrigin(request.payload as WikiReadRequest)) : decisions[request.operation === 'download-begin' ? 'downloads' : request.operation] !== 'granted');
       pending = request;
       // Remembered grants run straight away; camera and location still show their
       // live preview, and protected services still need their security check.
-      if (!pendingAsk && request.operation !== 'services') void approvePending();
+      // A native save picker needs fresh user activation even when the downloads grant is remembered.
+      if (!pendingAsk && request.operation !== 'services' && request.operation !== 'download-begin') void approvePending();
     }
   }
 
@@ -510,6 +512,7 @@
       stopCamera();
       stopLocation();
       controller?.abort();
+      void downloadSessions.cancel();
       observer.disconnect();
       window.removeEventListener('message', receive);
       for (const url of downloadUrls) URL.revokeObjectURL(url);
@@ -584,6 +587,15 @@
   </section>
 {/if}
 {#if progress && frameDocument}<div class="runtime-notice"><ClayStatus state="working" title={text.progress} detail={progress.id} progress={progress.bytes / progress.total * 100} /></div>{/if}
+{#if downloadProgress && frameDocument}
+  <div class="runtime-notice" data-download-progress>
+    <ClayStatus state={downloadProgress.phase === 'complete' ? 'done' : 'working'} title={downloadProgress.phase === 'complete' ? text.downloadDone : downloadProgress.phase === 'finishing' ? text.downloadFinishing : text.downloadSaving}
+      detail={`${downloadProgress.filename} · ${formatBytes(downloadProgress.loaded)} / ${formatBytes(downloadProgress.total)} · ${Math.floor(downloadProgress.loaded / downloadProgress.total * 100)}%`}
+      progress={downloadProgress.loaded / downloadProgress.total * 100}>
+      {#if downloadProgress.phase === 'saving'}<button class="clay-button small" type="button" onclick={cancelDownload}>{text.downloadCancel}</button>{/if}
+    </ClayStatus>
+  </div>
+{/if}
 {#if warning}<p class="runtime-notice" role="status">{warning === 'cache-corrupt' ? text.corruptWarning : text.cachedWarning}</p>{/if}
 {#if assetFailure}<div class="runtime-notice" role="alert"><p>{text.errors[assetFailure.code]}</p>{#if failedAsset}<button class="clay-button small" type="button" onclick={retryAssetDownload}>{text.retryAsset}</button>{/if}</div>{/if}
 {#if recoveredAsset}<p class="runtime-notice" role="status">{text.assetReady}</p>{/if}
@@ -591,13 +603,14 @@
 <dialog bind:this={operationDialog} class="operation-dialog surface" aria-labelledby="runtime-operation-title" oncancel={(event) => { event.preventDefault(); denyPending(); }}>
   {#if pending}
     <h2 id="runtime-operation-title">{text.confirm}</h2>
-    <p><strong>{tool.name}: {text.labels[pending.operation as keyof typeof text.labels]}</strong></p>
+    <p><strong>{tool.name}: {text.labels[(pending.operation === 'download-begin' ? 'downloads' : pending.operation) as keyof typeof text.labels]}</strong></p>
     <p>{pendingAsk ? text.rememberHelp : text.confirmHelp}</p>
     {#if pendingService && pendingInput}<p>{pendingService.handler === 'tracker-audit' ? (locale === 'id' ? 'URL publik akan diperiksa oleh Google PageSpeed Insights dan Worker trick-it. Google dapat memuat skrip halaman dalam browser uji terisolasi. Jangan gunakan URL privat atau bertanda tangan.' : 'The public URL is sent to Google PageSpeed Insights and inspected by the trick-it Worker. Google may load page scripts in an isolated test browser. Do not submit private or signed URLs.') : text.seoHelp}</p><pre>{pendingInput.url}</pre><p>{pendingInput.strategy === 'mobile' ? text.seoMobile : text.seoDesktop} · {text.serviceLimit}: {pendingService.rateLimit.limit} / {pendingService.rateLimit.periodSeconds}s</p>{#if pendingService.turnstile}<ServiceChallenge endpoint={serviceEndpoint(pendingService.id)} version={tool.version} sha256={tool.bundle.sha256} {locale} onToken={(token) => verificationToken = token} />{/if}{/if}
     {#if pending.operation === 'clipboard-write'}<pre>{(pending.payload as string).slice(0, 240)}</pre>{/if}
     {#if pending.operation === 'dns-query'}<p>{locale === 'id' ? 'Nama host dikirim ke resolver DNS-over-HTTPS publik (Cloudflare, termasuk resolver keamanannya, dan Google). Situs itu sendiri tidak dihubungi.' : 'The hostname is sent to public DNS-over-HTTPS resolvers (Cloudflare, including its security-filtering resolver, and Google). The site itself is not contacted.'}</p>{/if}
     {#if pending.operation === 'wiki-read'}<p>{locale === 'id' ? 'Situs tujuan akan menerima permintaan dari browser Anda. Tidak ada proxy server.' : 'Your browser will contact this wiki directly. No server proxy is used.'}</p><pre>{(pending.payload as WikiReadRequest).site}
 {(pending.payload as WikiReadRequest).title}</pre>{/if}
+    {#if pending.operation === 'download-begin'}<p>{(pending.payload as StreamStart).filename} · {formatBytes((pending.payload as StreamStart).size)}</p><p>{nativeDownloads() ? text.downloadNative : text.downloadBuffered} {text.downloadLimit}: {formatBytes(nativeDownloads() ? DOWNLOAD_LIMITS.maxBytes : DOWNLOAD_LIMITS.bufferedMaxBytes)}.</p>{/if}
     {#if pending.operation === 'downloads'}<p>{(pending.payload as { filename: string }).filename} · {(pending.payload as { mime: string }).mime} · {((pending.payload as { bytes: ArrayBuffer }).bytes.byteLength / 1024).toFixed(1)} KiB</p>{/if}
     {#if pending.operation === 'camera-capture' && cameraStage !== 'off'}
       <p>{locale === 'id' ? 'Foto hanya dikirim ke alat setelah Anda menekan Ambil foto.' : 'Only the photo you capture is sent to this tool.'}</p>

@@ -39,3 +39,6 @@ scripts/.tool-cards-*/
 # Rebuilt from independent pinned tool registrations
 src/lib/registry/generated.json
 worker/generated-services.json
+
+# Verified registry snapshot for one build, never committed
+scripts/.verified-registry.json

@@ -1,6 +1,7 @@
 import { isTheme, type Theme } from '../theme';
 import { uiKitScript, uiKitStyles } from './ui-kit';
 import { tableScript, tableStyles } from './ui-table';
+import { DOWNLOAD_LIMITS } from '../runtime/download-policy';
 
 // The policy precedes tool markup and cannot be relaxed by a later meta tag.
 // Opaque-origin sandboxing is also mandatory: never add allow-same-origin.
@@ -56,7 +57,7 @@ const themeBootstrap = `
 })();
 `;
 
-export type RuntimeOptions = { locale?: string; token?: string; permissions?: readonly string[]; scriptAssets?: boolean };
+export type RuntimeOptions = { locale?: string; token?: string; permissions?: readonly string[]; scriptAssets?: boolean; nativeDownloads?: boolean };
 
 export function sandboxDocument(html: string, initialTheme: Theme = 'light', options: RuntimeOptions = {}): string {
   const theme = isTheme(initialTheme) ? initialTheme : 'light';
@@ -70,7 +71,9 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
   const config = JSON.stringify({ token, permissions: permissions.filter((name) => ['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'external-assets', 'wasm', 'workers', 'services', 'wiki-read', 'dns-query'].includes(name)) }).replaceAll('<', '\\u003c');
   const sdk = `(() => {
     const config = ${config};
+    const downloadLimits = Object.freeze(${JSON.stringify({ ...DOWNLOAD_LIMITS, maxBytes: options.nativeDownloads ? DOWNLOAD_LIMITS.maxBytes : DOWNLOAD_LIMITS.bufferedMaxBytes })});
     const pending = new Map(); let sequence = 0;
+    const activeDownloads = new Map();
     const focusElement = HTMLElement.prototype.focus;
     addEventListener('message', event => {
       if (event.source !== parent) return;
@@ -79,7 +82,9 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
         document.documentElement.lang = data.locale;
         dispatchEvent(new CustomEvent('trick-it:localechange', { detail: { locale: data.locale } }));
       }
-      if (!config.token || data?.version !== 1 || data.token !== config.token || typeof data.id !== 'string') return;
+      if (!config.token || data?.version !== 1 || data.token !== config.token) return;
+      if (data.type === 'trick-it:download-cancelled' && typeof data.streamId === 'string') { activeDownloads.get(data.streamId)?.(); return; }
+      if (typeof data.id !== 'string') return;
       const request = pending.get(data.id); if (!request) return;
       if (data.type === 'trick-it:asset-progress') {
         if (request.operation !== 'asset' || !Number.isSafeInteger(data.loaded) || !Number.isSafeInteger(data.total) || data.loaded < 0 || data.total < 1 || data.loaded > data.total || data.total > 536870912 || !['loading', 'verifying'].includes(data.phase)) return;
@@ -94,22 +99,85 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
       if (request.focusTarget?.isConnected && document.hasFocus() && document.activeElement === document.body) focusElement.call(request.focusTarget, { preventScroll: true });
       if (data.ok === true) request.resolve(data.value); else request.reject(Object.assign(new Error('The requested capability was denied or could not complete.'), { code: typeof data.error === 'string' ? data.error : 'request' }));
     });
-    function request(operation, payload, onProgress) {
+    function request(operation, payload, onProgress, transfer = []) {
+      // Preserve existing tools while keeping large buffers off the message bridge.
+      if (operation === 'downloads' && payload?.bytes instanceof ArrayBuffer && payload.bytes.byteLength > downloadLimits.inlineBytes) {
+        const bytes = new Uint8Array(payload.bytes);
+        return downloadStream({ filename: payload.filename, mime: payload.mime, size: bytes.byteLength,
+          chunks: (async function* () { yield bytes; })(), onProgress });
+      }
       const hostUi = operation === 'ui-toast' || operation === 'ui-dialog';
-      if (!config.token || (!hostUi && operation !== 'asset' && !config.permissions.includes(operation)) || (operation === 'asset' && !config.permissions.includes('external-assets'))) return Promise.reject(new Error('Permission not granted.'));
-      if (pending.size >= 16) return Promise.reject(new Error('Too many pending requests.'));
+      if (!config.token || (!hostUi && operation !== 'asset' && !config.permissions.includes(operation) && !(operation.startsWith('download-') && config.permissions.includes('downloads'))) || (operation === 'asset' && !config.permissions.includes('external-assets'))) return Promise.reject(new Error('Permission not granted.'));
+      if (pending.size >= 16 && operation !== 'download-cancel') return Promise.reject(new Error('Too many pending requests.'));
       const id = String(++sequence);
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => { pending.delete(id); reject(new Error('Capability request timed out.')); }, 330000);
         const focusTarget = operation !== 'asset' && operation !== 'ui-toast' && document.activeElement instanceof HTMLElement ? document.activeElement : null;
         pending.set(id, { resolve, reject, timer, operation, onProgress, focusTarget });
-        try { parent.postMessage({ type: 'trick-it:request', version: 1, token: config.token, id, operation, payload }, '*'); }
+        try { parent.postMessage({ type: 'trick-it:request', version: 1, token: config.token, id, operation, payload }, '*', transfer); }
         catch { clearTimeout(timer); pending.delete(id); reject(new Error('Invalid capability payload.')); }
       });
     }
 ${tableScript}
 ${uiKitScript}
-    Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, ui, asset: (id, options = {}) => request('asset', { id }, options.onProgress), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
+    async function downloadStream({ filename, mime, size, chunks, onProgress, signal }) {
+      if (!config.permissions.includes('downloads')) throw new Error('Download permission was not declared.');
+      if (!Number.isSafeInteger(size) || size < 1 || size > downloadLimits.maxBytes) throw Object.assign(new Error('Export exceeds this browser’s download limit.'), { code: 'size' });
+      if (!chunks || typeof chunks[Symbol.asyncIterator] !== 'function') throw new Error('chunks must be an async iterable.');
+      const checkAbort = () => { if (signal?.aborted) throw Object.assign(new Error('Export cancelled.'), { code: 'aborted' }); };
+      checkAbort();
+      const { streamId } = await request('download-begin', { filename, mime, size });
+      let interrupt;
+      const interrupted = new Promise((_, reject) => { interrupt = () => reject(Object.assign(new Error('Export cancelled.'), { code: 'aborted' })); });
+      // Closing is intentionally not raced: the native sink may already commit.
+      interrupted.catch(() => undefined);
+      activeDownloads.set(streamId, interrupt);
+      const abort = () => { interrupt(); void request('download-cancel', { streamId }).catch(() => undefined); };
+      signal?.addEventListener('abort', abort, { once: true });
+      let iterator;
+      let produced = false;
+      try {
+        iterator = chunks[Symbol.asyncIterator]();
+        checkAbort();
+        let sent = 0;
+        onProgress?.({ loaded: 0, total: size, phase: 'saving' });
+        while (true) {
+          const next = await Promise.race([iterator.next(), interrupted]);
+          if (next.done) { produced = true; break; }
+          const part = next.value;
+          checkAbort();
+          const view = part instanceof ArrayBuffer ? new Uint8Array(part) : part;
+          if (!(view instanceof Uint8Array)) throw new Error('Invalid export chunk.');
+          for (let start = 0; start < view.byteLength; start += downloadLimits.chunkBytes) {
+            checkAbort();
+            const buffer = view.slice(start, start + downloadLimits.chunkBytes).buffer;
+            sent += buffer.byteLength;
+            if (sent > size) throw new Error('Export exceeds declared size.');
+            await Promise.race([request('download-chunk', { streamId, bytes: buffer }, undefined, [buffer]), interrupted]);
+            checkAbort();
+            onProgress?.({ loaded: sent, total: size, phase: 'saving' });
+          }
+        }
+        if (sent !== size) throw new Error('Export size does not match declaration.');
+        checkAbort();
+        onProgress?.({ loaded: sent, total: size, phase: 'finishing' });
+        checkAbort();
+        // Closing commits the native file atomically; cancellation ends here.
+        signal?.removeEventListener('abort', abort);
+        await request('download-end', { streamId });
+        onProgress?.({ loaded: sent, total: size, phase: 'complete' });
+      } catch (error) {
+        await request('download-cancel', { streamId }).catch(() => undefined);
+        throw error;
+      } finally {
+        signal?.removeEventListener('abort', abort);
+        activeDownloads.delete(streamId);
+        // A generator may be awaiting work that cancellation cannot interrupt.
+        // Ask it to close, but never block file cleanup or the caller on return().
+        if (!produced) { try { Promise.resolve(iterator?.return?.()).catch(() => undefined); } catch {} }
+      }
+    }
+    Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, downloadStream, downloadLimits, ui, asset: (id, options = {}) => request('asset', { id }, options.onProgress), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
   })();`;
   // The parent cannot measure an opaque sandbox. Send only the height of the
   // tool's rendered document, never DOM/content, through the session channel.

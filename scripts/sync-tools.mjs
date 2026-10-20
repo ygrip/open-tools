@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { createGithubClient, loadSource, artIconName } from './lib/bundles.mjs';
 import { createCredentialResolver } from './lib/credentials.mjs';
 import { readToolRegistrations } from './lib/registrations.mjs';
+import { writeRegistrySnapshot } from './verify-registry-snapshot.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const configPath = process.env.TOOLS_REGISTRY_CONFIG || 'config/registry.json';
@@ -79,4 +80,5 @@ try {
 } finally {
   await rm(stage, { recursive: true, force: true });
 }
+await writeRegistrySnapshot(root, configPath);
 console.log(`Registered and verified ${loaded.length} bundle(s).`);
