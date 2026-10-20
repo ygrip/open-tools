@@ -3,10 +3,11 @@
   import { base } from '$app/paths';
   import { sandboxDocument, themeMessageType } from '$lib/registry/sandbox';
   import { documentTheme } from '$lib/theme';
-  import { loadAsset, loadBundle, runService, parseRuntimeRequest, RuntimeFailure, type RuntimeAsset, type RuntimeRequest, type RuntimeTool, type PermissionName, type CacheWarning } from '$lib/runtime/core';
+  import { loadAsset, loadBundle, parseRuntimeRequest, RuntimeFailure, type RuntimeAsset, type RuntimeRequest, type RuntimeTool, type PermissionName, type CacheWarning } from '$lib/runtime/core';
+  import { executeCapability } from '$lib/runtime/handlers';
   import ServiceChallenge from './ServiceChallenge.svelte';
-  import { fetchDns, type DnsQueryRequest } from '$lib/runtime/dns';
-  import { fetchWikiArticle, fetchWikiImage, wikiOrigin, wikiImageUrl, type WikiReadRequest, type WikiImageRequest } from '$lib/runtime/wiki';
+  import { type DnsQueryRequest } from '$lib/runtime/dns';
+  import { wikiOrigin, wikiImageUrl, type WikiReadRequest, type WikiImageRequest } from '$lib/runtime/wiki';
   import { runtimeStrings } from '$lib/runtime/strings';
   import { openDialog, closeDialog, hostUi, showToast } from '$lib/ui/host-ui.svelte';
   import { readDecisions, saveDecisions, clearDecisions, type Decisions } from '$lib/permissions';
@@ -375,45 +376,14 @@
     pending = null;
     brokerBusy = true;
     try {
-      let value: unknown;
-      if (request.operation === 'clipboard-read') {
-        if (!navigator.clipboard?.readText) throw new RuntimeFailure('unsupported');
-        value = await navigator.clipboard.readText();
-        if (typeof value !== 'string' || value.length > 1024 * 1024) throw new RuntimeFailure('size');
-      } else if (request.operation === 'clipboard-write') {
-        if (!navigator.clipboard?.writeText) throw new RuntimeFailure('unsupported');
-        await navigator.clipboard.writeText(request.payload as string);
-      } else if (request.operation === 'dns-query') {
-        value = await fetchDns(request.payload as DnsQueryRequest, controller!.signal);
-      } else if (request.operation === 'wiki-read') {
-        if ('image' in (request.payload as object)) {
-          const image = await fetchWikiImage(request.payload as WikiImageRequest, controller!.signal);
-          if (current === generation) reply(request, true, image, undefined, [image.bytes]);
-          return;
-        }
-        value = await fetchWikiArticle(request.payload as WikiReadRequest, controller!.signal);
-      } else if (request.operation === 'services') {
-        value = await runService(serviceEndpoint(service!.id), { version: tool.version, sha256: tool.bundle.sha256, input: (request.payload as { input: unknown }).input, ...(service!.turnstile ? { turnstileToken: tokenForAction } : {}) }, controller!.signal);
-      } else if (request.operation === 'share-image') {
-        const data = request.payload as { bytes: ArrayBuffer; filename: string; mime: 'image/png' };
-        if (!navigator.share || !navigator.canShare) throw new RuntimeFailure('unsupported');
-        const file = new File([data.bytes], data.filename, { type: data.mime });
-        if (!navigator.canShare({ files: [file] })) throw new RuntimeFailure('unsupported');
-        await navigator.share({ files: [file], title: tool.name });
-      } else if (request.operation === 'downloads') {
-        const data = request.payload as { bytes: ArrayBuffer; filename: string; mime: string };
-        const url = URL.createObjectURL(new Blob([data.bytes], { type: data.mime }));
-        downloadUrls.add(url);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = data.filename;
-        link.hidden = true;
-        document.body.append(link);
-        link.click();
-        link.remove();
-        setTimeout(() => { URL.revokeObjectURL(url); downloadUrls.delete(url); }, 1000);
-      }
-      if (current === generation) reply(request, true, value);
+      const { value, transfer } = await executeCapability(request, {
+        tool,
+        signal: controller!.signal,
+        serviceEndpoint,
+        verificationToken: tokenForAction,
+        downloadUrls
+      });
+      if (current === generation) reply(request, true, value, undefined, transfer);
     } catch (error) {
       if (current === generation) reply(request, false, undefined, error instanceof RuntimeFailure ? error.code : 'denied');
     } finally { if (current === generation) { brokerBusy = false; inFlight.delete(request.id); } }
