@@ -47,16 +47,13 @@
       void openWithKeyboard(event.key === 'ArrowUp');
       return;
     }
-    if (!open || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    if (!open || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
     const options = Array.from(root.querySelectorAll<HTMLAnchorElement>('.language-option'));
-    if (!options.length) return;
     const index = options.indexOf(document.activeElement as HTMLAnchorElement);
-    const next = event.key === 'Home' ? 0
-      : event.key === 'End' ? options.length - 1
-      : event.key === 'ArrowDown' ? (index + 1) % options.length
-      : (index < 0 ? options.length - 1 : (index - 1 + options.length) % options.length);
+    const direction = event.key === 'ArrowDown' ? 1 : -1;
+    if (!options.length) return;
     event.preventDefault();
-    options[next].focus();
+    options[index < 0 ? (direction > 0 ? 0 : options.length - 1) : (index + direction + options.length) % options.length].focus();
   }
 
   function onFocusOut(event: FocusEvent) {
