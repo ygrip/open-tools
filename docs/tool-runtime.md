@@ -220,3 +220,28 @@ Decisions are stored per tool ID in the user's own browser (`localStorage`, neve
 The host checks the release JSON identity and bootstrap HTML digest before embedding. A release/version mismatch, unsupported runtime, invalid digest, oversized resource or missing grant fails closed with a retry/recovery path. The platform's PWA update flow must ask before reloading an active workspace. A user's approval to download a model is not permission to silently replace it with bytes from a mutable URL.
 
 For every release, test accepted and declined permissions, browser-native denial, revocation during a request, cache corruption, offline startup, optional model failure, mobile focus behavior, and preservation of input/output during language/theme changes. No live private GitHub or model endpoint is considered verified solely because a mocked test passes.
+
+## Chunked exports over 16 MiB
+
+The existing `trickIt.request('downloads', { filename, mime, bytes })` continues to support small exports (16 MiB maximum). Tools that generate large GIFs, PDF bundles, music or archives can opt into `trickIt.downloadStream` without a new permission name:
+
+```js
+async function* chunksFromBlob(blob) {
+  const reader = blob.stream().getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) return;
+      yield value;
+    }
+  } finally { reader.releaseLock(); }
+}
+await trickIt.downloadStream({
+  filename: 'render.gif',
+  mime: 'image/gif',
+  size: exportedBlob.size,
+  chunks: chunksFromBlob(exportedBlob)
+});
+```
+
+The manifest must declare the existing `downloads` capability. Each transfer is acknowledged before the next one, and the SDK splits larger buffers into at most 1 MiB per message. The host rejects undeclared sizes or excess chunks, binds the export to the current session, and aborts it on cancellation/reload. The maximum declared size is 512 MiB. Browsers supporting the File System Access API stream directly into a user-selected file. Other browsers use a bounded in-memory Blob fallback (up to 128 MiB). Tools can detect `trickIt.downloadStream` before choosing a compatibility fallback for an older host. The sandbox never receives direct filesystem access.
