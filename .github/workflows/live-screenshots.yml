@@ -1,0 +1,48 @@
+name: Capture live homepage screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'docs/live-site-capture-*'
+    paths:
+      - '.github/workflows/live-screenshots.yml'
+      - 'scripts/capture-live-screenshots.mjs'
+      - 'docs/live-screenshots.md'
+      - 'README.md'
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    if: startsWith(github.ref, 'refs/heads/docs/live-site-capture-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Capture live site in four device/theme combinations
+        run: node scripts/capture-live-screenshots.mjs
+      - name: Commit production screenshots
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots/live/
+          git diff --cached --exit-code && exit 0
+          git commit -m "docs: add verified live production screenshots [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+      - name: Keep downloadable screenshots with the run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trick-it-live-homepage-screenshots
+          path: docs/screenshots/live/
+          if-no-files-found: warn

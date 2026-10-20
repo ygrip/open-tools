@@ -1,0 +1,97 @@
+{
+  "source": "https://tools.readynaz.com/",
+  "capturedAt": "2026-10-20T15:59:02.981Z",
+  "browser": "Chromium (Playwright)",
+  "commitAtCapture": "7ac9675771495f39f8c9a711351a4ba58912be37",
+  "generatedBy": "scripts/capture-live-screenshots.mjs",
+  "captures": [
+    {
+      "profile": "desktop",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": "trick-it-desktop-light.png",
+      "image": {
+        "width": 1440,
+        "height": 3116,
+        "bytes": 563957
+      },
+      "url": "https://tools.readynaz.com/",
+      "httpStatus": 200,
+      "title": "trick-it · Little tools. Lovely results.",
+      "h1": "Small tools.Big little wins.",
+      "language": "en",
+      "horizontalOverflowPixels": 0,
+      "pageHeight": 3116,
+      "pageErrors": []
+    },
+    {
+      "profile": "desktop",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": "trick-it-desktop-dark.png",
+      "image": {
+        "width": 1440,
+        "height": 3116,
+        "bytes": 568320
+      },
+      "url": "https://tools.readynaz.com/",
+      "httpStatus": 200,
+      "title": "trick-it · Little tools. Lovely results.",
+      "h1": "Small tools.Big little wins.",
+      "language": "en",
+      "horizontalOverflowPixels": 0,
+      "pageHeight": 3116,
+      "pageErrors": []
+    },
+    {
+      "profile": "mobile",
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "screenshot": "trick-it-mobile-light.png",
+      "image": {
+        "width": 390,
+        "height": 6019,
+        "bytes": 487908
+      },
+      "url": "https://tools.readynaz.com/",
+      "httpStatus": 200,
+      "title": "trick-it · Little tools. Lovely results.",
+      "h1": "Small tools.Big little wins.",
+      "language": "en",
+      "horizontalOverflowPixels": 0,
+      "pageHeight": 6019,
+      "pageErrors": []
+    },
+    {
+      "profile": "mobile",
+      "theme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "screenshot": "trick-it-mobile-dark.png",
+      "image": {
+        "width": 390,
+        "height": 6019,
+        "bytes": 494919
+      },
+      "url": "https://tools.readynaz.com/",
+      "httpStatus": 200,
+      "title": "trick-it · Little tools. Lovely results.",
+      "h1": "Small tools.Big little wins.",
+      "language": "en",
+      "horizontalOverflowPixels": 0,
+      "pageHeight": 6019,
+      "pageErrors": []
+    }
+  ]
+}
