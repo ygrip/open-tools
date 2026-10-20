@@ -28,13 +28,6 @@
     if (restoreFocus) trigger?.focus();
   }
 
-  async function openWithKeyboard(last = false) {
-    open = true;
-    await tick();
-    const options = root.querySelectorAll<HTMLAnchorElement>('.language-option');
-    (last ? options[options.length - 1] : options[0])?.focus();
-  }
-
   function onKeydown(event: KeyboardEvent) {
     if (!popover) return;
     if (event.key === 'Escape' && open) {
@@ -42,9 +35,10 @@
       close(true);
       return;
     }
-    if (!open && event.target === trigger && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+    if (!open && event.target === trigger && event.key === 'ArrowDown') {
       event.preventDefault();
-      void openWithKeyboard(event.key === 'ArrowUp');
+      open = true;
+      void tick().then(() => root.querySelector<HTMLAnchorElement>('.language-option')?.focus());
       return;
     }
     if (!open || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
