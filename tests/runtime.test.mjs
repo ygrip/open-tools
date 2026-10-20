@@ -1,11 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import ts from 'typescript';
+import { fileURLToPath } from 'node:url';
+import { build } from 'esbuild';
 
-const source = await readFile(new URL('../src/lib/runtime/core.ts', import.meta.url), 'utf8');
-const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
-const { sha256, loadBundle, loadAsset, assetRequestUrl, parseRuntimeRequest, runService } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
+// Bundle the real runtime dependencies; a standalone transpileModule import
+// from a data: URL cannot resolve sibling modules such as asset-cache.js.
+const { outputFiles } = await build({
+  entryPoints: [fileURLToPath(new URL('../src/lib/runtime/core.ts', import.meta.url))],
+  bundle: true, write: false, format: 'esm', platform: 'browser', target: 'es2022', logLevel: 'silent'
+});
+const { sha256, loadBundle, loadAsset, assetRequestUrl, parseRuntimeRequest, runService } =
+  await import(`data:text/javascript;base64,${Buffer.from(outputFiles[0].text).toString('base64')}`);
 const html = '<!doctype html><title>Safe tool</title>';
 const htmlHash = await sha256(new TextEncoder().encode(html));
 const tool = { schemaVersion: 3, id: 'fixture', name: 'Fixture', version: '1.0.0', bundle: { sha256: htmlHash }, permissions: [], assets: [] };

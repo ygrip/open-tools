@@ -40,7 +40,7 @@ test('recently used releases are retained even when over budget', async () => {
 
 test('unknown legacy entry sizes are conservatively accounted for', async () => {
   const meta = store();
-  const a = caches({ 'trick-it-assets-old': [new Response('legacy')], 'trick-it-assets-current': [response(100)] });
+  const a = caches({ 'trick-it-assets-legacy': [new Response('legacy')], 'trick-it-assets-current': [response(100)] });
   const result = await pruneAssetCaches(a, 'trick-it-assets-current', { now: Date.now(), budgetBytes: 1000, metadataStore: meta });
-  assert.deepEqual(result.deleted, ['trick-it-assets-old']);
+  assert.deepEqual(result.deleted, ['trick-it-assets-legacy']);
 });
