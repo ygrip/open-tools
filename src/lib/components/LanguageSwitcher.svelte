@@ -67,7 +67,7 @@
 <nav bind:this={root} class="language-switcher" class:language-popover={popover} aria-label={m.languages()} onkeydown={onKeydown} onfocusout={onFocusOut}>
   {#if popover}
     <button bind:this={trigger} class="language-trigger" type="button"
-      aria-label={m.languages() + ': ' + labels[getLocale()]} title={m.languages() + ': ' + labels[getLocale()]}
+      aria-label={m.languages() + ': ' + labels[getLocale()]}
       aria-expanded={open} aria-controls={open ? panelId : undefined}
       onclick={() => (open = !open)}>
       <span class="trigger-globe"><Icon name="globe" size={22} /></span>
