@@ -170,6 +170,16 @@ for(const scenario of [
     await expect(tool.locator('#job')).toContainText('Pemeriksaan belum selesai');
     await expect(tool.locator('#website')).toHaveValue('example.org');
     await expect(tool.locator('#run-audit')).toBeEnabled();
+    if (scenario.name === 'unreachable site') {
+      await page.evaluate(() => document.querySelector('iframe')?.contentWindow?.postMessage(
+        { type:'trick-it:locale', version:1, locale:'en' }, '*'
+      ));
+      await expect(tool.locator('#job')).toContainText('Audit did not finish');
+      await page.evaluate(() => document.querySelector('iframe')?.contentWindow?.postMessage(
+        { type:'trick-it:locale', version:1, locale:'id' }, '*'
+      ));
+      await expect(tool.locator('#job')).toContainText('Pemeriksaan belum selesai');
+    }
     expect(requests).toBe(1);
   });
 }
