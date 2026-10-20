@@ -168,6 +168,8 @@ test('SEO service client preserves zero scores, handles quota and aborts stale w
   await assert.rejects(runService('/api/tools/seo-checker/audit', payload, controller().signal, async () => response(null)), error => error.code === 'request');
   await assert.rejects(runService('/api/tools/seo-checker/audit', payload, controller().signal, async () => Response.json({ error: 'verification' }, { status: 403 })), error => error.code === 'verification');
   await assert.rejects(runService('/api/tools/seo-checker/audit', payload, controller().signal, async () => Response.json({ error: 'origin' }, { status: 403 })), error => error.code === 'request');
+  await assert.rejects(runService('/api/tools/seo-checker/audit', payload, controller().signal, async () => Response.json({ error: 'invalid-url' }, { status: 400 })), error => error.code === 'invalid-request');
+  await assert.rejects(runService('/api/tools/seo-checker/audit', payload, controller().signal, async () => Response.json({ error: 'unavailable' }, { status: 503 })), error => error.code === 'unavailable');
   const abort = controller(); abort.abort();
   await assert.rejects(runService('/api/tools/seo-checker/audit', payload, abort.signal), error => error.code === 'aborted');
 });
