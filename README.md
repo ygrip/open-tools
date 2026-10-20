@@ -4,31 +4,30 @@ A localized, installable SvelteKit platform for independent browser tools. Each 
 
 English and Indonesian pages are prerendered and support SPA navigation, per-tool guides/SEO, explicit capabilities, verified model/WASM downloads, and PWA offline access. Start with [localization](docs/i18n.md), [v3 metadata](docs/tool-contract-v3.md), [permissions/runtime](docs/tool-runtime.md), [PWA](docs/pwa.md), or [SEO deployment](docs/seo.md).
 
-## Screenshots
+## Live production screenshots
 
-Captured from the production preview. Mobile views show the complete header and navigation at **375 × 812**; desktop captures are full-page at 1440px wide.
+These captures come from the **deployed** [tools.readynaz.com](https://tools.readynaz.com/) homepage, rather than a locally rendered preview. Each screenshot is full-page. The automated Chromium capture uses a consistent viewport, explicit light/dark preferences, English locale, and reduced motion so the documentation is reproducible.
 
-### Mobile
-
-<img src="docs/screenshots/open-tools-mobile-light.png" width="375" alt="trick-it mobile light view with logo, search, theme control, Toolbox, How it works and GitHub navigation" /> <img src="docs/screenshots/open-tools-mobile-dark.png" width="375" alt="trick-it mobile dark view with the same visible header and navigation" />
-
-Header close-ups: [light](docs/screenshots/open-tools-mobile-header-light.png) · [dark](docs/screenshots/open-tools-mobile-header-dark.png).
-
-Also see the [Indonesian mobile view](docs/screenshots/trick-it-mobile-id.png), [localized tool guide](docs/screenshots/trick-it-tool-id.png), and [generated social card](docs/screenshots/trick-it-og-preview.png).
+| Mobile (390 × 844 viewport) | |
+| :---: | :---: |
+| **Light** | **Dark** |
+| <img src="docs/screenshots/live/trick-it-mobile-light.png" width="320" alt="Live trick-it homepage on mobile, light theme" /> | <img src="docs/screenshots/live/trick-it-mobile-dark.png" width="320" alt="Live trick-it homepage on mobile, dark theme" /> |
 
 <details>
-<summary>Desktop — light mode</summary>
+<summary>Desktop, light theme (1440 × 900 viewport)</summary>
 
-![trick-it homepage in light mode, with a clay toolbox illustration and bento-style tool catalog](docs/screenshots/open-tools-light.png)
+![Live trick-it homepage on desktop in light mode](docs/screenshots/live/trick-it-desktop-light.png)
 
 </details>
 
 <details>
-<summary>Desktop — dark mode</summary>
+<summary>Desktop, dark theme (1440 × 900 viewport)</summary>
 
-![trick-it homepage in dark mode, with the same clay illustration and dark bento cards](docs/screenshots/open-tools-dark.png)
+![Live trick-it homepage on desktop in dark mode](docs/screenshots/live/trick-it-desktop-dark.png)
 
 </details>
+
+Screenshot provenance, actual pixel sizes, capture time, HTTP status, and layout diagnostics are recorded in [capture.json](docs/screenshots/live/capture.json). Refresh instructions are in [the screenshot guide](docs/live-screenshots.md). Earlier screenshots are retained under `docs/screenshots/` for historical comparison.
 
 ## Run
 
