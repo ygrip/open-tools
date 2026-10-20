@@ -9,12 +9,14 @@ const GRACE_MS = 30 * 60 * 1000;
 const MAX_UNKNOWN_BYTES = 64 * 1024 * 1024;
 const recent = new Map();
 
+/** @param {Storage | null | undefined} storage */
 function metadata(storage) {
   try {
     const parsed = JSON.parse(storage?.getItem(KEY) || '{}');
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
   } catch { return {}; }
 }
+/** @param {Record<string, number>} data @param {Storage | null | undefined} storage */
 function save(data, storage) {
   try { storage?.setItem(KEY, JSON.stringify(data)); } catch { /* Private browsing */ }
 }
@@ -22,6 +24,7 @@ function localStore() {
   try { return globalThis.localStorage; } catch { return undefined; }
 }
 
+/** @param {string} name @param {number} now @param {Storage | null | undefined} storage */
 export function touchAssetCache(name, now = Date.now(), storage = localStore()) {
   if (!name.startsWith(PREFIX)) return;
   recent.set(name, now);
@@ -35,6 +38,11 @@ export function touchAssetCache(name, now = Date.now(), storage = localStore()) 
  * Header-only byte accounting avoids reading multi-megabyte model bodies.
  * Legacy entries with no byte header are conservatively counted at 64 MiB.
  */
+/**
+ * @param {CacheStorage} cacheStorage
+ * @param {string} active
+ * @param {{ now?: number, metadataStore?: Storage | null, budgetBytes?: number, estimate?: { quota?: number, usage?: number } }} options
+ */
 export async function pruneAssetCaches(cacheStorage, active, options = {}) {
   const now = options.now ?? Date.now();
   const store = options.metadataStore === undefined ? localStore() : options.metadataStore;
@@ -43,7 +51,7 @@ export async function pruneAssetCaches(cacheStorage, active, options = {}) {
   try {
     const estimate = options.estimate || (globalThis.navigator?.storage?.estimate ? await globalThis.navigator.storage.estimate() : undefined);
     if (estimate?.quota > 0) {
-      limit = Math.min(limit, Math.floor(estimate.quota * (estimate.usage / estimate.quota > .75 ? .10 : .20)));
+      limit = Math.min(limit, Math.floor(estimate.quota * ((estimate.usage ?? 0) / estimate.quota > .75 ? .10 : .20)));
     }
   } catch { /* Storage estimates are advisory. */ }
 
