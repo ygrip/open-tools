@@ -18,7 +18,7 @@ trick-it keeps browser-only tools isolated and local. Reviewed tools can opt int
 }
 ```
 
-The service list is optional; existing local tools need no changes. Each feature has its own rate-limit bucket. Two features can use different limits and Turnstile settings. Only approved immutable registrations determine deployed policies. A browser cannot disable Turnstile, raise a limit or choose a different provider URL. This release supports only the host-owned `pagespeed-seo` handler. Other server behaviors require reviewed implementations before the schema allows them.
+The service list is optional; existing local tools need no changes. Each feature has its own rate-limit bucket. Two features can use different limits and Turnstile settings. Only approved immutable registrations determine deployed policies. A browser cannot disable Turnstile, raise a limit or choose a different provider URL. This release supports the host-owned `pagespeed-seo` and `tracker-audit` handlers. `tracker-audit` uses a bounded Worker page read and Google PageSpeed Insights Lighthouse network diagnostics. It does **not** scan a visitor's browser cookie jar, run a native browser extension, or execute page scripts in the Worker. Dynamic signals depend on Google Lighthouse availability; response `Set-Cookie` names never include cookie values. Other server behaviors require reviewed implementations before the schema allows them.
 
 ## Runtime
 

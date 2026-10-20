@@ -192,7 +192,7 @@ export function parseRuntimeRequest(event: Pick<MessageEvent, 'source' | 'data'>
     if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).some(key => !['feature', 'input'].includes(key)) || typeof data.feature !== 'string' || !tool.services?.some(service => service.id === data.feature) || !data.input || typeof data.input !== 'object' || Array.isArray(data.input)) return { request, error: 'invalid-request' };
     const service = tool.services!.find(service => service.id === data.feature)!;
     const input = data.input as { url?: unknown; strategy?: unknown; locale?: unknown };
-    if (service.handler !== 'pagespeed-seo' || Object.keys(input).some(key => !['url', 'strategy', 'locale'].includes(key)) || typeof input.url !== 'string' || input.url.length > 2048 || !['mobile', 'desktop'].includes(input.strategy as string) || !['en', 'id'].includes(input.locale as string)) return { request, error: 'invalid-request' };
+    if (!['pagespeed-seo','tracker-audit'].includes(service.handler) || Object.keys(input).some(key => !['url', 'strategy', 'locale'].includes(key)) || typeof input.url !== 'string' || input.url.length > 2048 || !['mobile', 'desktop'].includes(input.strategy as string) || !['en', 'id'].includes(input.locale as string)) return { request, error: 'invalid-request' };
     try { const url = new URL(input.url); if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return { request, error: 'invalid-request' }; } catch { return { request, error: 'invalid-request' }; }
     try { if (JSON.stringify(data.input).length > 4096) return { request, error: 'invalid-request' }; }
     catch { return { request, error: 'invalid-request' }; }
