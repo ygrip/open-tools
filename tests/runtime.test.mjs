@@ -92,6 +92,68 @@ test('private and no-store model responses remain usable but never persist offli
     assert.deepEqual(warnings, ['cache-unavailable']);
   }
 });
+// CacheStorage stand-in enforces a shared origin quota, including unrelated data.
+function quotaCacheStorage(quota, unrelatedBytes) {
+  const releases = new Map();
+  let attempts = 0;
+  const storage = {
+    keys: async () => [...releases.keys()],
+    delete: async name => releases.delete(name),
+    open: async name => {
+      if (!releases.has(name)) releases.set(name, new Map());
+      const values = releases.get(name);
+      return {
+        keys: async () => [...values.keys()].map(url => new Request(url)),
+        match: async key => values.get(typeof key === 'string' ? key : key.url)?.clone(),
+        delete: async key => values.delete(typeof key === 'string' ? key : key.url),
+        put: async (key, value) => {
+          attempts++;
+          const bytes = (await value.clone().arrayBuffer()).byteLength;
+          let usage = unrelatedBytes;
+          for (const cache of releases.values()) for (const [url, entry] of cache)
+            if (cache !== values || url !== key) usage += Number(entry.headers.get('x-trick-it-asset-bytes'));
+          if (usage + bytes > quota) throw new DOMException('Full', 'QuotaExceededError');
+          values.set(key, value.clone());
+        }
+      };
+    }
+  };
+  return { storage, releases, attempts: () => attempts };
+}
+
+for (const estimated of [true, false]) {
+  test(`asset writes ${estimated ? 'reserve quota before writing' : 'reclaim stale caches and retry after quota failure'} and remain reusable`, async () => {
+    const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { storage: { estimate: async () => estimated ? { quota: 200, usage: 160 } : {} } } });
+    try {
+      const quota = quotaCacheStorage(200, 140);
+      const old = await quota.storage.open('trick-it-assets-stale-' + estimated);
+      await old.put('https://models.example/old', new Response(new Uint8Array(20), { headers: { 'x-trick-it-asset-bytes': '20' } }));
+      const incoming = new Uint8Array(50).fill(7);
+      const incomingAsset = { ...asset, bytes: incoming.length, sha256: await sha256(incoming) };
+      let requests = 0; const warnings = [];
+      const options = { signal: controller().signal, cacheStorage: quota.storage, fetcher: async () => { requests++; return new Response(incoming); }, onWarning: value => warnings.push(value) };
+      assert.deepEqual(await loadAsset(tool, incomingAsset, options), incoming);
+      assert.deepEqual(await loadAsset(tool, incomingAsset, options), incoming);
+      assert.equal(requests, 1, 'the second load reuses the verified cached bytes');
+      assert.equal(quota.attempts(), estimated ? 2 : 3, 'write retries exactly once after a quota failure');
+      assert.equal(quota.releases.has('trick-it-assets-stale-' + estimated), false);
+      assert.deepEqual(warnings, []);
+    } finally {
+      if (navigatorDescriptor) Object.defineProperty(globalThis, 'navigator', navigatorDescriptor);
+      else delete globalThis.navigator;
+    }
+  });
+}
+
+test('unrecoverable quota retries only once and keeps the verified network result', async () => {
+  const quota = quotaCacheStorage(1, 1); const warnings = [];
+  assert.deepEqual(await loadAsset(tool, asset, { signal: controller().signal, cacheStorage: quota.storage,
+    fetcher: async () => new Response(model), onWarning: value => warnings.push(value) }), model);
+  assert.equal(quota.attempts(), 2);
+  assert.deepEqual(warnings, ['cache-unavailable']);
+});
+
 test('asset timeout aborts the request and reports a safe reason', async () => {
   await assert.rejects(loadAsset(tool, asset, { signal: controller().signal, timeoutMs: 1, cacheStorage: null,
     fetcher: async (_url, { signal }) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new Error('private timeout detail')), { once: true }))

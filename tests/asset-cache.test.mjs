@@ -44,3 +44,24 @@ test('unknown legacy entry sizes are conservatively accounted for', async () => 
   const result = await pruneAssetCaches(a, 'trick-it-assets-current', { now: Date.now(), budgetBytes: 1000, metadataStore: meta });
   assert.deepEqual(result.deleted, ['trick-it-assets-legacy']);
 });
+
+test('eviction reserves bytes for the incoming asset before the cache write', async () => {
+  const a = caches({ 'trick-it-assets-reserve-old': [response(20)], 'trick-it-shell-v1': [response(140)] });
+  const result = await pruneAssetCaches(a, 'trick-it-assets-reserve-current', {
+    now: Date.now(), metadataStore: store(), estimate: { quota: 200, usage: 160 }, incomingBytes: 50
+  });
+  assert.deepEqual(result.deleted, ['trick-it-assets-reserve-old']);
+  assert.equal(a.has('trick-it-shell-v1'), true);
+});
+
+test('quota recovery reclaims eligible stale caches below the advisory budget', async () => {
+  const meta = store(); const now = Date.now();
+  touchAssetCache('trick-it-assets-recovery-recent', now, meta);
+  const a = caches({
+    'trick-it-assets-recovery-old': [response(20)], 'trick-it-assets-recovery-current': [response(10)],
+    'trick-it-assets-recovery-recent': [response(10)], 'trick-it-shell-v1': [response(140)]
+  });
+  const result = await pruneAssetCaches(a, 'trick-it-assets-recovery-current', { now, metadataStore: meta, reclaim: true });
+  assert.deepEqual(result.deleted, ['trick-it-assets-recovery-old']);
+  for (const name of ['trick-it-assets-recovery-current', 'trick-it-assets-recovery-recent', 'trick-it-shell-v1']) assert.equal(a.has(name), true);
+});

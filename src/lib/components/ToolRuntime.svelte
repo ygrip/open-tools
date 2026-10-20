@@ -5,7 +5,8 @@
   import { documentTheme } from '$lib/theme';
   import { loadAsset, loadBundle, parseRuntimeRequest, RuntimeFailure, type RuntimeAsset, type RuntimeRequest, type RuntimeTool, type PermissionName, type CacheWarning } from '$lib/runtime/core';
   import { executeCapability } from '$lib/runtime/handlers';
-  import { DownloadSessionManager, type StreamStart, type StreamPiece } from '$lib/runtime/downloads';
+  import { DownloadSessionManager, type StreamStart, type StreamPiece, type DownloadProgress } from '$lib/runtime/downloads';
+  import { DOWNLOAD_LIMITS } from '$lib/runtime/download-policy';
   import ServiceChallenge from './ServiceChallenge.svelte';
   import { type DnsQueryRequest } from '$lib/runtime/dns';
   import { wikiOrigin, wikiImageUrl, type WikiReadRequest, type WikiImageRequest } from '$lib/runtime/wiki';
@@ -63,7 +64,19 @@
   let loadedAssets = new Map<string, Promise<Uint8Array>>();
   const assetRequests = new Map<string, string>(); // request ID → declared asset ID
   const downloadUrls = new Set<string>();
-  const downloadSessions = new DownloadSessionManager(downloadUrls);
+  let downloadProgress = $state<DownloadProgress | null>(null);
+  const downloadSessions = new DownloadSessionManager(downloadUrls, undefined, value => { downloadProgress = value; });
+  async function cancelDownload() {
+    if (downloadProgress?.phase !== 'saving') return;
+    const streamId = downloadProgress.streamId;
+    const cancelled = downloadSessions.cancel(streamId);
+    // Only the user's explicit cancellation interrupts a stalled producer.
+    // Sink failures retain their actual error in the request acknowledgement.
+    frame?.contentWindow?.postMessage({ type: 'trick-it:download-cancelled', version: 1, token, streamId }, '*');
+    await cancelled;
+  }
+  const nativeDownloads = () => typeof (window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker === 'function';
+  const formatBytes = (bytes: number) => bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(2)} GiB` : `${(bytes / 1024 ** 2).toFixed(1)} MiB`;
   // Remember approved wiki origins for this tool session only, never globally.
   const approvedWikiOrigins = new Set<string>();
   // Startup permissions change the sandbox policy, so they are chosen before launch.
@@ -167,7 +180,7 @@
       for (const asset of assets) {
         if (!asset.defer && assetAllowed(asset, grants)) await getAsset(asset, current, signal);
       }
-      if (current === generation && !signal.aborted) frameDocument = sandboxDocument(html, documentTheme(document), { locale: frameLocale, token, permissions: [...grants], scriptAssets: assets.some((asset) => asset.type === 'script') });
+      if (current === generation && !signal.aborted) frameDocument = sandboxDocument(html, documentTheme(document), { locale: frameLocale, token, permissions: [...grants], scriptAssets: assets.some((asset) => asset.type === 'script'), nativeDownloads: nativeDownloads() });
     } catch (error) {
       if (current === generation && !signal.aborted) failure = fail(error);
     } finally {
@@ -415,7 +428,7 @@
     if (seen.size >= 1024) seen.delete(seen.values().next().value!);
     seen.add(request.id);
     if (parsed.error) { reply(request, false, undefined, parsed.error); return; }
-    if (inFlight.size >= 16) { reply(request, false, undefined, 'busy'); return; }
+    if (inFlight.size >= 16 && request.operation !== 'download-cancel') { reply(request, false, undefined, 'busy'); return; }
     const source = { id: tool.id, name: tool.name, icon: tool.icon };
     if (parsed.toast) { showToast(parsed.toast.message, parsed.toast.tone, source); reply(request, true); return; }
     if (parsed.dialog) {
@@ -448,7 +461,7 @@
         reply(request, false, undefined, assetFailure.code);
       } finally { if (current === generation) { progress = null; inFlight.delete(request.id); assetRequests.delete(request.id); } }
     } else if (['download-chunk', 'download-end', 'download-cancel'].includes(request.operation)) {
-      if (pending || brokerBusy) { reply(request, false, undefined, 'busy'); return; }
+      // Cleanup and sequential chunks remain available during unrelated prompts.
       inFlight.add(request.id);
       const current = generation;
       try {
@@ -574,6 +587,15 @@
   </section>
 {/if}
 {#if progress && frameDocument}<div class="runtime-notice"><ClayStatus state="working" title={text.progress} detail={progress.id} progress={progress.bytes / progress.total * 100} /></div>{/if}
+{#if downloadProgress && frameDocument}
+  <div class="runtime-notice" data-download-progress>
+    <ClayStatus state={downloadProgress.phase === 'complete' ? 'done' : 'working'} title={downloadProgress.phase === 'complete' ? text.downloadDone : downloadProgress.phase === 'finishing' ? text.downloadFinishing : text.downloadSaving}
+      detail={`${downloadProgress.filename} · ${formatBytes(downloadProgress.loaded)} / ${formatBytes(downloadProgress.total)} · ${Math.floor(downloadProgress.loaded / downloadProgress.total * 100)}%`}
+      progress={downloadProgress.loaded / downloadProgress.total * 100}>
+      {#if downloadProgress.phase === 'saving'}<button class="clay-button small" type="button" onclick={cancelDownload}>{text.downloadCancel}</button>{/if}
+    </ClayStatus>
+  </div>
+{/if}
 {#if warning}<p class="runtime-notice" role="status">{warning === 'cache-corrupt' ? text.corruptWarning : text.cachedWarning}</p>{/if}
 {#if assetFailure}<div class="runtime-notice" role="alert"><p>{text.errors[assetFailure.code]}</p>{#if failedAsset}<button class="clay-button small" type="button" onclick={retryAssetDownload}>{text.retryAsset}</button>{/if}</div>{/if}
 {#if recoveredAsset}<p class="runtime-notice" role="status">{text.assetReady}</p>{/if}
@@ -588,7 +610,7 @@
     {#if pending.operation === 'dns-query'}<p>{locale === 'id' ? 'Nama host dikirim ke resolver DNS-over-HTTPS publik (Cloudflare, termasuk resolver keamanannya, dan Google). Situs itu sendiri tidak dihubungi.' : 'The hostname is sent to public DNS-over-HTTPS resolvers (Cloudflare, including its security-filtering resolver, and Google). The site itself is not contacted.'}</p>{/if}
     {#if pending.operation === 'wiki-read'}<p>{locale === 'id' ? 'Situs tujuan akan menerima permintaan dari browser Anda. Tidak ada proxy server.' : 'Your browser will contact this wiki directly. No server proxy is used.'}</p><pre>{(pending.payload as WikiReadRequest).site}
 {(pending.payload as WikiReadRequest).title}</pre>{/if}
-    {#if pending.operation === 'download-begin'}<p>{(pending.payload as StreamStart).filename} · {((pending.payload as StreamStart).size / 1024 / 1024).toFixed(1)} MiB</p>{/if}
+    {#if pending.operation === 'download-begin'}<p>{(pending.payload as StreamStart).filename} · {formatBytes((pending.payload as StreamStart).size)}</p><p>{nativeDownloads() ? text.downloadNative : text.downloadBuffered} {text.downloadLimit}: {formatBytes(nativeDownloads() ? DOWNLOAD_LIMITS.maxBytes : DOWNLOAD_LIMITS.bufferedMaxBytes)}.</p>{/if}
     {#if pending.operation === 'downloads'}<p>{(pending.payload as { filename: string }).filename} · {(pending.payload as { mime: string }).mime} · {((pending.payload as { bytes: ArrayBuffer }).bytes.byteLength / 1024).toFixed(1)} KiB</p>{/if}
     {#if pending.operation === 'camera-capture' && cameraStage !== 'off'}
       <p>{locale === 'id' ? 'Foto hanya dikirim ke alat setelah Anda menekan Ambil foto.' : 'Only the photo you capture is sent to this tool.'}</p>

@@ -41,12 +41,13 @@ export function touchAssetCache(name, now = Date.now(), storage = localStore()) 
 /**
  * @param {CacheStorage} cacheStorage
  * @param {string} active
- * @param {{ now?: number, metadataStore?: Storage | null, budgetBytes?: number, estimate?: { quota?: number, usage?: number } }} options
+ * @param {{ now?: number, metadataStore?: Storage | null, budgetBytes?: number, estimate?: { quota?: number, usage?: number }, incomingBytes?: number, reclaim?: boolean }} options
  */
 export async function pruneAssetCaches(cacheStorage, active, options = {}) {
   const now = options.now ?? Date.now();
   const store = options.metadataStore === undefined ? localStore() : options.metadataStore;
   const budget = options.budgetBytes ?? DEFAULT_BUDGET;
+  const incoming = typeof options.incomingBytes === 'number' && Number.isSafeInteger(options.incomingBytes) && options.incomingBytes > 0 ? options.incomingBytes : 0;
   let limit = budget;
   try {
     const estimate = options.estimate || (globalThis.navigator?.storage?.estimate ? await globalThis.navigator.storage.estimate() : undefined);
@@ -77,7 +78,9 @@ export async function pruneAssetCaches(cacheStorage, active, options = {}) {
   let total = items.reduce((sum, item) => sum + item.bytes, 0);
   const deleted = [];
   for (const item of items.sort((a, b) => a.last - b.last)) {
-    if (total <= limit) break;
+    // Reserve the verified incoming bytes before put(); after a quota failure,
+    // reclaim every eligible stale release even if estimates were optimistic.
+    if (!options.reclaim && total + incoming <= limit) break;
     if (item.name === active || now - item.last < GRACE_MS) continue;
     if (await cacheStorage.delete(item.name)) {
       total -= item.bytes;

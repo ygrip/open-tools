@@ -59,7 +59,9 @@ const HOST_JS_BASELINE_TOOLS = 18;
 // previous ceiling; 1,024 bytes of headroom keeps the next copy tweak from failing CI. No per-tool JS ceiling changes.
 // The bounded export protocol and cache lifecycle add 1,776 bytes gzip on the 32-tool baseline.
 // Keep their allowance explicit and fixed rather than increasing the per-tool budget.
-const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048 + 1_024 + 2_048;
+// Export progress, cancellation and the shared browser-aware limit policy add ~1.5 kB gzip.
+// This fixed allowance leaves all tool-specific budgets unchanged.
+const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048 + 1_024 + 2_048 + 2_048;
 // User-approved catalog headroom: 64 extra gzip bytes per tool for richer EN/ID metadata.
 // The image-editor registration exceeded the previous aggregate ceiling by 12 bytes.
 // Keep the fixed host baseline and individual entry, bundle and icon ceilings unchanged.

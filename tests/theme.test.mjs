@@ -1,23 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
-import ts from 'typescript';
+import { build } from 'esbuild';
 
 // Exercise the exact browser modules without relying on Node's optional TS loader.
-function moduleUrl(source) {
-  const { outputText } = ts.transpileModule(source, {
-    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
-  });
-  return `data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`;
+async function loadModule(path) {
+  const { outputFiles } = await build({ entryPoints: [fileURLToPath(new URL(path, import.meta.url))],
+    bundle: true, write: false, format: 'esm', platform: 'browser', target: 'es2022', logLevel: 'silent' });
+  return import(`data:text/javascript;base64,${Buffer.from(outputFiles[0].text).toString('base64')}`);
 }
-const themeUrl = moduleUrl(await readFile(new URL('../src/lib/theme.ts', import.meta.url), 'utf8'));
-const theme = await import(themeUrl);
-const uiKitUrl = moduleUrl(await readFile(new URL('../src/lib/registry/ui-kit.ts', import.meta.url), 'utf8'));
-const tableUrl = moduleUrl(await readFile(new URL('../src/lib/registry/ui-table.ts', import.meta.url), 'utf8'));
-const sandboxSource = (await readFile(new URL('../src/lib/registry/sandbox.ts', import.meta.url), 'utf8'))
-  .replace("from '../theme'", `from '${themeUrl}'`).replace("from './ui-kit'", `from '${uiKitUrl}'`).replace("from './ui-table'", `from '${tableUrl}'`);
-const { sandboxDocument, bundlePolicy } = await import(moduleUrl(sandboxSource));
+const theme = await loadModule('../src/lib/theme.ts');
+const { sandboxDocument, bundlePolicy } = await loadModule('../src/lib/registry/sandbox.ts');
 
 test('sandbox theme is an enum and host policy precedes untrusted markup', () => {
   const content = '<!doctype html><html><body>Bundle contents</body></html>';
