@@ -22,16 +22,14 @@ test('Indonesian catalog and legal pages are prerendered at /id/', async ({ page
   await expect(page).toHaveURL(/\/id\/privacy\/?$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'id');
   await expect(page.getByRole('heading', { name: 'Kebijakan Privasi' })).toBeVisible();
-  await page.getByRole('button', { name: 'Bahasa: Bahasa Indonesia' }).click();
-  await page.getByRole('group', { name: 'Bahasa' }).getByRole('link', { name: 'English' }).click();
+  await page.getByRole('link', { name: 'English' }).click();
   await expect(page).toHaveURL(/\/privacy\/?$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });
 
 test('language switching preserves tool route and isolated bundle', async ({ page }) => {
   await page.goto('/json-tools/');
-  await page.getByRole('button', { name: 'Languages: English' }).click();
-  await page.getByRole('group', { name: 'Languages' }).getByRole('link', { name: 'Bahasa Indonesia' }).click();
+  await page.getByRole('link', { name: 'Bahasa Indonesia' }).click();
   await expect(page).toHaveURL(/\/id\/json-tools\/?$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'id');
   await expect(page.getByRole('link', { name: 'Kembali ke kotak alat' })).toBeVisible();
