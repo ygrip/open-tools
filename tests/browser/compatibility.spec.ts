@@ -16,7 +16,7 @@ for (const tool of catalog) {
     expect(createHash('sha256').update(envelope.html, 'utf8').digest('hex')).toBe(tool.bundle.sha256);
 
     await page.goto(`/${tool.id}/`);
-    await expect(page.getByRole('heading', { name: tool.translations?.en?.name ?? tool.name, level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: (tool.translations as unknown as { en?: { name: string } })?.en?.name ?? tool.name, level: 1 })).toBeVisible();
     const startup = tool.permissions.filter(p => ['external-assets', 'wasm', 'workers'].includes(p.name));
     if (startup.length) {
       // Never silently approve external engines during CI. Verify the host
