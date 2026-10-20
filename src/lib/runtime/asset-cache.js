@@ -50,8 +50,10 @@ export async function pruneAssetCaches(cacheStorage, active, options = {}) {
   let limit = budget;
   try {
     const estimate = options.estimate || (globalThis.navigator?.storage?.estimate ? await globalThis.navigator.storage.estimate() : undefined);
-    if (estimate?.quota > 0) {
-      limit = Math.min(limit, Math.floor(estimate.quota * ((estimate.usage ?? 0) / estimate.quota > .75 ? .10 : .20)));
+    const quota = Number(estimate?.quota ?? 0);
+    const usage = Number(estimate?.usage ?? 0);
+    if (Number.isFinite(quota) && quota > 0) {
+      limit = Math.min(limit, Math.floor(quota * (usage / quota > .75 ? .10 : .20)));
     }
   } catch { /* Storage estimates are advisory. */ }
 
