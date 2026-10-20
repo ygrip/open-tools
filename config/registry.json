@@ -6,6 +6,7 @@
   "discovery": false,
   "toolDirectory": "config/tools",
   "trustedAssetOrigins": [
-    "https://cdn.jsdelivr.net"
+    "https://cdn.jsdelivr.net",
+    "https://storage.googleapis.com"
   ]
 }
