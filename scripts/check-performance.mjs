@@ -55,7 +55,9 @@ const HOST_JS_BASELINE_TOOLS = 18;
 // the per-tool entry, iframe bundle and artwork ceilings remain unchanged.
 // Scoped wiki picture broker and DNS-over-HTTPS (dns-query) broker add <=2,048 gzip bytes to the shared host
 // (measured +1,719); per-tool entry, iframe bundle and artwork ceilings remain unchanged.
-const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048;
+// seo-checker 0.4.0 page-inspection consent copy (EN/ID) in the shared host strings: measured +106 bytes over the
+// previous ceiling; 1,024 bytes of headroom keeps the next copy tweak from failing CI. No per-tool JS ceiling changes.
+const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048 + 1_024;
 const TOOL_JS_ALLOWANCE = 1_024;
 const MAX_TOOL_ENTRY_GZIP = 4_096;
 for (const tool of catalog) {
