@@ -58,7 +58,10 @@ const HOST_JS_BASELINE_TOOLS = 18;
 // seo-checker 0.4.0 page-inspection consent copy (EN/ID) in the shared host strings: measured +106 bytes over the
 // previous ceiling; 1,024 bytes of headroom keeps the next copy tweak from failing CI. No per-tool JS ceiling changes.
 const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048 + 1_024;
-const TOOL_JS_ALLOWANCE = 1_024;
+// User-approved catalog headroom: 64 extra gzip bytes per tool for richer EN/ID metadata.
+// The image-editor registration exceeded the previous aggregate ceiling by 12 bytes.
+// Keep the fixed host baseline and individual entry, bundle and icon ceilings unchanged.
+const TOOL_JS_ALLOWANCE = 1_088;
 const MAX_TOOL_ENTRY_GZIP = 4_096;
 for (const tool of catalog) {
   const entryBytes = gzipSync(JSON.stringify(tool)).length;
