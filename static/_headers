@@ -1,3 +1,11 @@
+# Crawlers should receive fresh sitemap metadata with an explicit document type.
+/sitemap.xml
+  Content-Type: application/xml; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+/robots.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=300, must-revalidate
+
 # The release probe and worker script are mutable aliases. Never make browsers
 # or intermediary caches hold a previous deployment's update metadata.
 /_app/version.json

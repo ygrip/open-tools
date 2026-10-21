@@ -45,6 +45,12 @@ Use one `Seo` component per page. Remove duplicate `<title>`, description/canoni
 
 The default generator assumes the project's root deployment. Its exported `generateSeo({ root, origin, base })` accepts a base path for a deliberately configured subpath deployment; keep that value consistent with SvelteKit and PWA configuration.
 
+## Production deployment guard
+
+The production GitHub Actions build uses the deployed custom domain from `wrangler.jsonc` (`https://tools.readynaz.com`) as the fallback when the `PUBLIC_SITE_URL` repository variable is not configured. Pull requests still produce deliberately nonindexable preview artifacts. A production build must **never** inherit an empty `PUBLIC_SITE_URL`, because an explicitly empty value suppresses the generator's default and silently writes an empty sitemap and a deny-all `robots.txt`.
+
+After the static build, `scripts/verify-seo.mjs` compares the published `build/sitemap.xml` and `build/robots.txt` with the approved registry and checks that every listed localized page has an HTML artifact. In the production workflow `SEO_EXPECT_PRODUCTION=true` also requires the canonical origin to match the configured Cloudflare custom domain. Once Workers deploy finishes, CI downloads the public sitemap and robots file and checks the expected production URLs.
+
 ## Verification
 
 `tests/seo.test.mjs` checks origin validation, locale/base canonicalization, safe JSON-LD/SVG escaping, preview noindex behavior, sitemap exclusions and content-addressed card output using a deterministic injected renderer. The real Resvg renderer and bundled font are exercised by the production build, not by that test double.

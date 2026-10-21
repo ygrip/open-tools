@@ -17,7 +17,9 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     env:
-      PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+      # Empty repository variables must not turn the actual production deploy into a noindex preview.
+      PUBLIC_SITE_URL: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (vars.PUBLIC_SITE_URL || 'https://tools.readynaz.com') || '' }}
+      SEO_EXPECT_PRODUCTION: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -87,3 +89,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config .wrangler.services.json
+      - name: Verify public sitemap and robots after deploy
+        run: |
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 --retry-all-errors https://tools.readynaz.com/sitemap.xml -o /tmp/trick-it-sitemap.xml
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 --retry-all-errors https://tools.readynaz.com/robots.txt -o /tmp/trick-it-robots.txt
+          grep -Fq '<loc>https://tools.readynaz.com/</loc>' /tmp/trick-it-sitemap.xml
+          grep -Fq '<loc>https://tools.readynaz.com/id/</loc>' /tmp/trick-it-sitemap.xml
+          grep -Fq 'Sitemap: https://tools.readynaz.com/sitemap.xml' /tmp/trick-it-robots.txt
+          grep -Fq 'Allow: /' /tmp/trick-it-robots.txt
