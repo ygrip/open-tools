@@ -43,8 +43,10 @@ test('mobile language selector remains reachable without horizontal overflow', a
   await page.setViewportSize({ width: 320, height: 812 });
   await page.goto('/id/');
   await page.getByRole('button', { name: 'Opsi', exact: true }).click();
-  await expect(page.getByRole('link', { name: 'English' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Bahasa Indonesia' })).toBeVisible();
+  // Scope to the opened quick-settings menu: catalog cards can also mention languages.
+  const languageMenu = page.locator('.quick-settings .language-switcher');
+  await expect(languageMenu.getByRole('link', { name: 'English' })).toBeVisible();
+  await expect(languageMenu.getByRole('link', { name: 'Bahasa Indonesia' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
