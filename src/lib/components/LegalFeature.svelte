@@ -4,7 +4,7 @@
   import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 
   let { data }: { data: {
-    kind: 'terms' | 'policy';
+    kind: 'terms' | 'policy' | 'privacy';
     title: string;
     eyebrow: string;
     intro: string;
@@ -32,7 +32,7 @@
         <p class="legal-lede">{data.intro}</p>
         <p class="legal-updated">{data.updated}</p>
       </div>
-      <img class="legal-hero-art" src={`${base}/illustrations/${data.kind}-clay.svg`} alt={data.illustrationAlt} width="360" height="270" decoding="async" />
+      <img class="legal-hero-art" src={`${base}/illustrations/${data.kind}-clay.png`} alt={data.illustrationAlt} width="128" height="128" decoding="async" />
     </header>
     <aside class="legal-summary" aria-label={data.shortTitle}>
       <strong>{data.shortTitle}</strong>
