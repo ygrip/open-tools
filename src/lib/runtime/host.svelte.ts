@@ -74,7 +74,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
   }
 
   function reply(request: RuntimeRequest, ok: boolean, value?: unknown, error?: string, transfer: Transferable[] = []) {
-    if (request.session.token !== session.token || session.controller?.signal.aborted || !frame?.contentWindow) return;
+    if (request.token !== session.token || session.controller?.signal.aborted || !frame?.contentWindow) return;
     frame.contentWindow.postMessage({ type: 'trick-it:response', version: 1, token: session.token, id: request.id, ok, value, error }, '*', transfer);
   }
 
@@ -123,7 +123,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
   }
 
   async function startTool() {
-    const { signal, session.generation: current } = session.start();
+    const { signal, generation: current } = session.start();
     pending = null;
     frameDocument = '';
     frameHeight = 280;
@@ -160,7 +160,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
   }
 
   const media = createMediaSessions({
-    session.generation: () => session.generation,
+    generation: () => session.generation,
     pending: () => pending,
     active: (request, current) => current === session.generation && pending?.id === request.id && !session.controller?.signal.aborted,
     reply,
@@ -290,7 +290,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
       assetFailure = null;
       recoveredAsset = false;
       try {
-        const bytes = await getAsset(parsed.asset, current, session.controller.signal);
+        const bytes = await getAsset(parsed.asset, current, session.controller!.signal);
         if (current !== session.generation) return;
         const transferable = new Uint8Array(bytes).buffer;
         reply(request, true, { bytes: transferable, type: parsed.asset.type }, undefined, [transferable]);
