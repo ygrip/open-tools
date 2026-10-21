@@ -1,23 +1,8 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import type { PageData } from './$types';
   import Seo from '$lib/components/Seo.svelte';
-  import { localizedPath } from '$lib/i18n';
-  import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
+  import LegalFeature from '$lib/components/LegalFeature.svelte';
+  let { data }: { data: PageData } = $props();
 </script>
-<Seo title={m.policy_title()} description={m.policy_description()} path="/policy/" />
-<main id="main-content" class="page-shell legal-shell">
-  <div class="legal-top"><a class="legal-back" href={localizedPath('/')}>← trick-it</a><LanguageSwitcher /></div>
-  <article class="legal-card surface">
-    <p class="eyebrow">{m.registry_label()}</p>
-    <h1>{m.policy_title()}</h1>
-    <p class="legal-updated">{m.last_updated()}</p>
-    <h2>{m.policy_register_title()}</h2>
-    <p>{m.policy_register_text()}</p>
-    <h2>{m.policy_route_title()}</h2>
-    <p>{m.policy_route_text()}</p>
-    <h2>{m.policy_behavior_title()}</h2>
-    <p>{m.policy_behavior_text()}</p>
-    <h2>{m.policy_remove_title()}</h2>
-    <p>{m.policy_remove_text()}</p>
-  </article>
-</main>
+<Seo title={data.title} description={data.description} path="/policy/" />
+<LegalFeature {data} />
