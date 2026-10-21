@@ -9,7 +9,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 test('mobile Chrome records LCP, CLS, FCP and interaction timing on real rendered pages', async ({ browser }) => {
   test.setTimeout(120_000);
   const report: Array<Record<string, string | number | null>> = [];
-  for (const route of ['/', '/json-tools/']) {
+  for (const route of ['/', '/hash-generator/']) {
     const context = await browser.newContext({ ...devices['Pixel 7'], reducedMotion: 'reduce' });
     const page = await context.newPage();
     const cdp = await context.newCDPSession(page);
