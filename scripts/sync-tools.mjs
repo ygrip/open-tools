@@ -7,6 +7,7 @@ import { readToolRegistrations } from './lib/registrations.mjs';
 import { writeRegistrySnapshot } from './verify-registry-snapshot.mjs';
 import { mapBounded } from './lib/concurrency.mjs';
 
+const syncStartedAt = performance.now();
 const root = fileURLToPath(new URL('../', import.meta.url));
 const configPath = process.env.TOOLS_REGISTRY_CONFIG || 'config/registry.json';
 const config = JSON.parse(await readFile(resolve(root, configPath), 'utf8'));
@@ -89,4 +90,4 @@ try {
   await rm(stage, { recursive: true, force: true });
 }
 await writeRegistrySnapshot(root, configPath);
-console.log(`Registered and verified ${loaded.length} bundle(s).`);
+console.log(`Registered and verified ${loaded.length} bundle(s) in ${((performance.now() - syncStartedAt) / 1000).toFixed(2)}s (up to 4 concurrent approved sources).`);
