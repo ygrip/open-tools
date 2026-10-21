@@ -93,7 +93,7 @@
   "policy_remove_text": "Kami dapat menonaktifkan atau menghapus alat yang tidak aman, menyesatkan, tidak tersedia, atau tidak lagi memenuhi persyaratan publikasi. Pemeriksaan ini juga dapat kami perbarui seiring perkembangan platform.",
   "legal_label": "Informasi hukum",
   "registry_label": "Registri",
-  "last_updated": "Terakhir diperbarui: 21 Oktober 2026",
+  "last_updated": "Terakhir diperbarui: 17 Oktober 2026",
   "overlay_empty_tip": "Coba format seperti JSON atau XML, atau gunakan kata yang lebih singkat.",
   "overlay_tip": "Alat yang kamu butuhkan hanya sejauh satu klik. Tekan Escape untuk menutup.",
   "overlay_placeholder": "Apa yang ingin kamu selesaikan?",
@@ -261,5 +261,6 @@
   "legal_in_short": "Singkatnya",
   "legal_related_label": "Informasi lain tentang trick-it",
   "legal_related_title": "Informasi penting lainnya",
-  "legal_last_updated": "Terakhir diperbarui: 21 Oktober 2026"
+  "legal_last_updated": "Terakhir diperbarui: 21 Oktober 2026",
+  "policy_eyebrow": "Cara kerja alat"
 }

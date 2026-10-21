@@ -93,7 +93,7 @@
   "policy_remove_text": "We may disable or remove a tool if it becomes unsafe, misleading, unavailable, or no longer meets our publishing requirements. We may update these checks as the platform improves.",
   "legal_label": "Legal",
   "registry_label": "Registry",
-  "last_updated": "Last updated: October 21, 2026",
+  "last_updated": "Last updated: October 17, 2026",
   "overlay_empty_tip": "Try a format like JSON or XML, or a shorter word.",
   "overlay_tip": "Your next little shortcut is a click away. Press Escape to close.",
   "overlay_placeholder": "What would make today a little easier?",
@@ -261,5 +261,6 @@
   "legal_in_short": "The short version",
   "legal_related_label": "More about trick-it",
   "legal_related_title": "More good-to-know stuff",
-  "legal_last_updated": "Last updated: October 21, 2026"
+  "legal_last_updated": "Last updated: October 21, 2026",
+  "policy_eyebrow": "How tools work"
 }

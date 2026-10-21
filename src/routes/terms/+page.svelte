@@ -26,7 +26,7 @@
         <p class="eyebrow">{m.legal_label()}</p>
         <h1>{m.terms_title()}</h1>
         <p class="legal-lede">{m.terms_intro()}</p>
-        <p class="legal-updated">{m.last_updated()}</p>
+        <p class="legal-updated">{m.legal_last_updated()}</p>
       </div>
       <img class="legal-hero-art" src={`${base}/illustrations/terms-clay.svg`} alt={m.terms_illustration_alt()} width="360" height="270" decoding="async" />
     </header>

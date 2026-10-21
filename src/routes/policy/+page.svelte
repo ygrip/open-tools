@@ -23,10 +23,10 @@
   <article class="legal-card legal-feature surface">
     <header class="legal-hero">
       <div class="legal-hero-copy">
-        <p class="eyebrow">{m.registry_label()}</p>
+        <p class="eyebrow">{m.policy_eyebrow()}</p>
         <h1>{m.policy_title()}</h1>
         <p class="legal-lede">{m.policy_intro()}</p>
-        <p class="legal-updated">{m.last_updated()}</p>
+        <p class="legal-updated">{m.legal_last_updated()}</p>
       </div>
       <img class="legal-hero-art" src={`${base}/illustrations/policy-clay.svg`} alt={m.policy_illustration_alt()} width="360" height="270" decoding="async" />
     </header>
