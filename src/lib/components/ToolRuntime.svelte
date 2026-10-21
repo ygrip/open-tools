@@ -48,11 +48,11 @@
       {#if host.permissions.length}<button class="clay-button small revoke" type="button" onclick={host.resetAccess} aria-label={text.revoke} title={text.revoke}><Icon name="lock" size={16} /><span>{text.revokeShort}</span></button>{/if}
     </div>
     {#if host.failure || host.timedOut}
-      <div class="load-state"><ClayStatus state="error" title={text.failed} detail={`${host.timedOut ? text.timeout : text.errors[host.failure!.code]}${failure?.status ? ` (${host.failure.status})` : ''}`}><button class="clay-button small" type="button" onclick={host.startTool}>{text.retry}</button></ClayStatus></div>
+      <div class="load-state"><ClayStatus state="error" title={text.failed} detail={`${host.timedOut ? text.timeout : text.errors[host.failure!.code]}${host.failure?.status ? ` (${host.failure?.status})` : ''}`}><button class="clay-button small" type="button" onclick={host.startTool}>{text.retry}</button></ClayStatus></div>
     {:else if host.frameDocument}
       <iframe bind:this={host.frame} title={tool.name} srcdoc={host.frameDocument} sandbox="allow-scripts" allow="camera 'none'; microphone 'none'; geolocation 'none'; clipboard-read 'none'; clipboard-write 'none'" referrerpolicy="no-referrer" style:height={`${host.frameHeight}px`} onload={host.syncFrame}></iframe>
     {:else if host.loading}
-      <div class="load-state"><ClayStatus state={host.progress ? 'working' : 'waiting'} title={`${text.loading} ${tool.name}…`} detail={progress ? `${text.progress}: ${host.progress.id}` : ''} progress={host.progress ? host.progress.bytes / host.progress.total * 100 : null} /></div>
+      <div class="load-state"><ClayStatus state={host.progress ? 'working' : 'waiting'} title={`${text.loading} ${tool.name}…`} detail={host.progress ? `${text.progress}: ${host.progress.id}` : ''} progress={host.progress ? host.progress.bytes / host.progress.total * 100 : null} /></div>
     {/if}
   </section>
 {/if}
@@ -74,14 +74,14 @@
   {#if host.pending}
     <h2 id="runtime-operation-title">{text.confirm}</h2>
     <p><strong>{tool.name}: {text.labels[(host.pending.operation === 'download-begin' ? 'downloads' : host.pending.operation) as keyof typeof text.labels]}</strong></p>
-    <p>{pendingAsk ? text.rememberHelp : text.confirmHelp}</p>
+    <p>{host.pendingAsk ? text.rememberHelp : text.confirmHelp}</p>
     {#if host.pendingService && host.pendingInput}<p>{host.pendingService.handler === 'tracker-audit' ? (locale === 'id' ? 'URL publik akan diperiksa oleh Google PageSpeed Insights dan Worker trick-it. Google dapat memuat skrip halaman dalam browser uji terisolasi. Jangan gunakan URL privat atau bertanda tangan.' : 'The public URL is sent to Google PageSpeed Insights and inspected by the trick-it Worker. Google may load page scripts in an isolated test browser. Do not submit private or signed URLs.') : text.seoHelp}</p><pre>{host.pendingInput.url}</pre><p>{host.pendingInput.strategy === 'mobile' ? text.seoMobile : text.seoDesktop} · {text.serviceLimit}: {host.pendingService.rateLimit.limit} / {host.pendingService.rateLimit.periodSeconds}s</p>{#if host.pendingService.turnstile}<ServiceChallenge endpoint={host.serviceEndpoint(host.pendingService.id)} version={tool.version} sha256={tool.bundle.sha256} {locale} onToken={(token) => host.verificationToken = token} />{/if}{/if}
     {#if host.pending.operation === 'clipboard-write'}<pre>{(host.pending.payload as string).slice(0, 240)}</pre>{/if}
     {#if host.pending.operation === 'dns-query'}<p>{locale === 'id' ? 'Nama host dikirim ke resolver DNS-over-HTTPS publik (Cloudflare, termasuk resolver keamanannya, dan Google). Situs itu sendiri tidak dihubungi.' : 'The hostname is sent to public DNS-over-HTTPS resolvers (Cloudflare, including its security-filtering resolver, and Google). The site itself is not contacted.'}</p>{/if}
     {#if host.pending.operation === 'wiki-read'}<p>{locale === 'id' ? 'Situs tujuan akan menerima permintaan dari browser Anda. Tidak ada proxy server.' : 'Your browser will contact this wiki directly. No server proxy is used.'}</p><pre>{(host.pending.payload as WikiReadRequest).site}
 {(host.pending.payload as WikiReadRequest).title}</pre>{/if}
     {#if host.pending.operation === 'download-begin'}<p>{(host.pending.payload as StreamStart).filename} · {host.formatBytes((host.pending.payload as StreamStart).size)}</p><p>{host.nativeDownloads() ? text.downloadNative : text.downloadBuffered} {text.downloadLimit}: {host.formatBytes(host.nativeDownloads() ? DOWNLOAD_LIMITS.maxBytes : DOWNLOAD_LIMITS.bufferedMaxBytes)}.</p>{/if}
-    {#if host.pending.operation === 'downloads'}<p>{(pending.payload as { filename: string }).filename} · {(pending.payload as { mime: string }).mime} · {((pending.payload as { bytes: ArrayBuffer }).bytes.byteLength / 1024).toFixed(1)} KiB</p>{/if}
+    {#if host.pending.operation === 'downloads'}<p>{(host.pending.payload as { filename: string }).filename} · {(host.pending.payload as { mime: string }).mime} · {((host.pending.payload as { bytes: ArrayBuffer }).bytes.byteLength / 1024).toFixed(1)} KiB</p>{/if}
     {#if host.pending.operation === 'camera-capture' && host.cameraStage !== 'off'}
       <p>{locale === 'id' ? 'Foto hanya dikirim ke alat setelah Anda menekan Ambil foto.' : 'Only the photo you capture is sent to this tool.'}</p>
       <video bind:this={host.cameraVideo} autoplay muted playsinline class="camera-preview" aria-label={locale === 'id' ? 'Pratinjau kamera' : 'Camera preview'}></video>
