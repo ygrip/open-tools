@@ -487,9 +487,3 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
   .legal-feature .legal-related-links { width: 100%; }
   .legal-feature .legal-related-links a { flex: 1; }
 }
-
-/* Terms and Tool Policy are prerendered without client hydration. Keep language switching as ordinary links. */
-.legal-language-links { display: inline-flex; align-items: center; padding: 4px; gap: 4px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-strong); }
-.legal-language-links a { display: inline-flex; justify-content: center; align-items: center; min-width: 44px; min-height: 44px; padding: 0 8px; border-radius: 12px; color: var(--text-secondary); font-size: 13px; font-weight: 900; }
-.legal-language-links a[aria-current="page"] { background: var(--lavender); color: var(--text); box-shadow: 0 2px 0 var(--line); }
-.legal-language-links a:hover, .legal-language-links a:focus-visible { background: var(--mint); }
