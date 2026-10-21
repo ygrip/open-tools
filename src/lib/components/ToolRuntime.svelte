@@ -26,9 +26,9 @@
 
 {#if host.consent}
   <div class="load-state"><ClayStatus state="waiting" title={text.permissions} detail={tool.name} /></div>
-  <div class="host.consent surface" role="dialog" aria-modal="true" aria-labelledby="runtime-host.consent-title">
-    <p class="host.consent-source"><ToolArt id={tool.id} icon={(tool.icon ?? 'sparkles') as ToolIcon} size={32} /> {tool.name}</p>
-    <h2 id="runtime-host.consent-title">{text.permissions}</h2>
+  <div class="consent surface" role="dialog" aria-modal="true" aria-labelledby="runtime-consent-title">
+    <p class="consent-source"><ToolArt id={tool.id} icon={(tool.icon ?? 'sparkles') as ToolIcon} size={32} /> {tool.name}</p>
+    <h2 id="runtime-consent-title">{text.permissions}</h2>
     <p>{text.permissionHelp}</p>
     {#each host.startupPermissions as permission}
       <label class="permission"><input type="checkbox" value={permission.name} required={permission.required} bind:group={host.selected} /><span><strong>{text.labels[permission.name]}</strong> <small>({permission.required ? text.required : text.optional})</small><span>{permission.reason}</span></span></label>
@@ -48,20 +48,20 @@
       {#if host.permissions.length}<button class="clay-button small revoke" type="button" onclick={host.resetAccess} aria-label={text.revoke} title={text.revoke}><Icon name="lock" size={16} /><span>{text.revokeShort}</span></button>{/if}
     </div>
     {#if host.failure || host.timedOut}
-      <div class="load-state"><ClayStatus state="error" title={text.failed} detail={`${host.timedOut ? text.timeout : text.errors[host.failure!.code]}${host.failure?.status ? ` (${host.failure.status})` : ''}`}><button class="clay-button small" type="button" onclick={host.startTool}>{text.retry}</button></ClayStatus></div>
+      <div class="load-state"><ClayStatus state="error" title={text.failed} detail={`${host.timedOut ? text.timeout : text.errors[host.failure!.code]}${failure?.status ? ` (${host.failure.status})` : ''}`}><button class="clay-button small" type="button" onclick={host.startTool}>{text.retry}</button></ClayStatus></div>
     {:else if host.frameDocument}
       <iframe bind:this={host.frame} title={tool.name} srcdoc={host.frameDocument} sandbox="allow-scripts" allow="camera 'none'; microphone 'none'; geolocation 'none'; clipboard-read 'none'; clipboard-write 'none'" referrerpolicy="no-referrer" style:height={`${host.frameHeight}px`} onload={host.syncFrame}></iframe>
     {:else if host.loading}
-      <div class="load-state"><ClayStatus state={host.progress ? 'working' : 'waiting'} title={`${text.loading} ${tool.name}…`} detail={host.progress ? `${text.progress}: ${host.progress.id}` : ''} host.progress={host.progress ? host.progress.bytes / host.progress.total * 100 : null} /></div>
+      <div class="load-state"><ClayStatus state={host.progress ? 'working' : 'waiting'} title={`${text.loading} ${tool.name}…`} detail={progress ? `${text.progress}: ${host.progress.id}` : ''} progress={host.progress ? host.progress.bytes / host.progress.total * 100 : null} /></div>
     {/if}
   </section>
 {/if}
-{#if host.progress && host.frameDocument}<div class="runtime-notice"><ClayStatus state="working" title={text.progress} detail={host.progress.id} host.progress={host.progress.bytes / host.progress.total * 100} /></div>{/if}
+{#if host.progress && host.frameDocument}<div class="runtime-notice"><ClayStatus state="working" title={text.progress} detail={host.progress.id} progress={host.progress.bytes / host.progress.total * 100} /></div>{/if}
 {#if host.downloadProgress && host.frameDocument}
-  <div class="runtime-notice" data-download-host.progress>
+  <div class="runtime-notice" data-download-progress>
     <ClayStatus state={host.downloadProgress.phase === 'complete' ? 'done' : 'working'} title={host.downloadProgress.phase === 'complete' ? text.downloadDone : host.downloadProgress.phase === 'finishing' ? text.downloadFinishing : text.downloadSaving}
       detail={`${host.downloadProgress.filename} · ${host.formatBytes(host.downloadProgress.loaded)} / ${host.formatBytes(host.downloadProgress.total)} · ${Math.floor(host.downloadProgress.loaded / host.downloadProgress.total * 100)}%`}
-      host.progress={host.downloadProgress.loaded / host.downloadProgress.total * 100}>
+      progress={host.downloadProgress.loaded / host.downloadProgress.total * 100}>
       {#if host.downloadProgress.phase === 'saving'}<button class="clay-button small" type="button" onclick={host.cancelDownload}>{text.downloadCancel}</button>{/if}
     </ClayStatus>
   </div>
@@ -81,7 +81,7 @@
     {#if host.pending.operation === 'wiki-read'}<p>{locale === 'id' ? 'Situs tujuan akan menerima permintaan dari browser Anda. Tidak ada proxy server.' : 'Your browser will contact this wiki directly. No server proxy is used.'}</p><pre>{(host.pending.payload as WikiReadRequest).site}
 {(host.pending.payload as WikiReadRequest).title}</pre>{/if}
     {#if host.pending.operation === 'download-begin'}<p>{(host.pending.payload as StreamStart).filename} · {host.formatBytes((host.pending.payload as StreamStart).size)}</p><p>{host.nativeDownloads() ? text.downloadNative : text.downloadBuffered} {text.downloadLimit}: {host.formatBytes(host.nativeDownloads() ? DOWNLOAD_LIMITS.maxBytes : DOWNLOAD_LIMITS.bufferedMaxBytes)}.</p>{/if}
-    {#if host.pending.operation === 'downloads'}<p>{(host.pending.payload as { filename: string }).filename} · {(host.pending.payload as { mime: string }).mime} · {((host.pending.payload as { bytes: ArrayBuffer }).bytes.byteLength / 1024).toFixed(1)} KiB</p>{/if}
+    {#if host.pending.operation === 'downloads'}<p>{(pending.payload as { filename: string }).filename} · {(pending.payload as { mime: string }).mime} · {((pending.payload as { bytes: ArrayBuffer }).bytes.byteLength / 1024).toFixed(1)} KiB</p>{/if}
     {#if host.pending.operation === 'camera-capture' && host.cameraStage !== 'off'}
       <p>{locale === 'id' ? 'Foto hanya dikirim ke alat setelah Anda menekan Ambil foto.' : 'Only the photo you capture is sent to this tool.'}</p>
       <video bind:this={host.cameraVideo} autoplay muted playsinline class="camera-preview" aria-label={locale === 'id' ? 'Pratinjau kamera' : 'Camera preview'}></video>
