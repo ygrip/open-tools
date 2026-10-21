@@ -18,7 +18,7 @@
     "i18n:compile": "paraglide-js compile --project ./project.inlang",
     "services:generate": "node scripts/generate-services.mjs",
     "pretest": "npm run services:generate",
-    "build:verified": "node scripts/verify-registry-snapshot.mjs && npm run services:generate && npm run seo:generate && vite build && node scripts/export-error-page.mjs"
+    "build:verified": "node scripts/verify-registry-snapshot.mjs && npm run services:generate && npm run seo:generate && vite build && node scripts/export-error-page.mjs && node scripts/verify-seo.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
