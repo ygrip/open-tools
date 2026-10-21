@@ -399,6 +399,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
     get recoveredAsset() { return recoveredAsset; },
     get progress() { return progress; },
     get pending() { return pending; },
+    get pendingAsk() { return pendingAsk; },
     get verificationToken() { return verificationToken; },
     get pendingService() { return pendingService; },
     get pendingInput() { return pendingInput; },
