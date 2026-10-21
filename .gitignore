@@ -42,3 +42,6 @@ worker/generated-services.json
 
 # Verified registry snapshot for one build, never committed
 scripts/.verified-registry.json
+
+# Generated CI measurements
+artifacts/

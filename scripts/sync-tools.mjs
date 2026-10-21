@@ -5,7 +5,9 @@ import { createGithubClient, loadSource, artIconName } from './lib/bundles.mjs';
 import { createCredentialResolver } from './lib/credentials.mjs';
 import { readToolRegistrations } from './lib/registrations.mjs';
 import { writeRegistrySnapshot } from './verify-registry-snapshot.mjs';
+import { mapBounded } from './lib/concurrency.mjs';
 
+const syncStartedAt = performance.now();
 const root = fileURLToPath(new URL('../', import.meta.url));
 const configPath = process.env.TOOLS_REGISTRY_CONFIG || 'config/registry.json';
 const config = JSON.parse(await readFile(resolve(root, configPath), 'utf8'));
@@ -34,17 +36,25 @@ if (config.discovery) {
   }
 }
 
-const loaded = [];
-const ids = new Set();
-for (const source of sources) {
-  // Fail closed: never silently publish a partial registry on a source failure.
-  const tool = await loadSource(source, config, root, github);
+// Verify pinned sources in parallel, with a small cap to protect the GitHub API.
+// No staged output is touched until EVERY source has passed its hash/contract checks.
+const loaded = await mapBounded(sources, 4, async (source) => {
+  let tool;
+  try { tool = await loadSource(source, config, root, github); }
+  catch (error) {
+    const cause = error instanceof Error ? error.message : String(error);
+    const hint = source.local ? '' : ' For a private repository, check auth.repositories / auth.owners and build-time TOOLS_GITHUB_TOKEN access.';
+    throw new Error(`Could not verify approved source ${source.repository}@${source.ref ?? 'local'}: ${cause}.${hint}`, { cause: error });
+  }
   const configuredId = configuredIds.get(source.repository.toLowerCase());
   if (configuredId && tool.manifest.id !== configuredId) throw new Error(`tool registration filename does not match manifest id: ${configuredId}`);
-  if (ids.has(tool.manifest.id)) throw new Error(`duplicate tool id/path: ${tool.manifest.id}`);
-  ids.add(tool.manifest.id);
   const addedAt = addedDates.get(source.repository.toLowerCase());
-  loaded.push(addedAt ? { ...tool, manifest: { ...tool.manifest, addedAt } } : tool);
+  return addedAt ? { ...tool, manifest: { ...tool.manifest, addedAt } } : tool;
+});
+const ids = new Set();
+for (const { manifest } of loaded) {
+  if (ids.has(manifest.id)) throw new Error(`duplicate tool id/path: ${manifest.id}`);
+  ids.add(manifest.id);
 }
 loaded.sort((a, b) => a.manifest.name.localeCompare(b.manifest.name));
 await mkdir(resolve(root, 'static'), { recursive: true });
@@ -81,4 +91,4 @@ try {
   await rm(stage, { recursive: true, force: true });
 }
 await writeRegistrySnapshot(root, configPath);
-console.log(`Registered and verified ${loaded.length} bundle(s).`);
+console.log(`Registered and verified ${loaded.length} bundle(s) in ${((performance.now() - syncStartedAt) / 1000).toFixed(2)}s (up to 4 concurrent approved sources).`);

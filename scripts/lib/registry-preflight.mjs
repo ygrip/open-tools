@@ -1,8 +1,8 @@
+import { mapBounded } from './concurrency.mjs';
 export async function verifySourceAccess(registrations, github) {
   const failures = [];
   let verified = 0;
-  for (const { source } of registrations) {
-    if (source.local) continue;
+  await mapBounded(registrations.filter(({ source }) => !source.local), 4, async ({ source }) => {
     const path = `/repos/${source.repository}/contents/tool.manifest.json?ref=${source.ref}`;
     try {
       const result = await github(path);
@@ -20,7 +20,8 @@ export async function verifySourceAccess(registrations, github) {
           : 'GitHub request failed or credential could not be resolved';
       failures.push(`${source.repository}@${source.ref}: ${detail}`);
     }
-  }
+  });
+  failures.sort();
   if (failures.length) {
     throw new Error(`Private tool registry access check failed for ${failures.length} source(s): ${failures.join('; ')}. Check auth.repositories / auth.owners credentials or TOOLS_GITHUB_TOKEN fallback; public repositories need no token. Grant approved owners read-only access. The default Actions GITHUB_TOKEN cannot read sibling private repositories.`);
   }
