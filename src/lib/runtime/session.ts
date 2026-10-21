@@ -1,5 +1,3 @@
-import type { RuntimeRequest } from './core';
-
 /** Per-iframe lifecycle state. Never shared between tool instances or releases. */
 export class RuntimeSession {
   controller?: AbortController;
@@ -30,9 +28,5 @@ export class RuntimeSession {
     this.inFlight.clear();
     this.loadedAssets.clear();
     this.assetRequests.clear();
-  }
-
-  accepts(request: RuntimeRequest) {
-    return request.token === this.token && !this.controller?.signal.aborted;
   }
 }

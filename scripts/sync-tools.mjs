@@ -43,7 +43,8 @@ const loaded = await mapBounded(sources, 4, async (source) => {
   try { tool = await loadSource(source, config, root, github); }
   catch (error) {
     const cause = error instanceof Error ? error.message : String(error);
-    throw new Error(`Could not verify approved source ${source.repository}@${source.ref ?? 'local'}: ${cause}. For a private repository, check auth.repositories / auth.owners and build-time TOOLS_GITHUB_TOKEN access.`);
+    const hint = source.local ? '' : ' For a private repository, check auth.repositories / auth.owners and build-time TOOLS_GITHUB_TOKEN access.';
+    throw new Error(`Could not verify approved source ${source.repository}@${source.ref ?? 'local'}: ${cause}.${hint}`, { cause: error });
   }
   const configuredId = configuredIds.get(source.repository.toLowerCase());
   if (configuredId && tool.manifest.id !== configuredId) throw new Error(`tool registration filename does not match manifest id: ${configuredId}`);

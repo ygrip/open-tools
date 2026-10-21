@@ -21,6 +21,7 @@ export async function verifySourceAccess(registrations, github) {
       failures.push(`${source.repository}@${source.ref}: ${detail}`);
     }
   });
+  failures.sort();
   if (failures.length) {
     throw new Error(`Private tool registry access check failed for ${failures.length} source(s): ${failures.join('; ')}. Check auth.repositories / auth.owners credentials or TOOLS_GITHUB_TOKEN fallback; public repositories need no token. Grant approved owners read-only access. The default Actions GITHUB_TOKEN cannot read sibling private repositories.`);
   }

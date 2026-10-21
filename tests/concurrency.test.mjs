@@ -33,3 +33,9 @@ test('invalid concurrency is refused', async () => {
   await assert.rejects(mapBounded([1], 0, async x => x), /concurrency/);
   await assert.rejects(mapBounded([1], 9, async x => x), /concurrency/);
 });
+
+test('a thrown falsy value still fails closed instead of publishing partial results', async () => {
+  for (const thrown of [undefined, null, 0, '']) {
+    await assert.rejects(mapBounded([1, 2], 2, async value => { if (value === 1) throw thrown; return value; }), error => error === thrown);
+  }
+});
