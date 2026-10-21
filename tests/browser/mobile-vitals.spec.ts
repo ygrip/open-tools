@@ -58,7 +58,7 @@ test('mobile Chrome records LCP, CLS, FCP and interaction timing on real rendere
       // Persist even when a regression assertion fails, so the CI artifact
       // contains the offending browser measurements instead of disappearing.
       await mkdir('artifacts', { recursive: true });
-      await writeFile('artifacts/mobile-vitals.json', JSON.stringify({ measuredAt: new Date().toISOString(), kind: 'synthetic mobile lab', report }, null, 2) + '\\n');
+      await writeFile('artifacts/mobile-vitals.json', JSON.stringify({ measuredAt: new Date().toISOString(), kind: 'synthetic mobile lab', report }, null, 2) + '\n');
       if (values.cls > 0.1 || (values.observedInteractionMs ?? 0) > 500) {
         console.warn(`Mobile interaction/layout needs attention on ${route}: CLS=${values.cls.toFixed(3)}, longest observed event=${values.observedInteractionMs}ms`);
       }
