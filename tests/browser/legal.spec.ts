@@ -29,9 +29,10 @@ for (const locale of ['en', 'id'] as const) {
         canvas.height = img.naturalHeight;
         const context = canvas.getContext('2d')!;
         context.drawImage(img, 0, 0);
-        return { width: img.naturalWidth, alpha: context.getImageData(0, 0, 1, 1).data[3] };
+        return { width: img.naturalWidth, height: img.naturalHeight, alpha: context.getImageData(0, 0, 1, 1).data[3] };
       });
-      expect(pixels.width).toBeGreaterThanOrEqual(128);
+      expect(pixels.width).toBeGreaterThanOrEqual(512);
+      expect(pixels.height).toBeGreaterThanOrEqual(512);
       expect(pixels.alpha).toBe(0);
       await expect(page.locator('.legal-related a')).toHaveCount(2);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
