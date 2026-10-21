@@ -10,6 +10,10 @@ for (const locale of ['en', 'id'] as const) {
       await page.goto(`${prefix}/${route}/`);
       await expect(page.locator('html')).toHaveAttribute('lang', locale);
       await expect(page.locator('.legal-hero h1')).toBeVisible();
+      const languageLinks = page.locator('.legal-language-links a');
+      await expect(languageLinks).toHaveCount(2);
+      await expect(page.locator('.legal-language-links a[aria-current="page"]')).toHaveCount(1);
+      await expect(languageLinks.nth(locale === 'en' ? 1 : 0)).toHaveAttribute('href', locale === 'en' ? `/id/${route}/` : `/${route}/`);
       await expect(page.locator('.legal-lede')).not.toBeEmpty();
       await expect(page.locator('.legal-summary p')).not.toBeEmpty();
       await expect(page.locator('.legal-section')).toHaveCount(5);

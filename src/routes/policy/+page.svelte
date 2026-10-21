@@ -3,7 +3,7 @@
   import { m } from '$lib/paraglide/messages.js';
   import Seo from '$lib/components/Seo.svelte';
   import { localizedPath } from '$lib/i18n';
-  import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
+  import { getLocale } from '$lib/paraglide/runtime.js';
 
   const sections = [
     { title: m.policy_register_title(), text: m.policy_register_text() },
@@ -18,7 +18,10 @@
 <main id="main-content" class="page-shell legal-shell">
   <div class="legal-top">
     <a class="legal-back" href={localizedPath('/')}>← trick-it</a>
-    <LanguageSwitcher />
+    <nav class="legal-language-links" aria-label={m.languages()}>
+      <a href={localizedPath('/policy/', 'en')} lang="en" aria-label="English" aria-current={getLocale() === 'en' ? 'page' : undefined}>EN</a>
+      <a href={localizedPath('/policy/', 'id')} lang="id" aria-label="Bahasa Indonesia" aria-current={getLocale() === 'id' ? 'page' : undefined}>ID</a>
+    </nav>
   </div>
   <article class="legal-card legal-feature surface">
     <header class="legal-hero">
