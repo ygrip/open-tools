@@ -53,8 +53,15 @@ test('mobile Chrome records LCP, CLS, FCP and interaction timing on real rendere
         return { lcpMs: state.lcp, cls: state.cls, fcpMs: fcp?.startTime ?? 0,
           ttfbMs: nav?.responseStart ?? 0, observedInteractionMs: state.inp || null };
       });
-      report.push({ route, device: 'Pixel 7 emulation', network: '4G (150ms RTT, 1.5Mbps)', cpu: '2x slowdown', ...values });
+      report.push({ route, device: 'Pixel 7 emulation', network: '4G CDP profile requested (local preview may bypass network throttling)', cpu: '2x slowdown', ...values });
       console.log('Mobile Web Vitals (lab):', JSON.stringify(report.at(-1)));
+      // Persist even when a regression assertion fails, so the CI artifact
+      // contains the offending browser measurements instead of disappearing.
+      await mkdir('artifacts', { recursive: true });
+      await writeFile('artifacts/mobile-vitals.json', JSON.stringify({ measuredAt: new Date().toISOString(), kind: 'synthetic mobile lab', report }, null, 2) + '\\n');
+      if (values.cls > 0.1 || (values.observedInteractionMs ?? 0) > 500) {
+        console.warn(`Mobile interaction/layout needs attention on ${route}: CLS=${values.cls.toFixed(3)}, longest observed event=${values.observedInteractionMs}ms`);
+      }
       expect(values.fcpMs, `${route}: FCP missing`).toBeGreaterThan(0);
       expect(values.lcpMs, `${route}: LCP missing`).toBeGreaterThan(0);
       expect(values.fcpMs, `${route}: FCP regression`).toBeLessThan(6_000);
