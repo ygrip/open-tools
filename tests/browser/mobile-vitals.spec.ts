@@ -37,7 +37,7 @@ test('mobile Chrome records LCP, CLS, FCP and interaction timing on real rendere
         try {
           new PerformanceObserver(list => {
             for (const entry of list.getEntries()) state.inp = Math.max(state.inp, entry.duration);
-          }).observe({ type: 'event', buffered: true, durationThreshold: 16 });
+          }).observe({ type: 'event', buffered: true, durationThreshold: 16 } as PerformanceObserverInit & { durationThreshold: number });
         } catch { /* Event Timing is not exposed */ }
       });
       await page.goto(route, { waitUntil: 'load' });
@@ -49,7 +49,7 @@ test('mobile Chrome records LCP, CLS, FCP and interaction timing on real rendere
       const values = await page.evaluate(() => {
         const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
         const fcp = performance.getEntriesByName('first-contentful-paint')[0];
-        const state = (window as Window & { __trickVitals: { lcp: number; cls: number; inp: number } }).__trickVitals;
+        const state = (window as unknown as Window & { __trickVitals: { lcp: number; cls: number; inp: number } }).__trickVitals;
         return { lcpMs: state.lcp, cls: state.cls, fcpMs: fcp?.startTime ?? 0,
           ttfbMs: nav?.responseStart ?? 0, observedInteractionMs: state.inp || null };
       });
