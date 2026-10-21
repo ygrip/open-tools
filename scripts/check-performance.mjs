@@ -35,8 +35,17 @@ for (const file of assets) {
   // Tool clay icons load lazily per card, so each gets its own small budget instead of the shared one.
   // /pwa/ icons are fetched only on install or home-screen add, never by a page load, so they stay out of the page-image budget.
   const toolIcon = file.includes('/icons/tools/');
+  // Each legal page requests its own artwork. Keep each image under 12 KiB
+  // rather than counting three mutually exclusive pages as homepage weight.
+  const legalArt = /\/illustrations\/(?:terms|policy|privacy)-clay\.png$/.test(file);
+  if (legalArt) {
+    if (bytes.length > 12_288) throw new Error(`Legal PNG exceeds 12 KiB: ${relative(client, file)}`);
+    if (!bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+      throw new Error(`Legal artwork must be a PNG: ${relative(client, file)}`);
+    }
+  }
   if (toolIcon && bytes.length > 12_000) throw new Error(`Tool icon exceeds 12 kB budget: ${relative(client, file)}`);
-  if (/\.(?:webp|svg|png|avif)$/.test(file) && !file.includes('/og/') && !file.includes('/pwa/') && !toolIcon) images += bytes.length;
+  if (/\.(?:webp|svg|png|avif)$/.test(file) && !file.includes('/og/') && !file.includes('/pwa/') && !toolIcon && !legalArt) images += bytes.length;
   if (file.includes('/og/') && file.endsWith('.png') && bytes.length > 200_000) throw new Error(`Social card exceeds 200 kB budget: ${file}`);
   if (file.endsWith('.woff2')) fonts += bytes.length;
   if (/\/bundles\/.*\.json$/.test(file) && gzipSync(bytes).length > 90_000) throw new Error(`Tool bundle exceeds 90 kB gzip budget: ${relative(client, file)}`);
