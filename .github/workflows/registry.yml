@@ -24,15 +24,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Verify private tool repository access
-        env:
-          TOOLS_GITHUB_TOKEN: ${{ secrets.TOOLS_GITHUB_TOKEN }}
-          TOOLS_PARTNER_TOKEN: ${{ secrets.TOOLS_PARTNER_TOKEN }}
-          TOOLS_APP_ID: ${{ secrets.TOOLS_APP_ID }}
-          TOOLS_APP_PRIVATE_KEY: ${{ secrets.TOOLS_APP_PRIVATE_KEY }}
-        run: node scripts/registry-preflight.mjs
       - run: npm ci
-      - name: Fetch approved bundles
+      # Sync already verifies pinned manifest access, contract and every digest.
+      # Skip the former duplicate access probe; a failed source still blocks the build.
+      - name: Fetch and verify approved bundles
         env:
           TOOLS_GITHUB_TOKEN: ${{ secrets.TOOLS_GITHUB_TOKEN }}
           TOOLS_PARTNER_TOKEN: ${{ secrets.TOOLS_PARTNER_TOKEN }}
