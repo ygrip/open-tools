@@ -5,6 +5,7 @@ import { createGithubClient, loadSource, artIconName } from './lib/bundles.mjs';
 import { createCredentialResolver } from './lib/credentials.mjs';
 import { readToolRegistrations } from './lib/registrations.mjs';
 import { writeRegistrySnapshot } from './verify-registry-snapshot.mjs';
+import { mapBounded } from './lib/concurrency.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const configPath = process.env.TOOLS_REGISTRY_CONFIG || 'config/registry.json';
@@ -34,17 +35,19 @@ if (config.discovery) {
   }
 }
 
-const loaded = [];
-const ids = new Set();
-for (const source of sources) {
-  // Fail closed: never silently publish a partial registry on a source failure.
+// Verify pinned sources in parallel, with a small cap to protect the GitHub API.
+// No staged output is touched until EVERY source has passed its hash/contract checks.
+const loaded = await mapBounded(sources, 4, async (source) => {
   const tool = await loadSource(source, config, root, github);
   const configuredId = configuredIds.get(source.repository.toLowerCase());
   if (configuredId && tool.manifest.id !== configuredId) throw new Error(`tool registration filename does not match manifest id: ${configuredId}`);
-  if (ids.has(tool.manifest.id)) throw new Error(`duplicate tool id/path: ${tool.manifest.id}`);
-  ids.add(tool.manifest.id);
   const addedAt = addedDates.get(source.repository.toLowerCase());
-  loaded.push(addedAt ? { ...tool, manifest: { ...tool.manifest, addedAt } } : tool);
+  return addedAt ? { ...tool, manifest: { ...tool.manifest, addedAt } } : tool;
+});
+const ids = new Set();
+for (const { manifest } of loaded) {
+  if (ids.has(manifest.id)) throw new Error(`duplicate tool id/path: ${manifest.id}`);
+  ids.add(manifest.id);
 }
 loaded.sort((a, b) => a.manifest.name.localeCompare(b.manifest.name));
 await mkdir(resolve(root, 'static'), { recursive: true });
