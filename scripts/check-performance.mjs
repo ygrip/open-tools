@@ -35,13 +35,20 @@ for (const file of assets) {
   // Tool clay icons load lazily per card, so each gets its own small budget instead of the shared one.
   // /pwa/ icons are fetched only on install or home-screen add, never by a page load, so they stay out of the page-image budget.
   const toolIcon = file.includes('/icons/tools/');
-  // Each legal page requests its own artwork. Keep each image under 12 KiB
-  // rather than counting three mutually exclusive pages as homepage weight.
+  // Each legal illustration is fetched only on its own page, not the homepage.
+  // Preserve 512px RGBA detail for high-DPI displays; PNG compression is lossless.
+  // Budget each image independently rather than forcing 128px paletted thumbnails.
   const legalArt = /\/illustrations\/(?:terms|policy|privacy)-clay\.png$/.test(file);
   if (legalArt) {
-    if (bytes.length > 12_288) throw new Error(`Legal PNG exceeds 12 KiB: ${relative(client, file)}`);
+    if (bytes.length > 256 * 1024) throw new Error(`Legal PNG exceeds 256 KiB: ${relative(client, file)}`);
     if (!bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
       throw new Error(`Legal artwork must be a PNG: ${relative(client, file)}`);
+    }
+    const width = bytes.readUInt32BE(16);
+    const height = bytes.readUInt32BE(20);
+    const colorType = bytes[25];
+    if (width < 512 || height < 512 || colorType !== 6) {
+      throw new Error(`Legal PNG must be at least 512px with truecolor transparency: ${relative(client, file)}`);
     }
   }
   if (toolIcon && bytes.length > 12_000) throw new Error(`Tool icon exceeds 12 kB budget: ${relative(client, file)}`);
