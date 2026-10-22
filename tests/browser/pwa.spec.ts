@@ -12,6 +12,14 @@ test('installed shell and an opened tool work offline without hiding missing rou
   await page.goto('/json-tools/');
   await expect(page.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts');
   await expect.poll(() => page.evaluate(async () => (await (await caches.open('trick-it-bundles-v1')).keys()).length)).toBeGreaterThan(0);
+  // Legal pages are no longer precached during install. Opening one online
+  // must make it available offline without delaying future updates.
+  await page.goto('/id/privacy/');
+  await expect.poll(() => page.evaluate(async () => {
+    const names = (await caches.keys()).filter((name) => name.startsWith('trick-it-shell-'));
+    return (await Promise.all(names.map(async (name) => Boolean(await (await caches.open(name)).match('/id/privacy/'))))).some(Boolean);
+  })).toBe(true);
+  await page.goto('/json-tools/');
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts');
@@ -175,4 +183,16 @@ test('mobile quick settings keeps a flagged two-choice language switcher', async
   await expect(choices.locator('a[hreflang="id"] img.clay-flag')).toHaveAttribute('src', /\/brand\/flag-id\.svg$/);
   await choices.locator('a[hreflang="id"]').click();
   await expect(page).toHaveURL(/\/id\/$/);
+});
+
+test('unused prerendered routes are deferred and cached on first visit', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  const hasCachedPrivacy = () => page.evaluate(async () => {
+    const shells = (await caches.keys()).filter((name) => name.startsWith('trick-it-shell-'));
+    return (await Promise.all(shells.map(async (name) => Boolean(await (await caches.open(name)).match('/privacy/'))))).some(Boolean);
+  });
+  expect(await hasCachedPrivacy()).toBe(false);
+  await page.goto('/privacy/');
+  await expect.poll(hasCachedPrivacy).toBe(true);
 });
