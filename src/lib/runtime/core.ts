@@ -123,8 +123,17 @@ async function readAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetO
   }
   checkAbort(signal);
   let response: Response;
-  try { response = await (options.fetcher ?? fetch)(url, { signal, credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer', cache: 'no-cache' }); }
+  // Public HF /resolve/<commit> model files redirect to a signed CDN URL. Permit
+  // only this reviewed, commit-pinned family; final bytes still require SHA-256.
+  // All other asset origins continue rejecting redirects.
+  const pinnedHf = /^https:\\/\\/huggingface\\.co\\/[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+\\/resolve\\/[a-f0-9]{40}\\//.test(asset.url);
+  try { response = await (options.fetcher ?? fetch)(url, { signal, credentials: 'omit', redirect: pinnedHf ? 'follow' : 'error', referrerPolicy: 'no-referrer', cache: 'no-cache' }); }
   catch { throw new RuntimeFailure(signal.aborted ? 'aborted' : 'request'); }
+  if (pinnedHf && response.redirected) {
+    let final: URL;
+    try { final = new URL(response.url); } catch { throw new RuntimeFailure('request'); }
+    if (final.protocol !== 'https:' || !/^(?:huggingface\\.co|(?:[a-z0-9-]+\\.)+(?:hf\\.co|huggingface\\.co))$/.test(final.hostname)) throw new RuntimeFailure('request');
+  }
   if (!response.ok || response.type === 'opaque') throw new RuntimeFailure('request', response.status);
   const bytes = await readBounded(response, asset.bytes, signal, onProgress);
   if (bytes.length !== asset.bytes) throw new RuntimeFailure('size');
