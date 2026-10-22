@@ -129,11 +129,7 @@ async function readAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetO
   const pinnedHf = /^https:\/\/huggingface\.co\/[^/]+\/[^/]+\/resolve\/[a-f0-9]{40}\//.test(asset.url);
   try { response = await (options.fetcher ?? fetch)(url, { signal, credentials: 'omit', redirect: pinnedHf ? 'follow' : 'error', referrerPolicy: 'no-referrer', cache: 'no-cache' }); }
   catch { throw new RuntimeFailure(signal.aborted ? 'aborted' : 'request'); }
-  if (pinnedHf && response.redirected) {
-    let final: URL;
-    try { final = new URL(response.url); } catch { throw new RuntimeFailure('request'); }
-    if (final.protocol !== 'https:' || !/(?:^huggingface\.co$|\.hf\.co$|\.huggingface\.co$)/.test(final.hostname)) throw new RuntimeFailure('request');
-  }
+  if (pinnedHf && response.redirected && !/^https:\/\/(?:[\w-]+\.)*(?:hf\.co|huggingface\.co)\//.test(response.url)) throw new RuntimeFailure('request');
   if (!response.ok || response.type === 'opaque') throw new RuntimeFailure('request', response.status);
   const bytes = await readBounded(response, asset.bytes, signal, onProgress);
   if (bytes.length !== asset.bytes) throw new RuntimeFailure('size');
