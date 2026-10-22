@@ -2,12 +2,14 @@ import { isTheme, type Theme } from '../theme';
 import { uiKitScript, uiKitStyles } from './ui-kit';
 import { tableScript, tableStyles } from './ui-table';
 import { DOWNLOAD_LIMITS } from '../runtime/download-policy';
+import { TOOL_ZOOM } from '../runtime/tool-zoom';
 
 // The policy precedes tool markup and cannot be relaxed by a later meta tag.
 // Opaque-origin sandboxing is also mandatory: never add allow-same-origin.
 export const bundlePolicy = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src data:; object-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'";
 
 export const themeMessageType = 'open-tools:theme';
+export const zoomMessageType = 'trick-it:zoom';
 
 /** Host-owned defaults are available even before a bundle's own styles are parsed. */
 const themeStyles = `
@@ -37,7 +39,7 @@ const themeStyles = `
 }
 html, body { background-color: var(--ot-bg) !important; color: var(--ot-text) !important; }
 /* Overridable safety net: long URLs, hashes and tokens wrap instead of widening the tool. */
-body { overflow-wrap: anywhere; }
+body { overflow-wrap: anywhere; zoom: var(--ot-host-tool-zoom, 1) !important; }
 img, video { max-width: 100%; }
 `;
 
@@ -57,11 +59,12 @@ const themeBootstrap = `
 })();
 `;
 
-export type RuntimeOptions = { locale?: string; token?: string; permissions?: readonly string[]; scriptAssets?: boolean; nativeDownloads?: boolean };
+export type RuntimeOptions = { locale?: string; token?: string; permissions?: readonly string[]; scriptAssets?: boolean; nativeDownloads?: boolean; zoomPercent?: number };
 
 export function sandboxDocument(html: string, initialTheme: Theme = 'light', options: RuntimeOptions = {}): string {
   const theme = isTheme(initialTheme) ? initialTheme : 'light';
   const locale = options.locale === 'id' ? 'id' : 'en';
+  const initialZoom = Number.isInteger(options.zoomPercent) && (options.zoomPercent ?? 0) >= TOOL_ZOOM.min && (options.zoomPercent ?? 0) <= TOOL_ZOOM.max ? options.zoomPercent! : TOOL_ZOOM.default;
   const permissions = options.permissions ?? [];
   let policy = bundlePolicy;
   if (permissions.includes('wasm')) policy = policy.replace("script-src 'unsafe-inline'", "script-src 'unsafe-inline' 'wasm-unsafe-eval'");
@@ -179,6 +182,21 @@ ${uiKitScript}
     }
     Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, downloadStream, downloadLimits, ui, asset: (id, options = {}) => request('asset', { id }, options.onProgress), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
   })();`;
+  // Host controls can only change an existing isolated frame. No reload and no
+  // permission escalation; browser/page zoom remains under the user's control.
+  const zoomBootstrap = `
+(() => {
+  const token = ${JSON.stringify(token)};
+  addEventListener('message', (event) => {
+    if (!token || event.source !== parent) return;
+    const data = event.data;
+    if (data?.type !== '${zoomMessageType}' || data.version !== 1 || data.token !== token ||
+        !Number.isInteger(data.percent) || data.percent < ${TOOL_ZOOM.min} || data.percent > ${TOOL_ZOOM.max}) return;
+    document.documentElement.style.setProperty('--ot-host-tool-zoom', String(data.percent / 100));
+    dispatchEvent(new Event('trick-it:zoomchange'));
+  });
+})();
+`;
   // The parent cannot measure an opaque sandbox. Send only the height of the
   // tool's rendered document, never DOM/content, through the session channel.
   const resizeBootstrap = `
@@ -214,11 +232,12 @@ ${uiKitScript}
     }
     new MutationObserver(schedule).observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true });
     addEventListener('resize', schedule);
+    addEventListener('trick-it:zoomchange', schedule);
     schedule();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
 })();
 `;
-  return `<!doctype html><html lang="${locale}" data-theme="${theme}" style="color-scheme:${theme}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}${uiKitStyles}${tableStyles}</style><script>${themeBootstrap}${sdk}</script><script>${resizeBootstrap}</script></head><body>${html}</body></html>`;
+  return `<!doctype html><html lang="${locale}" data-theme="${theme}" style="color-scheme:${theme};--ot-host-tool-zoom:${initialZoom / 100}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}${uiKitStyles}${tableStyles}</style><script>${themeBootstrap}${zoomBootstrap}${sdk}</script><script>${resizeBootstrap}</script></head><body>${html}</body></html>`;
 }
