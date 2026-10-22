@@ -39,14 +39,18 @@ export function makePrecachePlan(build, files, prerendered, base = '') {
  */
 export async function runBounded(items, concurrency, task) {
   let next = 0;
+  let stopped = false;
+  /** @type {unknown} */
   let firstFailure;
   const worker = async () => {
-    while (!firstFailure && next < items.length) {
+    while (!stopped && next < items.length) {
       const item = items[next++];
       try { await task(item); }
-      catch (error) { firstFailure ??= error; }
+      catch (error) {
+        if (!stopped) { stopped = true; firstFailure = error; }
+      }
     }
   };
   await Promise.all(Array.from({ length: Math.min(items.length, Math.max(1, Math.floor(concurrency) || 1)) }, worker));
-  if (firstFailure) throw firstFailure;
+  if (stopped) throw firstFailure;
 }
