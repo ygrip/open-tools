@@ -16,6 +16,9 @@
   let iosSafari = $state(false);
   let message = $state('');
   let updating = $state(false);
+  type InstallProgress = { completed: number; total: number };
+  let installingWorker = $state(false);
+  let installProgress = $state<InstallProgress | null>(null);
   let updateError = $state('');
   let updateDismissed = $state(false);
   let installDismissed = $state(false);
@@ -23,7 +26,15 @@
   // Only offer install where it helps: a phone/tablet browser tab that can actually install (native prompt, or iOS Add to Home Screen).
   // Chromium may offer native installation on desktop; iOS needs manual guidance.
   const showInstall = $derived(!installed && !installDismissed && (prompt !== null || (mobile && iosSafari)));
-  const hasUpdate = $derived(waiting !== null || refresh || spaUpdate || updated.current);
+  const hasUpdate = $derived(waiting !== null || refresh || spaUpdate || updated.current || installingWorker);
+  const updateBusy = $derived(updating || installingWorker);
+  const updateDetail = $derived(
+    installProgress
+      ? installProgress.completed < installProgress.total
+        ? m.pwa_update_files({ done: String(installProgress.completed), total: String(installProgress.total) })
+        : m.pwa_update_activating()
+      : m.pwa_updating_description()
+  );
   // A controlling worker may still serve an old offline shell. Activate it before reloading.
   const readyToReload = $derived(refresh || (!controlled && !waiting && (spaUpdate || updated.current)));
 
@@ -81,11 +92,22 @@
     const appInstalled = () => { installed = true; prompt = null; manualInstructions = false; };
     const offline = () => { message = navigator.onLine ? '' : m.pwa_offline(); };
     const ready = () => navigator.serviceWorker.controller?.postMessage({ type: 'trick-it:client-ready', appVersion: version });
-    const controllerChanged = () => { controlled = true; refresh = true; waiting = null; updateDismissed = false; ready(); };
+    const controllerChanged = () => {
+      controlled = true; refresh = true; waiting = null;
+      installingWorker = false; installProgress = null;
+      updateDismissed = false; ready();
+    };
     const failed = (event: MessageEvent) => {
       const source = event.source;
       if (!source || !('scriptURL' in source) || source.scriptURL !== new URL(`${base}/service-worker.js`, location.origin).href) return;
       if (event.data?.type === 'trick-it:version-request') source.postMessage({ type: 'trick-it:client-ready', appVersion: version });
+      if (event.data?.type === 'trick-it:install-progress') {
+        const { completed, total } = event.data;
+        if (Number.isSafeInteger(completed) && Number.isSafeInteger(total) &&
+            total > 0 && total <= 10_000 && completed >= 0 && completed <= total) {
+          installProgress = { completed, total };
+        }
+      }
     };
     window.addEventListener('beforeinstallprompt', install);
     window.addEventListener('appinstalled', appInstalled);
@@ -104,9 +126,14 @@
           const worker = registration.installing;
           if (!worker) return;
           const state = () => {
-            if (worker.state === 'installed' && navigator.serviceWorker.controller && registration.waiting) { waiting = registration.waiting; updateDismissed = false; }
+            installingWorker = worker.state === 'installing' && Boolean(navigator.serviceWorker.controller);
+            if (worker.state === 'installed' && navigator.serviceWorker.controller && registration.waiting) {
+              waiting = registration.waiting; updateDismissed = false;
+            }
+            if (worker.state === 'redundant') { installingWorker = false; installProgress = null; }
           };
           worker.addEventListener('statechange', state);
+          state();
           cleanup.push(() => worker.removeEventListener('statechange', state));
         };
         registration.addEventListener('updatefound', watch);
@@ -149,6 +176,7 @@
     if (!navigator.onLine) { updateError = m.pwa_update_offline(); return; }
     updating = true;
     updateError = '';
+    if (!installingWorker) installProgress = null;
     try {
       const registration = await navigator.serviceWorker?.getRegistration();
       if (registration) await applyPwaUpdate(registration);
@@ -182,22 +210,25 @@
   <aside class="pwa-card pwa-update" role="region" aria-label={m.pwa_update()}>
     <div class="pwa-icon" aria-hidden="true">✦</div>
     <div class="pwa-copy">
-      <strong>{updating ? m.pwa_updating_title() : readyToReload ? m.pwa_ready_title() : m.pwa_update()}</strong>
-      <p aria-live="polite">{updateError || (updating ? m.pwa_updating_description() : readyToReload ? m.pwa_ready() : m.pwa_update_description())}</p>
-      <div class="pwa-actions" aria-busy={updating}>
-        {#if updating}
+      <strong>{updateBusy ? m.pwa_updating_title() : readyToReload ? m.pwa_ready_title() : m.pwa_update()}</strong>
+      <p aria-live="polite">{updateError || (updateBusy ? updateDetail : readyToReload ? m.pwa_ready() : m.pwa_update_description())}</p>
+      {#if updateBusy}
+        <progress class="pwa-progress" aria-label={m.pwa_update_progress()} max={installProgress?.total ?? 1} value={installProgress?.completed}></progress>
+      {/if}
+      <div class="pwa-actions" aria-busy={updateBusy}>
+        {#if updateBusy}
           <button class="clay-button primary small" type="button" disabled>{m.pwa_updating()}</button>
         {:else if readyToReload}
           <button class="clay-button primary small" type="button" onclick={() => location.reload()}>{m.pwa_reload()}</button>
         {:else}
           <button class="clay-button primary small" type="button" onclick={prepareUpdate}>{updateError ? m.pwa_retry() : m.pwa_activate()}</button>
         {/if}
-        {#if !updating}
+        {#if !updateBusy}
           <button class="pwa-quiet" type="button" onclick={() => updateDismissed = true}>{m.pwa_later()}</button>
         {/if}
       </div>
     </div>
-    {#if !updating}
+    {#if !updateBusy}
       <button class="pwa-close" type="button" aria-label={m.pwa_later()} onclick={() => updateDismissed = true}>×</button>
     {/if}
   </aside>
@@ -232,6 +263,10 @@
   .pwa-copy { min-width: 0; flex: 1; }
   .pwa-copy strong { display: block; font-size: 16px; font-weight: 900; line-height: 1.2; }
   .pwa-copy p { font-size: 13px; color: var(--text-secondary); margin-top: 6px; line-height: 1.55; }
+  .pwa-progress { display: block; width: 100%; height: 8px; margin-top: 10px; border: 0; border-radius: 999px; overflow: hidden; accent-color: var(--accent-strong); }
+  .pwa-progress::-webkit-progress-bar { background: var(--line); border-radius: 999px; }
+  .pwa-progress::-webkit-progress-value { background: var(--accent-strong); border-radius: 999px; }
+  .pwa-progress::-moz-progress-bar { background: var(--accent-strong); border-radius: 999px; }
   .pwa-icon { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 14px; background: var(--peach); color: var(--accent-strong); font-size: 24px; }
   .pwa-install-button { flex: none; white-space: nowrap; }
   .pwa-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }

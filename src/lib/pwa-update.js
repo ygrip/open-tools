@@ -56,35 +56,43 @@ function waitForState(worker, completed, timeoutMs, start) {
 
 /**
  * @param {ServiceWorkerRegistration} registration
- * @param {{ installTimeoutMs?: number, activationTimeoutMs?: number }} [options]
+ * @param {{
+ *   installTimeoutMs?: number,
+ *   activationTimeoutMs?: number,
+ *   onPhase?: (phase: 'checking' | 'downloading' | 'activating' | 'ready') => void
+ * }} [options]
  */
 export async function applyPwaUpdate(registration, options = {}) {
-  await registration.update();
+  options.onPhase?.('checking');
+  // A worker may already be installing in the background; don't start a
+  // redundant network update check while the user is waiting for that worker.
+  if (!registration.waiting && !registration.installing) await registration.update();
 
-  // update() can resolve while a newly discovered worker is still precaching.
   const installing = registration.installing;
   if (installing && !registration.waiting) {
+    options.onPhase?.('downloading');
     await waitForState(installing, (state) =>
       state === 'installed' || state === 'activating' || state === 'activated',
       options.installTimeoutMs ?? 120_000
     );
   }
 
-  const waiting = registration.waiting;
+  // In some browsers registration.waiting updates a tick after statechange.
+  const waiting = registration.waiting || (installing?.state === 'installed' ? installing : null);
   if (waiting) {
+    options.onPhase?.('activating');
     await waitForState(waiting, (state) => state === 'activated',
       options.activationTimeoutMs ?? 30_000,
       () => waiting.postMessage({ type: 'trick-it:activate', version: 1 })
     );
+    options.onPhase?.('ready');
     return;
   }
 
-  // The worker may have activated on its own if there were no controlled tabs.
   if (installing?.state === 'activating') {
+    options.onPhase?.('activating');
     await waitForState(installing, (state) => state === 'activated', options.activationTimeoutMs ?? 30_000);
-  } else if (installing?.state === 'installed') {
-    throw new Error('The replacement service worker did not become ready.');
   }
-  // No new worker: the SvelteKit SPA version changed without a worker change.
-  // A normal navigation fetch is network-first, so a reload gets the new shell.
+  // No replacement worker: a SPA-only release can be picked up on reload.
+  options.onPhase?.('ready');
 }

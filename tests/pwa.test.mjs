@@ -61,10 +61,13 @@ test('PWA install skips Cloudflare config and defers nonessential artwork', asyn
   }
   assert.ok(requiredPaths.has('/'));
   assert.ok(requiredPaths.has('/offline/'));
+  assert.ok(requiredPaths.has('/id/'));
+  assert.deepEqual(precachePaths, requiredPaths, 'only essential shell assets should block installation');
   assert.ok(requiredPaths.has('/_app/immutable/start.js'));
-  assert.ok(precachePaths.has('/manifest.webmanifest'));
-  assert.ok(precachePaths.has('/pwa/icon-192.png'));
-  assert.ok(precachePaths.has('/json-tools/'));
+  for (const path of ['/manifest.webmanifest', '/pwa/icon-192.png', '/json-tools/']) {
+    assert.equal(precachePaths.has(path), false, `${path} is cached on first use, not during install`);
+    assert.ok(publicPaths.has(path), `${path} remains eligible for lazy caching`);
+  }
   assert.equal(precachePaths.has('/illustrations/large.webp'), false, 'large artwork is lazy cached');
   assert.ok(publicPaths.has('/illustrations/large.webp'), 'visited artwork remains cacheable');
 });
@@ -74,4 +77,32 @@ test('Cloudflare never stores mutable deployment discovery URLs', async () => {
   assert.match(headers, /\/_app\/version\.json\s+Cache-Control: no-store/);
   assert.match(headers, /\/service-worker\.js\s+Cache-Control: no-cache/);
   assert.match(headers, /\/bundles\/\*\s+Cache-Control: public, max-age=31536000, immutable/);
+});
+
+test('shell downloads run in parallel with bounded concurrency', async () => {
+  const { runBounded } = await import('../src/lib/pwa-precache.js');
+  let active = 0, peak = 0;
+  const completed = [];
+  await runBounded(Array.from({ length: 24 }, (_, i) => i), 6, async (item) => {
+    active++;
+    peak = Math.max(peak, active);
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    completed.push(item);
+    active--;
+  });
+  assert.ok(peak > 1, 'multiple assets must fetch in parallel');
+  assert.ok(peak <= 6, 'cap concurrent network and cache operations');
+  assert.deepEqual(completed.sort((a, b) => a - b), Array.from({ length: 24 }, (_, i) => i));
+});
+
+test('a failed required asset stops scheduling and drains in-flight operations', async () => {
+  const { runBounded } = await import('../src/lib/pwa-precache.js');
+  let active = 0;
+  await assert.rejects(runBounded([0, 1, 2, 3, 4, 5, 6, 7], 3, async (item) => {
+    active++;
+    await new Promise((resolve) => setTimeout(resolve, item === 0 ? 1 : 4));
+    active--;
+    if (item === 0) throw new Error('network failed');
+  }), /network failed/);
+  assert.equal(active, 0, 'do not delete a failed install cache while writes remain in flight');
 });
