@@ -61,7 +61,7 @@ export const codeBlockScript = `
         button.title = button.disabled ? labels().unavailable : labels().copy;
         // Highlight.js escapes source before returning markup. Fallback uses textContent;
         // never accept HTML supplied by the tool or auto-execute fenced content.
-        if (source.length <= 100000 && grammar !== 'plaintext' && typeof hljs !== 'undefined') {
+        if (source.length <= (grammar === 'auto' ? 10000 : 100000) && grammar !== 'plaintext' && typeof hljs !== 'undefined') {
           try {
             const result = grammar === 'auto' ? hljs.highlightAuto(source) : hljs.highlight(source, { language: grammar, ignoreIllegals: true });
             content.innerHTML = result.value;
