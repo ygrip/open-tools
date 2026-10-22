@@ -53,7 +53,7 @@ for (const width of [375, 1440]) {
       // Configuration is inserted into a different bootstrap script.
       const scripts = [...document.querySelectorAll('script')];
       const sdk = scripts.find((entry) => entry.textContent?.includes('const config = '))!.textContent!;
-      const config = JSON.parse(sdk.match(/const config = (\\{[^\\n]+\\});/)![1]);
+      const config = JSON.parse(sdk.match(/const config = (\{[^\n]+\});/)![1]);
       window.postMessage({ type: 'trick-it:zoom', version: 1, token: config.token, percent: 75 }, '*');
       return config.token as string;
     });
