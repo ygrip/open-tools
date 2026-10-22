@@ -1,13 +1,13 @@
 import { precachePath } from './precache.js';
 
 /**
- * A deployment's public files are not all suitable for installation-time
- * downloads. Cloudflare consumes _headers/_redirects instead of serving them,
- * and eagerly downloading every illustration slows down or breaks PWA setup.
+ * Keep installation bounded to the runnable offline shell. Tool pages, legal
+ * pages, illustrations and app icons remain eligible for caching on first
+ * visit, but are never a prerequisite for activating an update.
  *
- * @param {string[]} build
- * @param {string[]} files
- * @param {string[]} prerendered
+ * @param {string[]} build Content-hashed app assets from SvelteKit
+ * @param {string[]} files Public static files
+ * @param {string[]} prerendered Prerendered route URLs
  * @param {string} base
  */
 export function makePrecachePlan(build, files, prerendered, base = '') {
@@ -19,14 +19,34 @@ export function makePrecachePlan(build, files, prerendered, base = '') {
     !/\/(?:404|500|503)\.html$/.test(path)
   );
   const publicPaths = new Set([...build, ...staticFiles, ...prerendered]);
-  // Route HTML and application chunks are small, release-specific offline shell.
-  // Other public assets are cached on first use rather than during install.
-  const coreStatic = staticFiles.filter((path) =>
-    /\/(?:manifest\.webmanifest|favicon\.[^/]+)$/.test(path) ||
-    path.startsWith(`${base}/brand/`) ||
-    path.startsWith(`${base}/pwa/`)
-  );
-  const precachePaths = new Set([...build, ...prerendered, ...coreStatic]);
-  const requiredPaths = new Set([...build, `${base}/`, `${base}/offline/`]);
+  // Cache both landing-page locales and the generic offline fallback.
+  // Retain all build chunks so already-opened tools remain runnable offline
+  // even if their shell imports lazy chunks later.
+  const requiredPaths = new Set([...build, `${base}/`, `${base}/id/`, `${base}/offline/`]);
+  const precachePaths = new Set(requiredPaths);
   return { publicPaths, precachePaths, requiredPaths };
+}
+
+/**
+ * Limit concurrent fetch + CacheStorage writes, and let in-flight operations
+ * settle before reporting an error so a failed install cannot repopulate a
+ * shell cache after it has been deleted.
+ *
+ * @template T
+ * @param {T[]} items
+ * @param {number} concurrency
+ * @param {(item: T) => Promise<void>} task
+ */
+export async function runBounded(items, concurrency, task) {
+  let next = 0;
+  let firstFailure;
+  const worker = async () => {
+    while (!firstFailure && next < items.length) {
+      const item = items[next++];
+      try { await task(item); }
+      catch (error) { firstFailure ??= error; }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(items.length, Math.max(1, Math.floor(concurrency) || 1)) }, worker));
+  if (firstFailure) throw firstFailure;
 }
