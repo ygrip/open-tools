@@ -3,6 +3,7 @@ import type { PermissionName, RuntimeErrorCode } from './core';
 const en = {
   downloadSaving: 'Saving your file', downloadFinishing: 'Finishing your file', downloadDone: 'File sent to your browser', downloadCancel: 'Cancel download', downloadNative: 'Save directly to a file on your device.', downloadBuffered: 'This browser prepares the file in memory before downloading.', downloadLimit: 'Maximum file size',
   languageFallback: 'This tool uses its supported interface language. Platform navigation keeps your selected language.',
+  zoomGroup: 'Tool zoom', zoomIn: 'Zoom in tool', zoomOut: 'Zoom out tool', zoomReset: 'Reset tool zoom to 100%', zoomLevel: 'Tool zoom level',
   guide: 'Tool guide', permissions: 'This tool needs extra power', permissionHelp: 'Nothing is granted automatically. Required items must be selected to start; optional ones can stay off. Your choice is remembered for this tool. Change it any time with Reset access.',
   required: 'Required', optional: 'Optional', start: 'Start with selected permissions', revoke: 'Reset access and restart', revokeShort: 'Reset access', sandboxed: 'Private sandbox', retry: 'Retry loading',
   retryAsset: 'Retry asset download', assetReady: 'Asset ready. Try the tool action again.',
@@ -19,6 +20,7 @@ const en = {
 const id: typeof en = {
   downloadSaving: 'Menyimpan berkas Anda', downloadFinishing: 'Menyelesaikan berkas Anda', downloadDone: 'Berkas dikirim ke peramban', downloadCancel: 'Batalkan unduhan', downloadNative: 'Simpan langsung ke berkas di perangkat Anda.', downloadBuffered: 'Peramban ini menyiapkan berkas di memori sebelum mengunduh.', downloadLimit: 'Ukuran berkas maksimum',
   languageFallback: 'Alat ini memakai bahasa antarmuka yang didukungnya. Navigasi platform tetap memakai bahasa pilihan Anda.',
+  zoomGroup: 'Perbesaran alat', zoomIn: 'Perbesar tampilan alat', zoomOut: 'Perkecil tampilan alat', zoomReset: 'Kembalikan perbesaran alat ke 100%', zoomLevel: 'Tingkat perbesaran alat',
   guide: 'Panduan alat', permissions: 'Alat ini butuh izin tambahan', permissionHelp: 'Tidak ada izin otomatis. Izin wajib harus dipilih sebelum mulai; izin opsional boleh dimatikan. Pilihan Anda diingat untuk alat ini. Ubah kapan saja lewat Atur ulang akses.',
   required: 'Wajib', optional: 'Opsional', start: 'Mulai dengan izin terpilih', revoke: 'Atur ulang akses dan mulai ulang', revokeShort: 'Atur ulang akses', sandboxed: 'Sandbox privat', retry: 'Coba muat lagi',
   retryAsset: 'Coba unduh aset lagi', assetReady: 'Aset siap. Coba tindakan alat lagi.',

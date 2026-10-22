@@ -5,6 +5,7 @@
   import type { StreamStart } from '$lib/runtime/downloads';
   import { DOWNLOAD_LIMITS } from '$lib/runtime/download-policy';
   import { runtimeStrings } from '$lib/runtime/strings';
+  import { TOOL_ZOOM, stepToolZoom } from '$lib/runtime/tool-zoom';
   import ServiceChallenge from './ServiceChallenge.svelte';
   import ClayStatus from './ClayStatus.svelte';
   import ToolArt from './ToolArt.svelte';
@@ -12,7 +13,8 @@
   import type { ToolIcon } from '$lib/registry/types';
   let { tool, locale = 'en' }: { tool: RuntimeTool; locale?: string } = $props();
   const text = $derived(runtimeStrings(locale));
-  const host = createToolRuntimeHost(() => tool, () => locale);
+  let zoomPercent = $state<number>(TOOL_ZOOM.default);
+  const host = createToolRuntimeHost(() => tool, () => locale, () => zoomPercent);
 </script>
 
 {#if host.frameLocale !== locale}<p class="runtime-notice" role="status">{text.languageFallback}</p>{/if}
@@ -45,6 +47,14 @@
     <div class="runtime-topline">
       <ToolArt id={tool.id} icon={(tool.icon ?? 'sparkles') as ToolIcon} size={40} />
       <span class="runtime-title"><strong>{tool.name}</strong><span class="runtime-meta"><span class="version-chip">v{tool.version}</span><span class="private-chip"><Icon name="shield" size={12} /> {text.sandboxed}</span></span></span>
+      {#if host.frameDocument}
+        <div class="runtime-zoom-controls" role="group" aria-label={text.zoomGroup}>
+          <button type="button" aria-label={text.zoomOut} title={text.zoomOut} disabled={zoomPercent <= TOOL_ZOOM.min} onclick={() => (zoomPercent = stepToolZoom(zoomPercent, -1))}><Icon name="minus" size={18} /></button>
+          <span class="zoom-level" role="meter" aria-label={text.zoomLevel} aria-valuemin={TOOL_ZOOM.min} aria-valuemax={TOOL_ZOOM.max} aria-valuenow={zoomPercent} aria-live="polite">{zoomPercent}%</span>
+          <button type="button" aria-label={text.zoomIn} title={text.zoomIn} disabled={zoomPercent >= TOOL_ZOOM.max} onclick={() => (zoomPercent = stepToolZoom(zoomPercent, 1))}><Icon name="plus" size={18} /></button>
+          <button type="button" class="zoom-reset" aria-label={text.zoomReset} title={text.zoomReset} disabled={zoomPercent === TOOL_ZOOM.default} onclick={() => (zoomPercent = TOOL_ZOOM.default)}><Icon name="rotate-ccw" size={17} /></button>
+        </div>
+      {/if}
       {#if host.permissions.length}<button class="clay-button small revoke" type="button" onclick={host.resetAccess} aria-label={text.revoke} title={text.revoke}><Icon name="lock" size={16} /><span>{text.revokeShort}</span></button>{/if}
     </div>
     {#if host.failure || host.timedOut}
@@ -133,6 +143,17 @@
   .hint { font-size: 13px; }
   .runtime-workspace { min-width: 0; overflow: hidden; }
   .runtime-topline { padding: 12px 14px 12px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 55%, var(--surface)); }
+  .runtime-zoom-controls { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; margin-left: auto; padding: 4px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+  .runtime-zoom-controls button { display: grid; place-items: center; flex: 0 0 auto; width: 44px; height: 44px; border: 0; border-radius: 12px; color: var(--text); background: transparent; cursor: pointer; }
+  .runtime-zoom-controls button:hover:not(:disabled) { background: var(--peach); }
+  .runtime-zoom-controls button:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+  .runtime-zoom-controls button:disabled { opacity: .35; cursor: not-allowed; }
+  .runtime-zoom-controls .zoom-level { display: block; min-width: 49px; text-align: center; color: var(--text-secondary); font-weight: 900; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .runtime-zoom-controls .zoom-reset { border-left: 1px solid var(--line); border-radius: 0 12px 12px 0; }
+  @media (max-width: 600px) {
+    .runtime-topline { flex-wrap: wrap; }
+    .runtime-zoom-controls { order: 3; width: 100%; margin: 2px 0 0; justify-content: center; }
+  }
   .runtime-title { flex: 1; min-width: 0; display: grid; gap: 4px; }
   .runtime-title strong { font-size: 15px; font-weight: 900; line-height: 1.25; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .runtime-meta { display: flex; flex-wrap: wrap; gap: 6px; }

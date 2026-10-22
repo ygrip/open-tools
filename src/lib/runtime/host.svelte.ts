@@ -1,6 +1,6 @@
 import { onMount, untrack } from 'svelte';
 import { base } from '$app/paths';
-import { sandboxDocument, themeMessageType } from '../registry/sandbox';
+import { sandboxDocument, themeMessageType, zoomMessageType } from '../registry/sandbox';
 import { documentTheme } from '../theme';
 import { loadAsset, loadBundle, RuntimeFailure, type RuntimeAsset, type RuntimeRequest, type RuntimeTool, type PermissionName, type CacheWarning } from './core';
 import { executeCapability } from './handlers';
@@ -12,9 +12,10 @@ import { startupPermissions as startupForTool, loadStartupPermissions, saveStart
 import { RuntimeSession } from './session';
 import { classifyRuntimeMessage } from './dispatcher';
 import { createMediaSessions } from './media.svelte';
-export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () => string) {
+export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () => string, getZoom: () => number) {
   const tool = $derived(getTool());
   const locale = $derived(getLocale());
+  const zoomPercent = $derived(getZoom());
   const frameLocale = $derived(tool.locales?.includes(locale) ? locale : tool.locales?.[0] ?? 'en');
   const permissions = $derived(tool.permissions ?? []);
   const assets = $derived(tool.assets ?? []);
@@ -71,6 +72,12 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
   function syncFrame() {
     frame?.contentWindow?.postMessage({ type: themeMessageType, version: 1, theme: documentTheme(document) }, '*');
     frame?.contentWindow?.postMessage({ type: 'trick-it:locale', version: 1, locale: frameLocale }, '*');
+    syncZoom();
+  }
+
+  function syncZoom() {
+    if (!session.controller || session.controller.signal.aborted) return;
+    frame?.contentWindow?.postMessage({ type: zoomMessageType, version: 1, token: session.token, percent: zoomPercent }, '*');
   }
 
   function reply(request: RuntimeRequest, ok: boolean, value?: unknown, error?: string, transfer: Transferable[] = []) {
@@ -150,7 +157,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
       for (const asset of assets) {
         if (!asset.defer && assetAllowed(asset, grants)) await getAsset(asset, current, signal);
       }
-      if (current === session.generation && !signal.aborted) frameDocument = sandboxDocument(html, documentTheme(document), { locale: frameLocale, token: session.token, permissions: [...grants], scriptAssets: assets.some((asset) => asset.type === 'script'), nativeDownloads: nativeDownloads() });
+      if (current === session.generation && !signal.aborted) frameDocument = sandboxDocument(html, documentTheme(document), { locale: frameLocale, token: session.token, permissions: [...grants], scriptAssets: assets.some((asset) => asset.type === 'script'), nativeDownloads: nativeDownloads(), zoomPercent });
     } catch (error) {
       if (current === session.generation && !signal.aborted) failure = fail(error);
     } finally {
@@ -367,6 +374,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
     });
   });
   $effect(() => { if (mounted) { void locale; syncFrame(); } });
+  $effect(() => { if (mounted) { void zoomPercent; syncZoom(); } });
   $effect(() => {
     if (!operationDialog) return;
     if (pending && !operationDialog.open) {
