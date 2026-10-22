@@ -9,12 +9,15 @@ This is a **release gate** for new scaffolds, feature changes and migrations of 
 | File selection, drag/drop, selected-file previews | `ui.fileInput(target, options)` | Custom hosted drop zones, native-only hosted pickers, duplicate validation/preview widgets |
 | Waiting, async processing, completion, failure | `ui.status(target, options)` | Hand-rolled job spinners or transient status banners |
 | Deferred/external asset download or engine setup | `ui.loader(target, options)`; use `.asset(id)` for declared downloads | Custom download spinners, fake percentages, direct network fetches |
+| Read-only highlighted code output | `ui.codeBlock(target, options)` | Tool-owned syntax highlighters or unsafe HTML injection for output previews |
 | Tabular results with filtering, sorting or paging | `ui.table(target, options)` | Custom table grid, toolbar, column chooser or pagination for hosted result lists |
 | Copied, saved, downloaded or other transient notices | `ui.toast(message, { tone })` | Tool-owned toast stacks or browser alerts |
 | Help/instructions/information popup | `ui.info(options)` | Hosted in-frame modal dialogs |
 | Destructive-action confirmation | `ui.confirm(options)` | `window.confirm` or a competing hosted modal |
 
 The rule applies **when the feature exists**. A synchronous text counter does not need a file picker or an artificial loading screen. Domain-specific editors, charts, non-tabular result layouts, persistent input validation and inline contextual explanations remain tool-owned. Interactive forms that cannot be expressed by text-only popups must be inline panels, not custom modal overlays. If the kit cannot represent a necessary interaction, extend the host kit and document/test that API first; do not silently bypass it in a tool.
+
+For shared code output, verify unsupported languages and hostile input render as literal text, updates preserve content, 320px mobile width has no document overflow, and both host themes remain legible. Code copying still requires the declared clipboard permission. Do not replace an **editable** editor with a read-only preview.
 
 For shared tables, test EN/ID search and copy labels, sorting, column visibility, density and paging at mobile widths, and verify displayed filtering does not alter full-dataset export. Copy buttons are icon-only with a meaningful accessible label; clipboard privileges still require the host permission broker.
 
