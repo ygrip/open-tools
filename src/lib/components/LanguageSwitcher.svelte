@@ -16,7 +16,7 @@
   const panelId = uid + '-language-panel';
   let open = $state(false);
   let root: HTMLElement;
-  let trigger: HTMLButtonElement;
+  let trigger = $state<HTMLButtonElement | undefined>(undefined);
 
   function href(locale: Locale) {
     return localizedPath(page.url.pathname, locale) + (browser ? page.url.search + page.url.hash : '');
