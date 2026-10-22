@@ -27,9 +27,11 @@ test('new service worker finishes precaching before activation', async () => {
   const registration = { installing: worker, waiting: null, update: async () => {
     queueMicrotask(() => { registration.waiting = worker; worker.transition('installed'); });
   } };
-  await applyPwaUpdate(registration);
+  const phases = [];
+  await applyPwaUpdate(registration, { onPhase: (phase) => phases.push(phase) });
   assert.equal(worker.state, 'activated');
   assert.equal(worker.messages.length, 1);
+  assert.deepEqual(phases, ['checking', 'downloading', 'activating', 'ready']);
 });
 
 test('failed essential precache keeps the current app and reports failure', async () => {
@@ -58,4 +60,19 @@ test('automatic refresh is limited to an idle catalog, never a running tool', ()
   assert.equal(canAutoRefreshCatalog('/', '', true), false);
   assert.equal(canAutoRefreshCatalog('/json-tools/'), false);
   assert.equal(canAutoRefreshCatalog('/id/json-tools/'), false);
+});
+
+test('ongoing installation is reused instead of starting another network check', async () => {
+  const worker = new FakeWorker('installing');
+  let updateCalls = 0;
+  const registration = {
+    installing: worker, waiting: null,
+    update: async () => { updateCalls++; }
+  };
+  queueMicrotask(() => { registration.waiting = worker; worker.transition('installed'); });
+  const phases = [];
+  await applyPwaUpdate(registration, { onPhase: (phase) => phases.push(phase) });
+  assert.equal(updateCalls, 0);
+  assert.deepEqual(phases, ['checking', 'downloading', 'activating', 'ready']);
+  assert.equal(worker.state, 'activated');
 });
