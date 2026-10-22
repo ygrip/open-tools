@@ -11,7 +11,7 @@
   let input = $state<HTMLInputElement | null>(null);
   let query = $state('');
   let phase = $state('');
-  let animatedPlaceholder = $state(m.overlay_placeholder());
+  let animatedPlaceholder = $state<string>(m.overlay_placeholder());
   let reducedMotion = $state(true);
   let pageVisible = $state(true);
   const placeholderPhrases = [
