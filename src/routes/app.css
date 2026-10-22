@@ -317,18 +317,20 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
 }
 .t-icon-swap[data-state="a"] .t-icon[data-icon="a"], .t-icon-swap[data-state="b"] .t-icon[data-icon="b"] { opacity: 1; filter: blur(0); transform: scale(1); }
 .t-icon-swap[data-state="a"] .t-icon[data-icon="b"], .t-icon-swap[data-state="b"] .t-icon[data-icon="a"] { opacity: 0; filter: blur(var(--icon-swap-blur)); transform: scale(var(--icon-swap-start-scale)); }
-.search-dialog { position: fixed; width: min(620px, calc(100% - 32px)); max-height: min(600px, 85vh); margin: 12vh auto auto; padding: 12px; color: var(--text); overflow: auto; }
+/* Keep the input and help text outside the scroll container: only matches move. */
+.search-dialog { position: fixed; width: min(620px, calc(100% - 32px)); max-height: min(600px, 85dvh); margin: min(12vh, 64px) auto auto; padding: 12px; color: var(--text); overflow: hidden; }
+.search-dialog[open] { display: flex; flex-direction: column; }
 .search-dialog::backdrop { background: rgba(27, 22, 25, .55); }
-.search-panel-header { display: flex; align-items: center; gap: 13px; padding: 8px 10px 15px; border-bottom: 1px solid var(--line); }
+.search-panel-header { position: sticky; top: 0; z-index: 1; flex: 0 0 auto; display: flex; align-items: center; gap: 13px; padding: 8px 10px 15px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .search-panel-header input { flex: 1; min-width: 0; border: 0; background: transparent; height: 44px; color: var(--text); font-size: 16px; }
-.search-results { padding-top: 10px; }
+.search-results { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; padding-top: 10px; scrollbar-width: thin; }
 .search-result { display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 18px; }
 .search-result:hover, .search-result:focus-visible { background: var(--peach); }
 .search-result-copy { min-width: 0; flex: 1; }
 .search-result-copy strong { display: block; font-size: 15px; }
 .search-result-copy small { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
 .search-empty { padding: 30px 20px; color: var(--muted); }
-.search-tip { color: var(--muted); font-size: 11px; padding: 12px 15px 3px; }
+.search-tip { flex: 0 0 auto; color: var(--muted); font-size: 11px; padding: 12px 15px 3px; }
 
 .legal-shell, .error-shell { max-width: 900px; }
 .legal-back { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 18px; font-weight: 850; }
