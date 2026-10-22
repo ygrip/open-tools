@@ -50,7 +50,7 @@
       {#if host.frameDocument}
         <div class="runtime-zoom-controls" role="group" aria-label={text.zoomGroup}>
           <button type="button" aria-label={text.zoomOut} title={text.zoomOut} disabled={zoomPercent <= TOOL_ZOOM.min} onclick={() => (zoomPercent = stepToolZoom(zoomPercent, -1))}><Icon name="minus" size={18} /></button>
-          <output aria-label={text.zoomLevel} aria-live="polite">{zoomPercent}%</output>
+          <span class="zoom-level" role="meter" aria-label={text.zoomLevel} aria-valuemin={TOOL_ZOOM.min} aria-valuemax={TOOL_ZOOM.max} aria-valuenow={zoomPercent} aria-live="polite">{zoomPercent}%</span>
           <button type="button" aria-label={text.zoomIn} title={text.zoomIn} disabled={zoomPercent >= TOOL_ZOOM.max} onclick={() => (zoomPercent = stepToolZoom(zoomPercent, 1))}><Icon name="plus" size={18} /></button>
           <button type="button" class="zoom-reset" aria-label={text.zoomReset} title={text.zoomReset} disabled={zoomPercent === TOOL_ZOOM.default} onclick={() => (zoomPercent = TOOL_ZOOM.default)}><Icon name="rotate-ccw" size={17} /></button>
         </div>
@@ -148,7 +148,7 @@
   .runtime-zoom-controls button:hover:not(:disabled) { background: var(--peach); }
   .runtime-zoom-controls button:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
   .runtime-zoom-controls button:disabled { opacity: .35; cursor: not-allowed; }
-  .runtime-zoom-controls output { display: block; min-width: 49px; text-align: center; color: var(--text-secondary); font-weight: 900; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .runtime-zoom-controls .zoom-level { display: block; min-width: 49px; text-align: center; color: var(--text-secondary); font-weight: 900; font-size: 13px; font-variant-numeric: tabular-nums; }
   .runtime-zoom-controls .zoom-reset { border-left: 1px solid var(--line); border-radius: 0 12px 12px 0; }
   @media (max-width: 600px) {
     .runtime-topline { flex-wrap: wrap; }
