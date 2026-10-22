@@ -25,8 +25,9 @@ test('waiting service worker activates after explicit approval', async () => {
 test('new service worker finishes precaching before activation', async () => {
   const worker = new FakeWorker('installing');
   const registration = { installing: worker, waiting: null, update: async () => {
-    queueMicrotask(() => { registration.waiting = worker; worker.transition('installed'); });
+    throw new Error('already installing: duplicate update check');
   } };
+  queueMicrotask(() => { registration.waiting = worker; worker.transition('installed'); });
   const phases = [];
   await applyPwaUpdate(registration, { onPhase: (phase) => phases.push(phase) });
   assert.equal(worker.state, 'activated');
@@ -37,9 +38,10 @@ test('new service worker finishes precaching before activation', async () => {
 test('failed essential precache keeps the current app and reports failure', async () => {
   const worker = new FakeWorker('installing');
   const registration = { installing: worker, waiting: null, update: async () => {
-    queueMicrotask(() => worker.transition('redundant'));
+    throw new Error('already installing: duplicate update check');
   } };
-  await assert.rejects(applyPwaUpdate(registration), /could not install/);
+  queueMicrotask(() => worker.transition('redundant'));
+  await assert.rejects(applyPwaUpdate(registration, { installTimeoutMs: 2_000 }), /could not install/);
   assert.equal(worker.messages.length, 0);
 });
 
