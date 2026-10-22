@@ -74,11 +74,11 @@ test('PWA update waits for approval, installs, then refreshes the app automatica
     expect(await page.evaluate(() => (window as unknown as { updateMarker: number }).updateMarker)).toBe(42);
     await Promise.all([
       page.waitForEvent('framenavigated', frame => frame === page.mainFrame()),
-      page.getByRole('button', { name: 'Prepare update', exact: true }).click()
+      page.getByRole('button', { name: 'Update now', exact: true }).click()
     ]);
     await expect(page).toHaveURL(`${origin}/json-tools/`);
     expect(await page.evaluate(() => (window as unknown as { updateMarker?: number }).updateMarker)).toBeUndefined();
-    await expect(page.getByRole('button', { name: 'Reload to use the update', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Reload to finish', exact: true })).toHaveCount(0);
     const caches = await page.evaluate(() => window.caches.keys());
     expect(caches).toContain(`trick-it-shell-${version}`);
     expect(caches).toContain(`trick-it-shell-${version}-test-update`);
