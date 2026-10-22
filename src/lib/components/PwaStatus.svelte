@@ -28,13 +28,11 @@
   const showInstall = $derived(!installed && !installDismissed && (prompt !== null || (mobile && iosSafari)));
   const hasUpdate = $derived(waiting !== null || refresh || spaUpdate || updated.current || installingWorker);
   const updateBusy = $derived(updating || installingWorker);
-  const updateDetail = $derived(
-    installProgress
-      ? installProgress.completed < installProgress.total
-        ? m.pwa_update_files({ done: String(installProgress.completed), total: String(installProgress.total) })
-        : m.pwa_update_activating()
-      : m.pwa_updating_description()
-  );
+  function updateDetail() {
+    if (!installProgress) return m.pwa_updating_description();
+    if (installProgress.completed === installProgress.total) return m.pwa_update_activating();
+    return m.pwa_update_files({ done: String(installProgress.completed), total: String(installProgress.total) });
+  }
   // A controlling worker may still serve an old offline shell. Activate it before reloading.
   const readyToReload = $derived(refresh || (!controlled && !waiting && (spaUpdate || updated.current)));
 
@@ -211,7 +209,7 @@
     <div class="pwa-icon" aria-hidden="true">✦</div>
     <div class="pwa-copy">
       <strong>{updateBusy ? m.pwa_updating_title() : readyToReload ? m.pwa_ready_title() : m.pwa_update()}</strong>
-      <p aria-live="polite">{updateError || (updateBusy ? updateDetail : readyToReload ? m.pwa_ready() : m.pwa_update_description())}</p>
+      <p aria-live="polite">{updateError || (updateBusy ? updateDetail() : readyToReload ? m.pwa_ready() : m.pwa_update_description())}</p>
       {#if updateBusy}
         <progress class="pwa-progress" aria-label={m.pwa_update_progress()} max={installProgress?.total ?? 1} value={installProgress?.completed}></progress>
       {/if}
