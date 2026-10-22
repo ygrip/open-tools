@@ -64,6 +64,65 @@ test('quick search traps focus, closes with Escape, and restores the trigger', a
   await expect(dialog).toBeVisible();
 });
 
+test('search popup scrolls results without moving its input or footer on small screens', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 480 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Search tools', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Search tools' });
+  const results = dialog.locator('.search-results');
+  await expect(results.locator('.search-result').first()).toBeVisible();
+
+  const measure = () => dialog.evaluate((element) => {
+    const header = element.querySelector('.search-panel-header')!;
+    const footer = element.querySelector('.search-tip')!;
+    const list = element.querySelector('.search-results')!;
+    return {
+      dialogScroll: element.scrollTop,
+      dialogOverflow: getComputedStyle(element).overflowY,
+      listOverflow: getComputedStyle(list).overflowY,
+      listScroll: list.scrollTop,
+      listHeight: list.clientHeight,
+      listContentHeight: list.scrollHeight,
+      headerTop: header.getBoundingClientRect().top,
+      footerTop: footer.getBoundingClientRect().top
+    };
+  });
+  const before = await measure();
+  expect(before.dialogOverflow).toBe('hidden');
+  expect(before.listOverflow).toBe('auto');
+  expect(before.listContentHeight).toBeGreaterThan(before.listHeight);
+  await results.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  const after = await measure();
+  expect(after.listScroll).toBeGreaterThan(0);
+  expect(after.dialogScroll).toBe(0);
+  expect(after.headerTop).toBeCloseTo(before.headerTop, 0);
+  expect(after.footerTop).toBeCloseTo(before.footerTop, 0);
+  await expect(dialog.getByRole('searchbox')).toBeVisible();
+});
+
+for (const { path, label, defaultHint, animatedPrefix } of [
+  { path: '/', label: 'Search tools', defaultHint: 'What would make today a little easier?', animatedPrefix: 'Search ' },
+  { path: '/id/', label: 'Cari alat', defaultHint: 'Apa yang ingin kamu selesaikan?', animatedPrefix: 'Cari ' }
+]) {
+  test(`search placeholder is localized, animated when idle, and static for reduced motion: ${path}`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(path);
+    await page.getByRole('button', { name: label, exact: true }).click();
+    const search = page.getByRole('dialog', { name: label }).getByRole('searchbox');
+    await expect(search).toHaveAttribute('placeholder', defaultHint);
+
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await expect.poll(async () => (await search.getAttribute('placeholder'))?.startsWith(animatedPrefix)).toBe(true);
+    await search.fill('JSON');
+    await expect(search).toHaveAttribute('placeholder', defaultHint);
+    await search.fill('');
+    await expect.poll(async () => (await search.getAttribute('placeholder'))?.startsWith(animatedPrefix)).toBe(true);
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(search).toHaveAttribute('placeholder', defaultHint);
+  });
+}
+
 test('catalog filters and empty state are usable', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('searchbox', { name: 'Search the toolbox' }).fill('not-here');
