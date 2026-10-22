@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { validateManifest, validateAssetOrigins, MAX_ASSET_BYTES } from '../src/lib/registry/contract.js';
+import { validateManifest, validateAssetOrigins, MAX_ASSET_BYTES, MAX_TOTAL_ASSET_BYTES } from '../src/lib/registry/contract.js';
 import { loadSource, verifyBundle } from '../scripts/lib/bundles.mjs';
 
 const example = JSON.parse(await readFile(new URL('../examples/tool.manifest.json', import.meta.url), 'utf8'));
@@ -95,6 +95,15 @@ test('asset metadata rejects unsafe URLs, ambiguous IDs, digest/type/defer/size 
   assert.throws(() => validateManifest({ ...withAssets(), assets: Array.from({ length: 3 }, (_, index) => asset({ id: `model-${index}`, bytes: MAX_ASSET_BYTES })) }), /total/);
   const result = validateManifest({ ...withAssets(), assets: [asset({ bytes: MAX_ASSET_BYTES }), asset({ id: 'second', bytes: MAX_ASSET_BYTES })] });
   assert.equal(result.assets.length, 2);
+});
+
+test('up to 128 MiB per asset with a separate 256 MiB aggregate ceiling', () => {
+  assert.equal(MAX_ASSET_BYTES, 128 * 1024 * 1024);
+  assert.equal(MAX_TOTAL_ASSET_BYTES, 256 * 1024 * 1024);
+  const model = validateManifest({ ...withAssets(), assets: [asset({ bytes: 118 * 1024 * 1024 }), asset({ id: 'tokenizer', bytes: 17 * 1024 * 1024, type: 'data' })] });
+  assert.equal(model.assets.length, 2);
+  assert.throws(() => validateManifest({ ...withAssets(), assets: [asset({ bytes: MAX_ASSET_BYTES + 1 })] }), /byte limit/);
+  assert.throws(() => validateManifest({ ...withAssets(), assets: [asset({ bytes: MAX_ASSET_BYTES }), asset({ id: 'b', bytes: MAX_ASSET_BYTES }), asset({ id: 'c', bytes: 1 })] }), /total/);
 });
 
 test('every asset capability must be declared independently of trust and required flags', () => {

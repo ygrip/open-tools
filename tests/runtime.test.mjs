@@ -63,6 +63,35 @@ test('asset loader sends no credentials, pins cache keys and never uses unverifi
   await assert.rejects(loadAsset(tool, asset, { signal: controller().signal, cacheStorage: null, fetcher: async () => new Response(new Uint8Array(model.length)) }), (error) => error.code === 'integrity');
   await assert.rejects(loadAsset(tool, asset, { signal: controller().signal, cacheStorage: null, fetcher: async () => new Response(new Uint8Array(model.length + 1)) }), (error) => error.code === 'size');
 });
+test('runtime accepts at most 128 MiB declared asset bytes without allocating model buffers', () => {
+  assert.equal(new URL(assetRequestUrl({ ...asset, bytes: 128 * 1024 * 1024 })).protocol, 'https:');
+  assert.throws(() => assetRequestUrl({ ...asset, bytes: 128 * 1024 * 1024 + 1 }), /invalid-asset/);
+});
+
+test('only approved commit-pinned Hugging Face assets may follow redirects and still require exact hashes', async () => {
+  const pinned = { ...asset, url: 'https://huggingface.co/Xenova/minilm/resolve/' + 'a'.repeat(40) + '/model.onnx' };
+  let follow;
+  const ok = async (_url, options) => {
+    follow = options.redirect;
+    const response = new Response(model);
+    Object.defineProperty(response, 'redirected', { value: true });
+    Object.defineProperty(response, 'url', { value: 'https://cdn-lfs-us-1.hf.co/models/a' });
+    return response;
+  };
+  assert.deepEqual(await loadAsset(tool, pinned, { signal: controller().signal, cacheStorage: null, fetcher: ok }), model);
+  assert.equal(follow, 'follow');
+  const invalid = async (_url, options) => {
+    const response = new Response(model);
+    Object.defineProperty(response, 'redirected', { value: true });
+    Object.defineProperty(response, 'url', { value: 'https://untrusted.example/a' });
+    return response;
+  };
+  await assert.rejects(loadAsset(tool, pinned, { signal: controller().signal, cacheStorage: null, fetcher: invalid }), /request/);
+  await assert.rejects(loadAsset(tool, { ...pinned, sha256: '0'.repeat(64) }, { signal: controller().signal, cacheStorage: null, fetcher: ok }), /integrity/);
+  await loadAsset(tool, { ...pinned, url: 'https://huggingface.co/Xenova/minilm/resolve/main/model.onnx' }, { signal: controller().signal, cacheStorage: null, fetcher: ok });
+  assert.equal(follow, 'error');
+});
+
 test('asset progress distinguishes downloaded bytes from integrity verification on network and cache reads', async () => {
   const cache = memoryCache();
   for (const cached of [false, true]) {

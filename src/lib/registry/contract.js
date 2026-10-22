@@ -1,8 +1,8 @@
 export const reservedIds = new Set(['api', 'policy', 'privacy', 'terms', 'bundles', 'icons', 'brand', 'illustrations', 'index', '404', '500', '503', '_app', 'offline', 'manifest', 'manifest-webmanifest', 'service-worker', 'pwa', 'id', 'og', 'robots', 'sitemap']);
 export const permissionNames = new Set(['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'external-assets', 'wasm', 'workers', 'services', 'wiki-read', 'dns-query']);
 export const iconNames = new Set(['braces', 'toolbox', 'grid', 'sparkles', 'bolt', 'heart', 'filter', 'lock', 'shield', 'search']);
-export const MAX_ASSET_BYTES = 64 * 1024 * 1024;
-export const MAX_TOTAL_ASSET_BYTES = 128 * 1024 * 1024;
+export const MAX_ASSET_BYTES = 128 * 1024 * 1024;
+export const MAX_TOTAL_ASSET_BYTES = 256 * 1024 * 1024;
 const safeId = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const digest = /^[a-f0-9]{64}$/;
 
@@ -132,7 +132,7 @@ export function validateManifest(manifest) {
     if (typeof entry.sha256 !== 'string' || !digest.test(entry.sha256)) throw new Error('invalid asset sha256');
     if (!Number.isSafeInteger(entry.bytes) || entry.bytes < 1 || entry.bytes > MAX_ASSET_BYTES) throw new Error('invalid asset byte limit');
     assetBytes += entry.bytes;
-    if (assetBytes > MAX_TOTAL_ASSET_BYTES) throw new Error('asset total exceeds 128 MiB');
+    if (assetBytes > MAX_TOTAL_ASSET_BYTES) throw new Error('asset total exceeds 256 MiB');
     if (!['wasm', 'script', 'worker', 'data'].includes(entry.type) || typeof entry.defer !== 'boolean') throw new Error('invalid asset type or defer flag');
     if (!grantedNames.has('external-assets')) throw new Error('assets require external-assets permission');
     if (entry.type === 'wasm' && !grantedNames.has('wasm')) throw new Error('WASM assets require wasm permission');

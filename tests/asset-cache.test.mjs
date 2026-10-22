@@ -65,3 +65,13 @@ test('quota recovery reclaims eligible stale caches below the advisory budget', 
   assert.deepEqual(result.deleted, ['trick-it-assets-recovery-old']);
   for (const name of ['trick-it-assets-recovery-current', 'trick-it-assets-recovery-recent', 'trick-it-shell-v1']) assert.equal(a.has(name), true);
 });
+
+
+test('verified 118 MiB metadata is counted accurately rather than as an unknown-size cache', async () => {
+  const size = 118 * 1024 * 1024;
+  const memory = caches({ 'trick-it-assets-current': [response(size)] });
+  const result = await pruneAssetCaches(memory, 'trick-it-assets-current', {
+    budgetBytes: 256 * 1024 * 1024, metadataStore: { getItem: () => '{}', setItem() {} }
+  });
+  assert.equal(result.bytes, size);
+});
