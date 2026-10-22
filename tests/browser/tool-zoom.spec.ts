@@ -8,12 +8,11 @@ for (const width of [375, 1440]) {
     await page.setViewportSize({ width, height: 812 });
     await mountFixture(page);
     const iframe = page.locator('iframe');
-    const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
     const controls = page.getByRole('group', { name: 'Tool zoom' });
     const zoomIn = controls.getByRole('button', { name: 'Zoom in tool' });
     const zoomOut = controls.getByRole('button', { name: 'Zoom out tool' });
     const reset = controls.getByRole('button', { name: 'Reset tool zoom to 100%' });
-    const level = controls.getByLabel('Tool zoom level');
+    const level = controls.getByRole('meter', { name: 'Tool zoom level' });
 
     await expect(iframe).toHaveAttribute('sandbox', 'allow-scripts');
     await expect(level).toHaveText('100%');
@@ -23,6 +22,7 @@ for (const width of [375, 1440]) {
 
     const text = page.frameLocator('iframe').getByRole('textbox', { name: 'Remember me' });
     await text.fill('Do not restart my tool');
+    const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
     await frame.evaluate(() => {
       const extra = document.createElement('div');
       extra.id = 'zoom-height-fixture';
