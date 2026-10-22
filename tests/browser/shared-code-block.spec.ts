@@ -6,6 +6,7 @@ test.use({ serviceWorkers: 'block' });
 test('shared Highlight.js code blocks escape markup and survive mobile theme changes', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
   await mountFixture(page);
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
   const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
   await frame.evaluate(() => {
     const mount = document.createElement('div'); mount.id = 'code-block-fixture'; document.body.append(mount);
@@ -41,6 +42,7 @@ test('shared Highlight.js code blocks escape markup and survive mobile theme cha
 
 test('shared code block highlights JSON, updates output and keeps unsupported grammar literal', async ({ page }) => {
   await mountFixture(page);
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
   const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
   await frame.evaluate(() => {
     const target = document.createElement('div'); document.body.append(target);
