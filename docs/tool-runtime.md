@@ -75,7 +75,7 @@ The shared picker, status card and close buttons defend their own layout and typ
 
 ### Shared highlighted code blocks
 
-Use `ui.codeBlock(target, options)` for read-only code or structured-text output (JSON, protobuf, generated source, cURL commands, etc.). The host supplies **Highlight.js 11.12.0** with a curated set of grammars (JavaScript, TypeScript, JSON, Bash, Python, Java, Go, Rust, C#, PHP, CSS, HTML/XML, SQL, YAML, Markdown and Protobuf), so tools do not include their own highlighter or make CDN requests. Inputs remain inside the opaque iframe. Output is always escaped by Highlight.js, and unknown languages fall back to literal plaintext. Content over 100,000 characters is shown safely without expensive highlighting; the maximum displayed code size is 2 MiB.
+Use `ui.codeBlock(target, options)` for read-only code or structured-text output (JSON, protobuf, generated source, cURL commands, etc.). The host supplies **Highlight.js 11.12.0** with a curated set of 19 grammars (JavaScript, TypeScript, JSON, Bash, Python, Java, Go, Rust, C#, C++, Kotlin, Swift, PHP, CSS, HTML/XML, SQL, YAML, Markdown and Protobuf), so tools do not include their own highlighter or make CDN requests. Inputs remain inside the opaque iframe. Output is always escaped by Highlight.js, and unknown languages fall back to literal plaintext. Content over 100,000 characters is shown safely without expensive highlighting; the maximum displayed code size is 2 MiB.
 
 ```js
 const block = trickIt.ui.codeBlock('#preview', {
