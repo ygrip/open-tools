@@ -37,7 +37,7 @@ export const codeBlockScript = `
       const head = document.createElement('div'); head.className = 'ti-code-head';
       const title = document.createElement('span'); title.className = 'ti-code-title';
       const button = document.createElement('button'); button.type = 'button'; button.className = 'ti-code-action';
-      const pre = document.createElement('pre'); const content = document.createElement('code');
+      const pre = document.createElement('pre'); pre.tabIndex = 0; const content = document.createElement('code');
       pre.append(content); head.append(title, button); root.append(head, pre); host.append(root);
       let data = { code: '', language: 'plaintext', wrap: false, copy: false, ...options };
       let active = true;
@@ -55,6 +55,7 @@ export const codeBlockScript = `
         const caption = typeof data.title === 'string' && data.title.trim() ? data.title : (grammar === 'auto' ? 'Code' : language);
         title.textContent = caption.slice(0, 200);
         root.setAttribute('aria-label', caption.slice(0, 200));
+        pre.setAttribute('aria-label', caption.slice(0, 200));
         root.dataset.wrap = String(data.wrap === true);
         button.hidden = data.copy !== true;
         button.disabled = data.copy === true && !config.permissions.includes('clipboard-write');
