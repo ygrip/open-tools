@@ -49,6 +49,17 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Browser compatibility and mobile Web Vitals
         run: npm run test:e2e
+      # PRs use noindex preview settings above. Compile again with the exact
+      # production SEO profile to catch release-only byte changes before merge.
+      # The deploy job only consumes the main-branch build, never this PR build.
+      - name: Verify production build and size before merging
+        if: github.event_name == 'pull_request'
+        env:
+          PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL || 'https://tools.readynaz.com' }}
+          SEO_EXPECT_PRODUCTION: 'true'
+        run: |
+          npm run build:verified
+          npm run performance:check
       - uses: actions/upload-artifact@v4
         if: always()
         with:
