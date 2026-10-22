@@ -73,6 +73,24 @@ Finished status cards (done/error) show a close button. `job.dismiss()` hides a 
 
 The shared picker, status card and close buttons defend their own layout and typography (15px base, centred column) against a tool's global `label`, `button`, `input`, `span` or `.settings label` rules, so every tool looks the same. Do not restyle them with structural overrides; change tokens (`--ot-*`) or the surrounding container only.
 
+### Shared highlighted code blocks
+
+Use `ui.codeBlock(target, options)` for read-only code or structured-text output (JSON, protobuf, generated source, cURL commands, etc.). The host supplies **Highlight.js 11.12.0** with a curated set of grammars (JavaScript, TypeScript, JSON, Bash, Python, Java, Go, Rust, C#, PHP, CSS, HTML/XML, SQL, YAML, Markdown and Protobuf), so tools do not include their own highlighter or make CDN requests. Inputs remain inside the opaque iframe. Output is always escaped by Highlight.js, and unknown languages fall back to literal plaintext. Content over 100,000 characters is shown safely without expensive highlighting; the maximum displayed code size is 2 MiB.
+
+```js
+const block = trickIt.ui.codeBlock('#preview', {
+  code: '{"hello":"world"}',
+  language: 'json',      // explicit language, 'auto', or 'plaintext'
+  title: 'response.json',
+  wrap: false,          // default: horizontally scroll rather than wrap long lines
+  copy: false           // true only if the tool declares clipboard-write
+});
+block.update({ code: nextOutput, language: 'typescript' });
+block.remove();
+```
+
+The code region is keyboard-accessible, mobile width is bounded with an internal horizontal code scrollbar, and colors automatically track the host's light/dark tokens. `wrap: true` enables wrapping. With `copy: true`, copy uses the existing host `clipboard-write` permission (never `navigator.clipboard` as a hidden bypass); without that declaration, the action is disabled. Tool-owned editable inputs remain `textarea` or an editor, not a read-only code block. For older hosts, fall back to escaped plain text or the tool's existing read-only output.
+
 ### Shared table and control pane
 
 Use `ui.table(target, options)` for tabular data in standalone tools. It renders a responsive, horizontally scrollable table and a host-owned control pane with localized search, column visibility, ascending/descending sort, rows per page (10/25/50/100 by default), density and pagination. No server calls, third-party grid dependencies or extra permissions are needed. The table is injected into the isolated tool frame, uses the host theme, and never sends rows to the parent. UI remains navigable on narrow screens.
