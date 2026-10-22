@@ -71,6 +71,9 @@ test('search popup scrolls results without moving its input or footer on small s
   const dialog = page.getByRole('dialog', { name: 'Search tools' });
   const results = dialog.locator('.search-results');
   await expect(results.locator('.search-result').first()).toBeVisible();
+  // The whole modal scales during entry. Compare element positions only after
+  // that transition settles, otherwise a moving dialog looks like a moving header.
+  await expect(dialog).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
 
   const measure = () => dialog.evaluate((element) => {
     const header = element.querySelector('.search-panel-header')!;
