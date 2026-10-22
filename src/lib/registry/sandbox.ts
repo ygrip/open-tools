@@ -1,6 +1,8 @@
 import { isTheme, type Theme } from '../theme';
 import { uiKitScript, uiKitStyles } from './ui-kit';
 import { tableScript, tableStyles } from './ui-table';
+import { codeBlockScript, codeBlockStyles } from './ui-code-block';
+import { highlightRuntime } from './highlight-runtime';
 import { DOWNLOAD_LIMITS } from '../runtime/download-policy';
 import { TOOL_ZOOM } from '../runtime/tool-zoom';
 
@@ -122,6 +124,8 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
       });
     }
 ${tableScript}
+${highlightRuntime}
+${codeBlockScript}
 ${uiKitScript}
     async function downloadStream({ filename, mime, size, chunks, onProgress, signal }) {
       if (!config.permissions.includes('downloads')) throw new Error('Download permission was not declared.');
@@ -239,5 +243,5 @@ ${uiKitScript}
   else start();
 })();
 `;
-  return `<!doctype html><html lang="${locale}" data-theme="${theme}" style="color-scheme:${theme};--ot-host-tool-zoom:${initialZoom / 100}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}${uiKitStyles}${tableStyles}</style><script>${themeBootstrap}${zoomBootstrap}${sdk}</script><script>${resizeBootstrap}</script></head><body>${html}</body></html>`;
+  return `<!doctype html><html lang="${locale}" data-theme="${theme}" style="color-scheme:${theme};--ot-host-tool-zoom:${initialZoom / 100}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}${uiKitStyles}${tableStyles}${codeBlockStyles}</style><script>${themeBootstrap}${zoomBootstrap}${sdk}</script><script>${resizeBootstrap}</script></head><body>${html}</body></html>`;
 }
