@@ -81,8 +81,9 @@ test('only approved commit-pinned Hugging Face assets may follow redirects and s
   assert.deepEqual(await loadAsset(tool, pinned, { signal: controller().signal, cacheStorage: null, fetcher: ok }), model);
   assert.equal(follow, 'follow');
   const invalid = async (_url, options) => {
-    const response = await ok(_url, options);
-    Object.defineProperty(response, 'url', { value: 'https://untrusted.example/a', configurable: true });
+    const response = new Response(model);
+    Object.defineProperty(response, 'redirected', { value: true });
+    Object.defineProperty(response, 'url', { value: 'https://untrusted.example/a' });
     return response;
   };
   await assert.rejects(loadAsset(tool, pinned, { signal: controller().signal, cacheStorage: null, fetcher: invalid }), /request/);
