@@ -15,7 +15,7 @@ export class RuntimeFailure extends Error {
   constructor(public code: RuntimeErrorCode, public status?: number) { super(code); this.name = 'RuntimeFailure'; }
 }
 const MAX_HTML = 5 * 1024 * 1024;
-export const MAX_ASSET = 64 * 1024 * 1024;
+export const MAX_ASSET = 128 * 1024 * 1024;
 const HASH = /^[a-f0-9]{64}$/;
 const ID = /^[a-zA-Z0-9_-]{1,64}$/;
 export function checkAbort(signal?: AbortSignal) {

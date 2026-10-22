@@ -63,6 +63,11 @@ test('asset loader sends no credentials, pins cache keys and never uses unverifi
   await assert.rejects(loadAsset(tool, asset, { signal: controller().signal, cacheStorage: null, fetcher: async () => new Response(new Uint8Array(model.length)) }), (error) => error.code === 'integrity');
   await assert.rejects(loadAsset(tool, asset, { signal: controller().signal, cacheStorage: null, fetcher: async () => new Response(new Uint8Array(model.length + 1)) }), (error) => error.code === 'size');
 });
+test('runtime accepts at most 128 MiB declared asset bytes without allocating model buffers', () => {
+  assert.equal(new URL(assetRequestUrl({ ...asset, bytes: 128 * 1024 * 1024 })).protocol, 'https:');
+  assert.throws(() => assetRequestUrl({ ...asset, bytes: 128 * 1024 * 1024 + 1 }), /invalid-asset/);
+});
+
 test('asset progress distinguishes downloaded bytes from integrity verification on network and cache reads', async () => {
   const cache = memoryCache();
   for (const cached of [false, true]) {

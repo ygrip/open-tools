@@ -4,9 +4,9 @@
  */
 const PREFIX = 'trick-it-assets-';
 const KEY = 'trick-it:asset-cache-usage:v1';
-const DEFAULT_BUDGET = 192 * 1024 * 1024;
+const DEFAULT_BUDGET = 320 * 1024 * 1024;
 const GRACE_MS = 30 * 60 * 1000;
-const MAX_UNKNOWN_BYTES = 64 * 1024 * 1024;
+const MAX_UNKNOWN_BYTES = 128 * 1024 * 1024;
 const recent = new Map();
 
 /** @param {Storage | null | undefined} storage */
@@ -36,7 +36,7 @@ export function touchAssetCache(name, now = Date.now(), storage = localStore()) 
 /**
  * Evict old release caches, never active or recently used ones.
  * Header-only byte accounting avoids reading multi-megabyte model bodies.
- * Legacy entries with no byte header are conservatively counted at 64 MiB.
+ * Legacy entries with no byte header are conservatively counted at 128 MiB.
  */
 /**
  * @param {CacheStorage} cacheStorage
