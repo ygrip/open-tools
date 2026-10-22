@@ -50,7 +50,6 @@ for (const width of [375, 1440]) {
 
     // A forged child-window message and a malformed parent message cannot set zoom.
     const token = await frame.evaluate(() => {
-      const script = document.querySelectorAll('script')[0].textContent!;
       // Configuration is inserted into a different bootstrap script.
       const scripts = [...document.querySelectorAll('script')];
       const sdk = scripts.find((entry) => entry.textContent?.includes('const config = '))!.textContent!;
@@ -83,9 +82,7 @@ test('zoom labels follow the host locale and preserve built-in browser magnifica
   await page.goto('/id/json-tools/');
   await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', 'width=device-width, initial-scale=1');
   const controls = page.getByRole('group', { name: 'Perbesaran alat' });
-  // The tool may require startup consent; buttons are available once its iframe exists.
-  if (await page.locator('iframe').count()) {
-    await expect(controls.getByRole('button', { name: 'Perbesar tampilan alat' })).toBeVisible();
-    await expect(controls.getByRole('button', { name: 'Kembalikan perbesaran alat ke 100%' })).toBeVisible();
-  }
+  await expect(page.locator('iframe')).toBeVisible();
+  await expect(controls.getByRole('button', { name: 'Perbesar tampilan alat' })).toBeVisible();
+  await expect(controls.getByRole('button', { name: 'Kembalikan perbesaran alat ke 100%' })).toBeVisible();
 });
