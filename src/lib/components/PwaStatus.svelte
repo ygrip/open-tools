@@ -16,7 +16,7 @@
   let iosSafari = $state(false);
   let message = $state('');
   let updating = $state(false);
-  type InstallProgress = { completed: number; total: number; phase: 'downloading' | 'ready' };
+  type InstallProgress = { completed: number; total: number };
   let installingWorker = $state(false);
   let installProgress = $state<InstallProgress | null>(null);
   let updatePhase = $state<'checking' | 'downloading' | 'activating' | 'ready' | null>(null);
@@ -27,12 +27,12 @@
   // Only offer install where it helps: a phone/tablet browser tab that can actually install (native prompt, or iOS Add to Home Screen).
   // Chromium may offer native installation on desktop; iOS needs manual guidance.
   const showInstall = $derived(!installed && !installDismissed && (prompt !== null || (mobile && iosSafari)));
-  const hasUpdate = $derived(waiting !== null || refresh || spaUpdate || updated.current || (controlled && installingWorker));
-  const updateBusy = $derived(updating || (controlled && installingWorker));
+  const hasUpdate = $derived(waiting !== null || refresh || spaUpdate || updated.current || installingWorker);
+  const updateBusy = $derived(updating || installingWorker);
   const updateDetail = $derived(
     updatePhase === 'activating' ? m.pwa_update_activating() :
     updatePhase === 'checking' && !installingWorker ? m.pwa_update_checking() :
-    installProgress?.phase === 'downloading' ?
+    installProgress ?
       m.pwa_update_files({ done: String(installProgress.completed), total: String(installProgress.total) }) :
     m.pwa_updating_description()
   );
@@ -107,7 +107,7 @@
         if ((phase === 'downloading' || phase === 'ready') &&
             Number.isSafeInteger(completed) && Number.isSafeInteger(total) &&
             total > 0 && total <= 10_000 && completed >= 0 && completed <= total) {
-          installProgress = { completed, total, phase };
+          installProgress = { completed, total };
         }
       }
     };
@@ -218,7 +218,7 @@
       <strong>{updateBusy ? m.pwa_updating_title() : readyToReload ? m.pwa_ready_title() : m.pwa_update()}</strong>
       <p aria-live="polite">{updateError || (updateBusy ? updateDetail : readyToReload ? m.pwa_ready() : m.pwa_update_description())}</p>
       {#if updateBusy}
-        <progress class="pwa-progress" aria-label={m.pwa_update_progress()} max={installProgress?.total ?? 1} value={installProgress?.phase === 'downloading' ? installProgress.completed : undefined}></progress>
+        <progress class="pwa-progress" aria-label={m.pwa_update_progress()} max={installProgress?.total ?? 1} value={installProgress?.completed}></progress>
       {/if}
       <div class="pwa-actions" aria-busy={updateBusy}>
         {#if updateBusy}
