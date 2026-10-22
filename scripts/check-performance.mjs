@@ -77,7 +77,10 @@ const HOST_JS_BASELINE_TOOLS = 18;
 // Keep their allowance explicit and fixed rather than increasing the per-tool budget.
 // Export progress, cancellation and the shared browser-aware limit policy add ~1.5 kB gzip.
 // This fixed allowance leaves all tool-specific budgets unchanged.
-const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048 + 1_024 + 2_048 + 2_048;
+// Pinned Highlight.js core + 16 grammars are shared once by all tools.
+// Keep this explicit instead of increasing the per-tool catalog allowance.
+const SHARED_CODE_HIGHLIGHT_BUDGET = 32_768;
+const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048 + 1_024 + 2_048 + 2_048 + SHARED_CODE_HIGHLIGHT_BUDGET;
 // User-approved catalog headroom: 64 extra gzip bytes per tool for richer EN/ID metadata.
 // The image-editor registration exceeded the previous aggregate ceiling by 12 bytes.
 // Keep the fixed host baseline and individual entry, bundle and icon ceilings unchanged.
