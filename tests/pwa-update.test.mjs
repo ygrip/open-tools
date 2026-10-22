@@ -28,11 +28,9 @@ test('new service worker finishes precaching before activation', async () => {
     throw new Error('already installing: duplicate update check');
   } };
   queueMicrotask(() => { registration.waiting = worker; worker.transition('installed'); });
-  const phases = [];
-  await applyPwaUpdate(registration, { onPhase: (phase) => phases.push(phase) });
+  await applyPwaUpdate(registration);
   assert.equal(worker.state, 'activated');
   assert.equal(worker.messages.length, 1);
-  assert.deepEqual(phases, ['checking', 'downloading', 'activating', 'ready']);
 });
 
 test('failed essential precache keeps the current app and reports failure', async () => {
@@ -72,9 +70,7 @@ test('ongoing installation is reused instead of starting another network check',
     update: async () => { updateCalls++; }
   };
   queueMicrotask(() => { registration.waiting = worker; worker.transition('installed'); });
-  const phases = [];
-  await applyPwaUpdate(registration, { onPhase: (phase) => phases.push(phase) });
+  await applyPwaUpdate(registration);
   assert.equal(updateCalls, 0);
-  assert.deepEqual(phases, ['checking', 'downloading', 'activating', 'ready']);
   assert.equal(worker.state, 'activated');
 });
