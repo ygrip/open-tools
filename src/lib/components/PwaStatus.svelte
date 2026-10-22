@@ -19,7 +19,6 @@
   type InstallProgress = { completed: number; total: number };
   let installingWorker = $state(false);
   let installProgress = $state<InstallProgress | null>(null);
-  let updatePhase = $state<'checking' | 'downloading' | 'activating' | 'ready' | null>(null);
   let updateError = $state('');
   let updateDismissed = $state(false);
   let installDismissed = $state(false);
@@ -29,12 +28,13 @@
   const showInstall = $derived(!installed && !installDismissed && (prompt !== null || (mobile && iosSafari)));
   const hasUpdate = $derived(waiting !== null || refresh || spaUpdate || updated.current || installingWorker);
   const updateBusy = $derived(updating || installingWorker);
-  function updateDetail() {
-    if (updatePhase === 'activating') return m.pwa_update_activating();
-    if (updatePhase === 'checking' && !installingWorker) return m.pwa_update_checking();
-    if (installProgress) return m.pwa_update_files({ done: String(installProgress.completed), total: String(installProgress.total) });
-    return m.pwa_updating_description();
-  }
+  const updateDetail = $derived(
+    installProgress
+      ? installProgress.completed < installProgress.total
+        ? m.pwa_update_files({ done: String(installProgress.completed), total: String(installProgress.total) })
+        : m.pwa_update_activating()
+      : m.pwa_updating_description()
+  );
   // A controlling worker may still serve an old offline shell. Activate it before reloading.
   const readyToReload = $derived(refresh || (!controlled && !waiting && (spaUpdate || updated.current)));
 
@@ -102,9 +102,8 @@
       if (!source || !('scriptURL' in source) || source.scriptURL !== new URL(`${base}/service-worker.js`, location.origin).href) return;
       if (event.data?.type === 'trick-it:version-request') source.postMessage({ type: 'trick-it:client-ready', appVersion: version });
       if (event.data?.type === 'trick-it:install-progress') {
-        const { completed, total, phase } = event.data;
-        if ((phase === 'downloading' || phase === 'ready') &&
-            Number.isSafeInteger(completed) && Number.isSafeInteger(total) &&
+        const { completed, total } = event.data;
+        if (Number.isSafeInteger(completed) && Number.isSafeInteger(total) &&
             total > 0 && total <= 10_000 && completed >= 0 && completed <= total) {
           installProgress = { completed, total };
         }
@@ -177,13 +176,10 @@
     if (!navigator.onLine) { updateError = m.pwa_update_offline(); return; }
     updating = true;
     updateError = '';
-    updatePhase = 'checking';
     if (!installingWorker) installProgress = null;
     try {
       const registration = await navigator.serviceWorker?.getRegistration();
-      if (registration) await applyPwaUpdate(registration, {
-        onPhase: (phase) => { updatePhase = phase; }
-      });
+      if (registration) await applyPwaUpdate(registration);
       // The browser keeps the installed PWA window open. Reload this window
       // only after the new shell is fully installed and activated.
       location.reload();
@@ -215,7 +211,7 @@
     <div class="pwa-icon" aria-hidden="true">✦</div>
     <div class="pwa-copy">
       <strong>{updateBusy ? m.pwa_updating_title() : readyToReload ? m.pwa_ready_title() : m.pwa_update()}</strong>
-      <p aria-live="polite">{updateError || (updateBusy ? updateDetail() : readyToReload ? m.pwa_ready() : m.pwa_update_description())}</p>
+      <p aria-live="polite">{updateError || (updateBusy ? updateDetail : readyToReload ? m.pwa_ready() : m.pwa_update_description())}</p>
       {#if updateBusy}
         <progress class="pwa-progress" aria-label={m.pwa_update_progress()} max={installProgress?.total ?? 1} value={installProgress?.completed}></progress>
       {/if}
