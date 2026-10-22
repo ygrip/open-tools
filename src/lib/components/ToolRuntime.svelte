@@ -144,7 +144,7 @@
   .runtime-workspace { min-width: 0; overflow: hidden; }
   .runtime-topline { padding: 12px 14px 12px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 55%, var(--surface)); }
   .runtime-zoom-controls { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; margin-left: auto; padding: 4px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
-  .runtime-zoom-controls button { display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; border: 0; border-radius: 12px; color: var(--text); background: transparent; cursor: pointer; }
+  .runtime-zoom-controls button { display: grid; place-items: center; flex: 0 0 auto; width: 44px; height: 44px; border: 0; border-radius: 12px; color: var(--text); background: transparent; cursor: pointer; }
   .runtime-zoom-controls button:hover:not(:disabled) { background: var(--peach); }
   .runtime-zoom-controls button:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
   .runtime-zoom-controls button:disabled { opacity: .35; cursor: not-allowed; }
