@@ -13,7 +13,7 @@
   import type { ToolIcon } from '$lib/registry/types';
   let { tool, locale = 'en' }: { tool: RuntimeTool; locale?: string } = $props();
   const text = $derived(runtimeStrings(locale));
-  let zoomPercent = $state(TOOL_ZOOM.default);
+  let zoomPercent = $state<number>(TOOL_ZOOM.default);
   const host = createToolRuntimeHost(() => tool, () => locale, () => zoomPercent);
 </script>
 
