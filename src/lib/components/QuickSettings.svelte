@@ -148,7 +148,7 @@
   </button>
 
   <div bind:this={panel} id={panelId} class="qs-panel" role="group" aria-label={m.quick_options()} inert={!open}>
-    <div class="qs-item qs-lang"><LanguageSwitcher onopen={() => close()} /></div>
+    <div class="qs-item qs-lang"><LanguageSwitcher onopen={() => close(true)} onclose={() => trigger.focus()} /></div>
     <div class="qs-item qs-theme"><ThemeToggle /></div>
     {#if share}
       <div class="qs-item qs-share">

@@ -1,6 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { gzipSync } from 'node:zlib';
+import { languageCodes } from '../src/lib/languages.js';
 
 async function files(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -10,7 +11,7 @@ async function files(directory) {
 
 const catalog = JSON.parse(await readFile('src/lib/registry/generated.json', 'utf8'));
 const routes = ['', 'privacy/', 'terms/', 'policy/', ...catalog.map((tool) => `${tool.id}/`)];
-for (const route of routes.flatMap((path) => [path, `id/${path}`])) {
+for (const route of routes.flatMap((path) => languageCodes.map((locale) => locale === 'en' ? path : `${locale}/${path}`))) {
   const file = join('build', route, 'index.html');
   const html = await readFile(file, 'utf8');
   if (!/<main(?:\s|>)/.test(html)) throw new Error(`Static page has no rendered content: ${file}`);
@@ -20,7 +21,7 @@ await readFile('build/service-worker.js', 'utf8');
 await readFile('build/manifest.webmanifest', 'utf8');
 await readFile('build/robots.txt', 'utf8');
 await readFile('build/sitemap.xml', 'utf8');
-console.log('Static EN/ID HTML, tool routes, error fallbacks, PWA, and crawler exports verified.');
+console.log(`Static HTML for all ${languageCodes.length} locales, tool routes, error fallbacks, PWA, and crawler exports verified.`);
 
 const client = '.svelte-kit/output/client';
 const assets = await files(client);
@@ -82,7 +83,14 @@ const HOST_JS_BASELINE_TOOLS = 18;
 // Measured across 19 pinned grammars: +34.7 KiB gzip vs the no-highlighter baseline.
 // The 2.5 KiB increment covers C++, Kotlin and Swift without changing per-tool limits.
 const SHARED_CODE_HIGHLIGHT_BUDGET = 35_328;
-const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048 + 1_024 + 2_048 + 2_048 + SHARED_CODE_HIGHLIGHT_BUDGET;
+// Ten additional Paraglide language packs add measured ~27.7 KiB gzip across
+// *all* emitted route chunks. This is an aggregate artifact-size allowance, not
+// a per-visit download budget: a browser never fetches all localized routes.
+// Keep it explicit, proportional to supported locales, and capped at 3 KiB each
+// instead of silently weakening the shared host/per-tool limits.
+const ADDITIONAL_LOCALE_JS_ALLOWANCE = 3_072;
+const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048 + 1_024 + 2_048 + 2_048 + SHARED_CODE_HIGHLIGHT_BUDGET
+  + Math.max(0, languageCodes.length - 2) * ADDITIONAL_LOCALE_JS_ALLOWANCE;
 // User-approved catalog headroom: 64 extra gzip bytes per tool for richer EN/ID metadata.
 // The image-editor registration exceeded the previous aggregate ceiling by 12 bytes.
 // Keep the fixed host baseline and individual entry, bundle and icon ceilings unchanged.

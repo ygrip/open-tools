@@ -11,7 +11,7 @@
 
   // Mobile quick settings closes before this modal opens. Both viewports use
   // this exact same searchable dialog, with one scrollable results area.
-  let { onopen }: { onopen?: () => void } = $props();
+  let { onopen, onclose }: { onopen?: () => void; onclose?: () => void } = $props();
   const uid = $props.id();
   const titleId = uid + '-language-title';
   let dialog = $state<HTMLDialogElement | undefined>(undefined);
@@ -42,7 +42,18 @@
   function close() {
     dialog?.close();
     open = false;
-    trigger?.focus();
+    // On mobile the quick-settings menu has already collapsed, so its
+    // language trigger is hidden. Restore focus to the visible settings button.
+    if (onclose) onclose();
+    else trigger?.focus();
+  }
+
+  // A modal nested inside a collapsed quick-settings item inherits its
+  // visibility:hidden and inert state. Portalling the dialog into <body>
+  // gives desktop and mobile identical top-layer focus/visibility behavior.
+  function portal(node: HTMLDialogElement) {
+    document.body.appendChild(node);
+    return { destroy: () => node.remove() };
   }
 
   function onKeydown(event: KeyboardEvent) {
@@ -70,7 +81,7 @@
     <span class="trigger-flag"><ClayFlag locale={getLocale()} size={23} /></span>
   </button>
 
-  <dialog bind:this={dialog} class="language-dialog surface" aria-labelledby={titleId}
+  <dialog bind:this={dialog} use:portal class="language-dialog surface" aria-labelledby={titleId}
     onkeydown={onKeydown}
     oncancel={(event) => { event.preventDefault(); close(); }}
     onclick={(event) => { if (event.target === dialog) close(); }}
