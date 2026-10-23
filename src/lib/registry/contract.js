@@ -168,6 +168,7 @@ export function validateManifest(manifest) {
   if (!Array.isArray(locales) || !locales.length || locales.length > languageCodes.length || new Set(locales).size !== locales.length || locales.some((locale) => !languageCodes.includes(locale))) throw new Error('invalid supported tool locales');
   // Locales are UI copy, not arbitrary external-script privileges. They receive a
   // read-only broker operation bound to hashes declared by the tool release.
+  /** @type {Partial<Record<import('./types').ToolLocale, {url: string, sha256: string, bytes: number}>>} */
   const localePacks = {};
   if (manifest.localePacks !== undefined) {
     if (!modern) throw new Error('language packs require schemaVersion 3');
