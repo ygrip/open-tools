@@ -280,5 +280,8 @@
   "privacy_storage_title": "Apa yang tersimpan setelah kamu pergi",
   "privacy_storage_text": "Browser dapat menyimpan cache alat, berkas luring, dan preferensi. Kamu bisa menghapusnya melalui pengaturan data situs di browser. Tindakan ini juga bisa menghapus akses luring dan preferensi tersimpan.",
   "privacy_eyebrow": "Tentang data kamu",
-  "privacy_illustration_alt": "Ilustrasi tanah liat berupa dokumen privasi, gembok kuning, perisai biru bertanda centang, dan daun."
+  "privacy_illustration_alt": "Ilustrasi tanah liat berupa dokumen privasi, gembok kuning, perisai biru bertanda centang, dan daun.",
+  "language_search": "Cari bahasa…",
+  "language_empty": "Bahasa tidak ditemukan. Coba kata lain.",
+  "language_hint": "Pilih bahasa untuk berganti halaman. Beberapa alat hanya tersedia dalam bahasa Inggris atau Indonesia."
 }

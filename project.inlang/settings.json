@@ -3,7 +3,17 @@
   "baseLocale": "en",
   "locales": [
     "en",
-    "id"
+    "id",
+    "ms",
+    "fil",
+    "th",
+    "vi",
+    "zh",
+    "my",
+    "km",
+    "lo",
+    "ja",
+    "hi"
   ],
   "modules": [
     "https://cdn.jsdelivr.net/npm/@inlang/plugin-message-format@4.5.0/dist/index.js"

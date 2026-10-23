@@ -1,3 +1,5 @@
+import { isSupportedLanguage, stripLanguagePrefix } from '../languages.js';
+
 export const SEO_LOCALES = ['en', 'id'];
 
 /** @param {string | undefined} value */
@@ -23,10 +25,10 @@ export function localePath(path, locale = 'en', base = '') {
   if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\')) throw new Error('SEO path must be site-local');
   let pathname = path.split(/[?#]/, 1)[0] || '/';
   if (base && (pathname === base || pathname.startsWith(`${base}/`))) pathname = pathname.slice(base.length) || '/';
-  pathname = pathname.replace(/^\/id(?=\/|$)/, '') || '/';
+  pathname = stripLanguagePrefix(pathname);
   if (pathname.split('/').some((part) => part === '.' || part === '..')) throw new Error('SEO path cannot contain dot segments');
   pathname = pathname === '/' ? '/' : `${pathname.replace(/\/+$/, '')}/`;
-  return `${base}${locale === 'id' ? `/id${pathname}` : pathname}`;
+  return `${base}${locale === 'en' ? pathname : `/${locale}${pathname}`}`;
 }
 
 /** JSON embedded in a script element must never contain an HTML closing tag.
@@ -41,17 +43,19 @@ export function safeJsonLd(value) {
 const applicationCategories = /** @type {Record<string, string>} */ ({ developer: 'DeveloperApplication', media: 'MultimediaApplication', data: 'BusinessApplication', productivity: 'UtilitiesApplication' });
 /** @param {{title:string,description:string,path:string,locale?:string,origin?:string,base?:string,image?:string,keywords?:string[],robots?:string,tool?:SeoTool}} options */
 export function seoMetadata(options) {
-  const locale = options.locale === 'id' ? 'id' : 'en';
+  const locale = isSupportedLanguage(options.locale) ? options.locale : 'en';
   const origin = siteOrigin(options.origin);
   const base = options.base || '';
   const path = localePath(options.path, locale, base);
   const title = /trick-it/i.test(options.title) ? options.title : `${options.title} · trick-it`;
-  const imagePath = options.image || `${base}/og/${options.tool ? `tools/${options.tool.id}` : 'home'}-${locale}.png`;
+  const imagePath = options.image || `${base}/og/${options.tool ? `tools/${options.tool.id}` : 'home'}-${SEO_LOCALES.includes(locale) ? locale : 'en'}.png`;
   if (!imagePath.startsWith('/') || imagePath.startsWith('//') || /[\\?#]/.test(imagePath)) throw new Error('SEO image must be a site-local asset path');
   const canonical = origin ? `${origin}${path}` : '';
   const image = origin ? `${origin}${imagePath}` : imagePath;
   const alternates = origin ? SEO_LOCALES.map((language) => ({ locale: language, href: `${origin}${localePath(options.path, language, base)}` })) : [];
-  const indexable = Boolean(origin) && options.robots !== 'noindex';
+  // Only reviewed en/id SEO copy is indexed. Other UI locales are functional but
+  // progressively translated; indexing English fallback text would create duplicates.
+  const indexable = Boolean(origin) && SEO_LOCALES.includes(locale) && options.robots !== 'noindex';
   const schema = options.tool ? {
     '@context': 'https://schema.org', '@type': 'WebApplication',
     ...(canonical ? { '@id': `${canonical}#application`, url: canonical } : {}),
@@ -68,6 +72,6 @@ export function seoMetadata(options) {
   return { title, description: options.description, path, canonical, image,
     imageAlt: `${options.tool?.name || 'trick-it'} — ${options.description}`,
     keywords: (options.keywords || []).join(', '), robots: indexable ? 'index,follow' : 'noindex,nofollow',
-    locale: locale === 'id' ? 'id_ID' : 'en_US', alternateLocale: locale === 'id' ? 'en_US' : 'id_ID',
+    locale: ({ en: 'en_US', id: 'id_ID', ms: 'ms_MY', fil: 'fil_PH', th: 'th_TH', vi: 'vi_VN', zh: 'zh_CN', my: 'my_MM', km: 'km_KH', lo: 'lo_LA', ja: 'ja_JP', hi: 'hi_IN' })[locale] ?? 'en_US', alternateLocale: locale === 'id' ? 'en_US' : 'id_ID',
     alternates, defaultHref: origin ? `${origin}${localePath(options.path, 'en', base)}` : '', schema };
 }

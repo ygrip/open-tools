@@ -280,5 +280,8 @@
   "privacy_storage_title": "What stays in your browser after you leave",
   "privacy_storage_text": "Your browser can cache tools, offline files, and preferences. You can remove these through your browser's site-data settings. Clearing them may also remove offline access and saved preferences.",
   "privacy_eyebrow": "Your data, explained",
-  "privacy_illustration_alt": "Clay-style privacy document with a yellow lock, a blue check-mark shield, and leaves."
+  "privacy_illustration_alt": "Clay-style privacy document with a yellow lock, a blue check-mark shield, and leaves.",
+  "language_search": "Search languages…",
+  "language_empty": "No matching languages. Try another name.",
+  "language_hint": "Choose a language to switch pages. Some tools may only support English or Indonesian."
 }
