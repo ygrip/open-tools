@@ -19,7 +19,7 @@ The rule applies **when the feature exists**. A synchronous text counter does no
 
 For shared code output, verify unsupported languages and hostile input render as literal text, updates preserve content, 320px mobile width has no document overflow, and both host themes remain legible. Code copying still requires the declared clipboard permission. Do not replace an **editable** editor with a read-only preview.
 
-For shared tables, test EN/ID search and copy labels, sorting, column visibility, density and paging at mobile widths, and verify displayed filtering does not alter full-dataset export. Copy buttons are icon-only with a meaningful accessible label; clipboard privileges still require the host permission broker.
+For shared tables, test all supported host locales for search and copy labels, sorting, column visibility, density and paging at mobile widths, and verify displayed filtering does not alter full-dataset export. Copy buttons are icon-only with a meaningful accessible label; clipboard privileges still require the host permission broker.
 
 ## Migration procedure
 
@@ -27,7 +27,7 @@ For shared tables, test EN/ID search and copy labels, sorting, column visibility
 2. Replace each hosted implementation with the matching shared component. Preserve type/size/count limits, callbacks, file previews, cancellation, keyboard access, test selectors where practical, output and user input. Keep domain-specific file-content validation after the shared picker's generic validation.
 3. Use one loader per concurrent asset; `await loader.asset(id)` returns verified bytes. Show initialization separately with `loader.update({ phase: 'initializing' })`. Never announce engine readiness at download completion. Keep retries explicit and preserve the workspace after denial, corrupt bytes or network failure.
 4. Keep fallback UI only behind **absence of the relevant SDK API**, for standalone files or older hosts. Never choose custom UI while the provided API exists. A denied capability is not permission to use a direct browser/network fallback. Remove unused hosted markup, CSS and handlers after replacement; fallback native inputs must not stay visible alongside the shared picker. Do not duplicate the kit's CSS/JavaScript.
-5. Update EN/ID copy and tests without resetting inputs, files, results or running work on locale/theme changes. Default shared labels already follow locale changes. Use first-use remembered permission wording; camera/location retain per-use previews and protected services retain per-request confirmation.
+5. Update every declared interface locale and its tests without resetting inputs, files, results or running work on locale/theme changes. Default shared labels already follow locale changes. Use first-use remembered permission wording; camera/location retain per-use previews and protected services retain per-request confirmation.
 
 ## Test ownership
 
@@ -60,7 +60,7 @@ For **each applicable row**, record its source integration and a passing behavio
 - File picker: select **and drop** valid files; check type/size/count refusal, previews/removal, disabled selection/drop/removal during processing, and the unchanged workspace after invalid replacement.
 - Job/asset UI: shared card appears while pending; real progress when available, indeterminate otherwise; success only after work completes; error/retry and cancellation preserve prior output. Asset tests must verify hash failure never exposes usable bytes.
 - Popups/notices: actual shared toast and parent-viewport dialog appear; no in-frame hosted modal; confirmation supports cancel, Escape and focus return. Forms stay inline.
-- Host integration: both themes and EN/ID where declared; 320–375px without document overflow; keyboard and reduced-motion behavior; remembered permission allowance/refusal and reset.
+- Host integration: both themes and every declared interface locale; 320–375px without document overflow; keyboard and reduced-motion behavior; remembered permission allowance/refusal and reset.
 - Layout coherence: render the shared picker/status card inside the tool's real containers (including `.settings label`-style grids) at desktop and 320–375px and confirm the icon, label, hint and button are centred and the same size as in other tools. Never override the kit's structure; the host regression test `the shared file picker keeps its layout under aggressive tool CSS` guards the kit, but your container must not squeeze or clip it.
 - Duplicates: one status card per place (update it, do not append a new one), one loader per asset (they auto-hide when done), identical toasts replace each other, and finished cards/toasts have a close button.
 - Live regions and focus: the shared status card sets its own `status`/`alert` role, so remove `role="status"`/`aria-live` from the element you pass to `ui.status` (no nested live regions). Keep an action that opens a host permission dialog focusable (`aria-busy`/`aria-disabled` plus a re-entry guard, never native `disabled`) so focus returns to it; test approval and refusal.

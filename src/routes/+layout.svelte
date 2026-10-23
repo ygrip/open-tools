@@ -1,5 +1,8 @@
 <script lang="ts">
   import './app.css';
+  import { browser } from '$app/environment';
+  import { page } from '$app/state';
+  import { getLocale, getLocaleForUrl, overwriteGetLocale } from '$lib/paraglide/runtime.js';
   import PwaStatus from '$lib/components/PwaStatus.svelte';
   import HostUi from '$lib/components/HostUi.svelte';
   import { base } from '$app/paths';
@@ -7,6 +10,10 @@
   import fontUrl from '@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2?url';
 
   let { children } = $props();
+  // Read SvelteKit's reactive URL so client-side locale navigation updates
+  // translations without replacing a running tool's iframe.
+  if (browser) overwriteGetLocale(() => getLocaleForUrl(page.url));
+  $effect(() => { document.documentElement.lang = getLocale(); });
 </script>
 
 <svelte:head>

@@ -1,3 +1,5 @@
+import { codeCopies, serializeCopies } from './ui-copy';
+
 /**
  * Host-owned syntax-highlighted code output.
  * Runs inside each opaque sandbox; source code never crosses the host bridge.
@@ -29,6 +31,7 @@ export const codeBlockStyles = `
 
 /** Runs in sandbox SDK scope after the Highlight.js library, before ui is constructed. */
 export const codeBlockScript = `
+    const codeCopy = ${serializeCopies(codeCopies)};
     function codeBlock(target, options = {}) {
       const host = typeof target === 'string' ? document.querySelector(target) : target;
       if (!(host instanceof Element)) throw new TypeError('trickIt.ui.codeBlock needs a target element.');
@@ -41,10 +44,27 @@ export const codeBlockScript = `
       pre.append(content); head.append(title, button); root.append(head, pre); host.append(root);
       let data = { code: '', language: 'plaintext', wrap: false, copy: false, ...options };
       let active = true;
-      const labels = () => document.documentElement.lang === 'id' ?
-        { copy: 'Salin kode', copied: 'Tersalin', error: 'Tidak dapat menyalin', unavailable: 'Izin menyalin belum tersedia' } :
-        { copy: 'Copy code', copied: 'Copied', error: 'Could not copy', unavailable: 'Copy permission is not available' };
-      function localize() { button.textContent = labels().copy; button.setAttribute('aria-label', labels().copy); }
+      let copyState = 'copy';
+      function labels() {
+        const locale = document.documentElement.lang;
+        if (Object.hasOwn(codeCopy, locale)) return codeCopy[locale];
+        return codeCopy.en;
+      }
+      function localize() {
+        const text = labels();
+        button.textContent = text[copyState];
+        button.setAttribute('aria-label', text[copyState]);
+        button.title = text.copy;
+        if (button.disabled) button.title = text.unavailable;
+        let language = 'plaintext';
+        if (typeof data.language === 'string') language = data.language.toLowerCase().replace(/^language-/, '');
+        let caption = language;
+        if (language === 'auto') caption = text.title;
+        if (typeof data.title === 'string' && data.title.trim()) caption = data.title;
+        title.textContent = caption.slice(0, 200);
+        root.setAttribute('aria-label', caption.slice(0, 200));
+        pre.setAttribute('aria-label', caption.slice(0, 200));
+      }
       function update(next = {}) {
         if (!active) return controller;
         data = { ...data, ...next };
@@ -52,14 +72,11 @@ export const codeBlockScript = `
         if (source.length > 2 * 1024 * 1024) throw new RangeError('Code block exceeds 2 MiB.');
         const language = typeof data.language === 'string' ? data.language.toLowerCase().replace(/^language-/, '') : 'plaintext';
         const grammar = language === 'auto' ? 'auto' : hljs.getLanguage(language) ? language : 'plaintext';
-        const caption = typeof data.title === 'string' && data.title.trim() ? data.title : (grammar === 'auto' ? 'Code' : language);
-        title.textContent = caption.slice(0, 200);
-        root.setAttribute('aria-label', caption.slice(0, 200));
-        pre.setAttribute('aria-label', caption.slice(0, 200));
+        if (Object.hasOwn(next, 'code')) copyState = 'copy';
         root.dataset.wrap = String(data.wrap === true);
         button.hidden = data.copy !== true;
         button.disabled = data.copy === true && !config.permissions.includes('clipboard-write');
-        button.title = button.disabled ? labels().unavailable : labels().copy;
+        localize();
         // Highlight.js escapes source before returning markup. Fallback uses textContent;
         // never accept HTML supplied by the tool or auto-execute fenced content.
         if (source.length <= (grammar === 'auto' ? 10000 : 100000) && grammar !== 'plaintext' && typeof hljs !== 'undefined') {
@@ -74,9 +91,9 @@ export const codeBlockScript = `
         if (!active || !config.permissions.includes('clipboard-write')) return;
         try {
           await request('clipboard-write', String(data.code ?? ''));
-          if (active) { button.textContent = labels().copied; button.setAttribute('aria-label', labels().copied); }
+          if (active) { copyState = 'copied'; localize(); }
         } catch {
-          if (active) { button.textContent = labels().error; button.setAttribute('aria-label', labels().error); }
+          if (active) { copyState = 'error'; localize(); }
         }
       }
       button.addEventListener('click', copy);

@@ -18,7 +18,7 @@ The resize bridge is **host-managed**. Tools do not need to post sizing messages
 
 ## Locale and theme without losing work
 
-The host initializes `html.lang` and `html[data-theme]` before parsing the tool's own script. Declare actual UI support with `locales: ["en", "id"]`; omitted `locales` means English only. Platform/guide translations are independent from tool interface support. Unsupported interface locales use the tool's first declared language, while platform navigation stays in the selected language. Consume the root `--ot-*` color tokens. Listen for locale changes to update **labels**, not to recreate the editor:
+The host initializes `html.lang` and `html[data-theme]` before parsing the tool's own script. The locale bridge accepts `en`, `id`, `ms`, `fil`, `th`, `vi`, `zh` (Simplified Chinese), `my`, `km`, `lo`, `ja` and `hi`. Declare only actual tool-owned UI support, for example `locales: ["en", "id"]`; omitted `locales` means English only. Switching the host language uses client-side navigation and updates the existing iframe through the locale bridge; it must not reload the workspace. Platform/guide translations are independent from tool interface support. Unsupported interface locales use the tool's first declared language, while platform navigation stays in the selected language. Consume the root `--ot-*` color tokens. Listen for locale changes to update **labels**, not to recreate the editor:
 
 ```js
 const labels = {

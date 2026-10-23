@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { validateManifest, validateAssetOrigins, MAX_ASSET_BYTES, MAX_TOTAL_ASSET_BYTES } from '../src/lib/registry/contract.js';
 import { loadSource, verifyBundle } from '../scripts/lib/bundles.mjs';
+import { languageCodes } from '../src/lib/languages.js';
 
 const example = JSON.parse(await readFile(new URL('../examples/tool.manifest.json', import.meta.url), 'utf8'));
 const fresh = () => structuredClone(example);
@@ -32,9 +33,27 @@ test('v3 exposes only bounded public metadata and localized presentation', () =>
 test('tool content languages are explicit and default to English independently of metadata translations', () => {
   assert.deepEqual(validateManifest(fresh()).locales, ['en']);
   assert.deepEqual(validateManifest({ ...fresh(), locales: ['en', 'id'] }).locales, ['en', 'id']);
+  assert.deepEqual(validateManifest({ ...fresh(), locales: languageCodes }).locales, languageCodes);
   assert.deepEqual(validateManifest({ ...fresh(), locales: ['id'] }).locales, ['id']);
   for (const locales of [[], ['en', 'en'], ['en', 'fr'], 'id']) assert.throws(() => validateManifest({ ...fresh(), locales }), /locales/);
 });
+
+test('translated permission reasons are bounded presentation, never additional authority', () => {
+  const source = { ...fresh(), permissions: [permission('downloads')], translations: {
+    ja: { name: 'テスト', description: 'ローカルで処理します。', permissionReasons: { downloads: '  結果を端末に保存します。  ' } }
+  } };
+  const result = validateManifest(source);
+  assert.deepEqual(result.permissions, source.permissions);
+  assert.deepEqual(result.translations.ja.permissionReasons, { downloads: '結果を端末に保存します。' });
+});
+
+for (const reasons of [null, [], { downloads: '' }, { downloads: 'x'.repeat(241) }, { downloads: 1 }, { downloads: { required: true } }, { workers: 'Not declared' }]) {
+  test(`reject malformed translated permission reasons: ${JSON.stringify(reasons)}`, () => {
+    assert.throws(() => validateManifest({ ...fresh(), permissions: [permission('downloads')], translations: {
+      ja: { name: 'テスト', description: '説明', permissionReasons: reasons }
+    } }), /permission reason|declared permission/);
+  });
+}
 
 test('legacy v2 receives safe defaults but cannot silently opt into capabilities', () => {
   const source = fresh();

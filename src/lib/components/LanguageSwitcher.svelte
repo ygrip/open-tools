@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { browser } from '$app/environment';
-  import { tick } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { getLocale, locales, type Locale } from '$lib/paraglide/runtime.js';
   import { localizedPath } from '$lib/i18n';
   import { languages } from '$lib/languages.js';
@@ -19,6 +19,8 @@
   let searchInput = $state<HTMLInputElement | undefined>(undefined);
   let query = $state('');
   let open = $state(false);
+  let ready = $state(false);
+  onMount(() => { ready = true; });
   const current = $derived(languages.find((item) => item.code === getLocale()) ?? languages[0]);
   const visible = $derived(languages.filter((item) =>
     locales.includes(item.code as Locale) &&
@@ -75,7 +77,7 @@
 
 <nav class="language-switcher" aria-label={m.languages()}>
   <button bind:this={trigger} class="language-trigger" type="button"
-    aria-label={m.languages() + ': ' + current.native} aria-haspopup="dialog" aria-expanded={open}
+    aria-label={m.languages() + ': ' + current.native} aria-haspopup="dialog" aria-expanded={open} disabled={!ready}
     onclick={show}>
     <span class="trigger-globe"><Icon name="globe" size={22} /></span>
     <span class="trigger-flag"><ClayFlag locale={getLocale()} size={23} /></span>
@@ -103,7 +105,7 @@
       <div class="language-results" role="group" aria-label={m.languages()}>
         {#each visible as item (item.code)}
           <a class="language-option" href={href(item.code as Locale)} hreflang={item.code} lang={item.code}
-            aria-current={getLocale() === item.code ? 'page' : undefined} data-sveltekit-reload>
+            aria-current={getLocale() === item.code ? 'page' : undefined} onclick={close}>
             <span class="language-option-flag"><ClayFlag locale={item.code} size={37} /></span>
             <span class="language-option-copy"><strong>{item.native}</strong><small>{item.english === item.native ? item.code.toUpperCase() : item.english}</small></span>
             {#if getLocale() === item.code}<span class="language-selected"><Icon name="check" size={18} /></span>{/if}

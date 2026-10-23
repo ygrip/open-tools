@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { m } from '$lib/paraglide/messages.js';
   import Icon from './Icon.svelte';
   import LanguageSwitcher from './LanguageSwitcher.svelte';
@@ -14,6 +14,8 @@
   const uid = $props.id();
   const panelId = `${uid}-panel`;
   let open = $state(false);
+  let ready = $state(false);
+  onMount(() => { ready = true; });
   let root: HTMLDivElement;
   let trigger: HTMLButtonElement;
   let panel: HTMLDivElement;
@@ -137,6 +139,7 @@
     bind:this={trigger}
     class="qs-trigger"
     type="button"
+    disabled={!ready}
     aria-expanded={open}
     aria-controls={panelId}
     aria-label={m.quick_options()}

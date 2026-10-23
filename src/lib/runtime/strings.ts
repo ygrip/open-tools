@@ -1,6 +1,12 @@
 import type { PermissionName, RuntimeErrorCode } from './core';
+import { runtimeLocales } from './runtime-locales';
 
 const en = {
+  cancel: 'Cancel',
+  camera: { help: 'Only the photo you capture is sent to this tool.', preview: 'Camera preview', capture: 'Capture photo', starting: 'Starting camera…' },
+  trackerHelp: 'The public URL is sent to Google PageSpeed Insights and inspected by the trick-it Worker. Google may load page scripts in an isolated test browser. Do not submit private or signed URLs.',
+  dnsHelp: 'The hostname is sent to public DNS-over-HTTPS resolvers (Cloudflare, including its security-filtering resolver, and Google). The site itself is not contacted.',
+  wikiHelp: 'Your browser will contact this wiki directly. No server proxy is used.',
   downloadSaving: 'Saving your file', downloadFinishing: 'Finishing your file', downloadDone: 'File sent to your browser', downloadCancel: 'Cancel download', downloadNative: 'Save directly to a file on your device.', downloadBuffered: 'This browser prepares the file in memory before downloading.', downloadLimit: 'Maximum file size',
   languageFallback: 'This tool uses its supported interface language. Platform navigation keeps your selected language.',
   zoomGroup: 'Tool zoom', zoomIn: 'Zoom in tool', zoomOut: 'Zoom out tool', zoomReset: 'Reset tool zoom to 100%', zoomLevel: 'Tool zoom level',
@@ -18,6 +24,11 @@ const en = {
   errors: { request: 'The request failed.', 'invalid-bundle': 'The installed tool version does not match the catalog. Reload the platform or retry.', integrity: 'The downloaded content failed its integrity check and was not used.', size: 'The downloaded content has an unexpected size.', 'invalid-asset': 'This asset is not valid.', aborted: 'The action was cancelled.', denied: 'Permission was not granted.', 'invalid-request': 'The tool sent an invalid request.', busy: 'Another action needs your attention.', unsupported: 'This action is unavailable in this browser.', timeout: 'The request timed out. Try the tool action again.', quota: 'The audit limit was reached. Wait a minute before retrying.', unavailable: 'The audit service is temporarily unavailable. Try again later.', 'audit-failed': 'The website audit could not finish. Confirm the page is public and try again.', verification: 'Security verification failed or expired. Retry with a fresh check.', 'stale-release': 'This tool release is outdated. Reload trick-it before retrying.' } satisfies Record<RuntimeErrorCode, string>
 };
 const id: typeof en = {
+  cancel: 'Batal',
+  camera: { help: 'Foto hanya dikirim ke alat setelah Anda menekan Ambil foto.', preview: 'Pratinjau kamera', capture: 'Ambil foto', starting: 'Menyiapkan kamera…' },
+  trackerHelp: 'URL publik akan diperiksa oleh Google PageSpeed Insights dan Worker trick-it. Google dapat memuat skrip halaman dalam browser uji terisolasi. Jangan gunakan URL privat atau bertanda tangan.',
+  dnsHelp: 'Nama host dikirim ke resolver DNS-over-HTTPS publik (Cloudflare, termasuk resolver keamanannya, dan Google). Situs itu sendiri tidak dihubungi.',
+  wikiHelp: 'Situs tujuan akan menerima permintaan dari browser Anda. Tidak ada proxy server.',
   downloadSaving: 'Menyimpan berkas Anda', downloadFinishing: 'Menyelesaikan berkas Anda', downloadDone: 'Berkas dikirim ke peramban', downloadCancel: 'Batalkan unduhan', downloadNative: 'Simpan langsung ke berkas di perangkat Anda.', downloadBuffered: 'Peramban ini menyiapkan berkas di memori sebelum mengunduh.', downloadLimit: 'Ukuran berkas maksimum',
   languageFallback: 'Alat ini memakai bahasa antarmuka yang didukungnya. Navigasi platform tetap memakai bahasa pilihan Anda.',
   zoomGroup: 'Perbesaran alat', zoomIn: 'Perbesar tampilan alat', zoomOut: 'Perkecil tampilan alat', zoomReset: 'Kembalikan perbesaran alat ke 100%', zoomLevel: 'Tingkat perbesaran alat',
@@ -34,4 +45,9 @@ const id: typeof en = {
   labels: { 'clipboard-read': 'Baca papan klip', 'clipboard-write': 'Tulis ke papan klip', geolocation: 'Ambil lokasi Anda sekali', downloads: 'Unduh berkas', 'camera-capture': 'Ambil foto kamera sekali', 'share-image': 'Bagikan PNG yang dibuat', 'wiki-read': 'Baca artikel wiki publik', 'dns-query': 'Cari rekaman DNS publik', 'external-assets': 'Unduh aset eksternal yang terdaftar', wasm: 'Jalankan WebAssembly dalam alat terisolasi', workers: 'Jalankan worker latar yang terisolasi', 'services': 'Gunakan fitur daring alat yang terdaftar' },
   errors: { request: 'Permintaan gagal.', 'invalid-bundle': 'Versi alat tidak cocok dengan katalog. Muat ulang platform atau coba lagi.', integrity: 'Konten gagal pemeriksaan integritas dan tidak dipakai.', size: 'Ukuran konten tidak sesuai.', 'invalid-asset': 'Aset ini tidak valid.', aborted: 'Tindakan dibatalkan.', denied: 'Izin belum diberikan.', 'invalid-request': 'Alat mengirim permintaan yang tidak valid.', busy: 'Ada tindakan lain yang menunggu perhatian Anda.', unsupported: 'Tindakan ini tidak tersedia di peramban Anda.', timeout: 'Waktu permintaan habis. Coba tindakan alat lagi.', quota: 'Batas audit tercapai. Tunggu satu menit sebelum mencoba lagi.', unavailable: 'Layanan pemeriksaan sementara tidak tersedia. Coba lagi nanti.', 'audit-failed': 'Pemeriksaan situs tidak dapat diselesaikan. Pastikan halaman publik, lalu coba lagi.', verification: 'Verifikasi keamanan gagal atau kedaluwarsa. Ulangi pemeriksaannya.', 'stale-release': 'Rilis alat sudah lama. Muat ulang trick-it sebelum mencoba lagi.' }
 };
-export function runtimeStrings(locale: string) { return locale === 'id' ? id : en; }
+export type RuntimeStrings = typeof en;
+export const runtimeCopies: Record<string, RuntimeStrings> = { en, id, ...runtimeLocales };
+export function runtimeStrings(locale: string): RuntimeStrings {
+  if (Object.hasOwn(runtimeCopies, locale)) return runtimeCopies[locale];
+  return en;
+}

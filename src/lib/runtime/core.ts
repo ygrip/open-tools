@@ -7,6 +7,7 @@ export type RuntimeAsset = { id: string; url: string; sha256: string; bytes: num
 export type RuntimeTool = {
   schemaVersion: number; id: string; name: string; version: string; bundle: { sha256: string }; locales?: string[]; icon?: string;
   permissions?: RuntimePermission[]; assets?: RuntimeAsset[]; services?: ToolService[];
+  translations?: Record<string, { permissionReasons?: Partial<Record<PermissionName, string>> }>;
   guide?: { summary: string; steps: string[] };
 };
 export type RuntimeErrorCode = 'request' | 'invalid-bundle' | 'integrity' | 'size' | 'invalid-asset' | 'aborted' | 'denied' | 'invalid-request' | 'busy' | 'unsupported' | 'timeout' | 'quota' | 'unavailable' | 'audit-failed' | 'verification' | 'stale-release';

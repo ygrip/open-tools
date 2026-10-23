@@ -56,7 +56,11 @@ See [`examples/tool.manifest.json`](../examples/tool.manifest.json) for a copyab
 
 `guide` requires a nonempty summary (500 maximum) and one to twelve nonempty steps (500 each). Explain the operation, input limits, output, privacy, any permission prompts and optional-resource behavior. Do not describe a network-dependent tool as local-only.
 
-Optional `translations.en` / `translations.id` each require localized `name` and `description`; they may also provide a complete localized `guide` and/or `seo` object with the same limits. Canonical fields are the fallback. Other locale keys are rejected until the host supports them. Metadata localization does not automatically translate the HTML bundle. Declare the actual interface languages in optional `locales` (a nonempty unique list of `en`/`id`, default `["en"]`), and use the runtime locale bridge described in [the runtime guide](tool-runtime.md). The host keeps an unsupported tool interface in its first supported language rather than mislabeling English controls as Indonesian.
+Optional `translations[locale]` entries require localized `name` and `description`; they may also provide a complete localized `guide` and/or `seo` object with the same limits. Supported codes are `en`, `id`, `ms`, `fil`, `th`, `vi`, `zh` (Simplified Chinese), `my`, `km`, `lo`, `ja` and `hi`. Canonical fields are the fallback; other codes are rejected.
+
+An entry may include `permissionReasons`, a map from already declared permission names to localized reason strings (1–240 characters). This changes consent presentation only: it cannot declare permissions, change `required`, or alter the runtime release fingerprint. Missing translated reasons use each canonical `permissions[].reason`. For example, `"permissionReasons": { "downloads": "結果を端末に保存します。" }` requires an existing `downloads` permission.
+
+Metadata localization does not translate the HTML bundle. Declare actual interface languages in optional `locales` (a nonempty unique list of supported codes, default `["en"]`), and use the runtime locale bridge described in [the runtime guide](tool-runtime.md). Unsupported interface locales use the tool's first supported language while platform navigation keeps its selected language. New localized SEO pages remain noindex pending reviewed copy.
 
 ## Layout contract
 

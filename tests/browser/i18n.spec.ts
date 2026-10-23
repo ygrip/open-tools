@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { stateProbe } from './runtime-fixture';
 
 test('English keeps original routes and exposes every supported language in a searchable modal', async ({ page }) => {
   await page.goto('/');
@@ -39,6 +40,9 @@ test('Indonesian catalog and legal routes are preserved', async ({ page }) => {
 
 test('language changes preserve tool route and sandbox language fallback', async ({ page }) => {
   await page.goto('/json-tools/?keep=1#guide');
+  const workspace = await stateProbe(page);
+  await workspace.fill('Keep this workspace through language navigation');
+  await page.locator('iframe').evaluate(element => { element.dataset.identity = 'original-frame'; });
   await page.getByRole('button', { name: 'Languages: English' }).click();
   const picker = page.getByRole('dialog', { name: 'Languages' });
   await picker.getByRole('searchbox', { name: 'Search languages…' }).fill('Japanese');
@@ -52,9 +56,13 @@ test('language changes preserve tool route and sandbox language fallback', async
   // The tool declares its own supported locales; the host must not send
   // an unsupported interface language into the isolated iframe.
   await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.locator('iframe')).toHaveAttribute('data-identity', 'original-frame');
+  await expect(workspace).toHaveValue('Keep this workspace through language navigation');
   await page.getByRole('button', { name: '言語: 日本語' }).click();
   await page.getByRole('dialog', { name: '言語' }).getByRole('link', { name: /English/ }).click();
   await expect(page).toHaveURL(/\/json-tools\/\?keep=1#guide$/);
+  await expect(page.locator('iframe')).toHaveAttribute('data-identity', 'original-frame');
+  await expect(workspace).toHaveValue('Keep this workspace through language navigation');
 });
 
 test('mobile quick settings launches the same filterable modal without horizontal overflow', async ({ page }) => {
@@ -78,6 +86,7 @@ test('mobile quick settings launches the same filterable modal without horizonta
 test('language picker supports arrow navigation, modal focus and backdrop close', async ({ page }) => {
   await page.goto('/');
   const trigger = page.getByRole('button', { name: 'Languages: English' });
+  await expect(trigger).toBeEnabled();
   await trigger.focus();
   await page.keyboard.press('Enter');
   const picker = page.getByRole('dialog', { name: 'Languages' });

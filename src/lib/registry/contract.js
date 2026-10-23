@@ -23,6 +23,14 @@ function texts(value, maximum, length, label) {
   if (!Array.isArray(value) || value.length > maximum) throw new Error(`invalid ${label}`);
   return value.map((item) => text(item, length, label));
 }
+/** @param {any} value @param {Set<string>} declared */
+function permissionReasons(value, declared) {
+  object(value, 'translated permission reasons');
+  return Object.fromEntries(Object.entries(value).map(([name, reason]) => {
+    if (!declared.has(name)) throw new Error('translated reason requires a declared permission');
+    return [name, text(reason, 240, 'translated permission reason')];
+  }));
+}
 /** @param {any} value */
 function seo(value) {
   object(value, 'seo');
@@ -151,6 +159,7 @@ export function validateManifest(manifest) {
       translations[/** @type {import('./types').ToolLocale} */ (locale)] = {
         name: text(value.name, 80, 'translated name'), description: text(value.description, 240, 'translated description'),
         ...(value.guide === undefined ? {} : { guide: guide(value.guide) }),
+        ...(value.permissionReasons === undefined ? {} : { permissionReasons: permissionReasons(value.permissionReasons, grantedNames) }),
         ...(value.seo === undefined ? {} : { seo: seo(value.seo) })
       };
     }

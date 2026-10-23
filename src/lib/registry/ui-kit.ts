@@ -1,3 +1,5 @@
+import { kitCopies, serializeCopies } from './ui-copy';
+
 /**
  * Host-owned clay UI kit injected into every tool sandbox as `trickIt.ui`.
  *
@@ -6,7 +8,7 @@
  *   Finished (done/error) cards have a close button; `dismiss()` hides the card and the
  *   next state change shows it again.
  * - `loader(target, options)` reuses the status card for asset download,
- *   verified-byte progress and tool-owned initialization, with EN/ID defaults.
+ *   verified-byte progress and tool-owned initialization, with twelve-language defaults.
  *   A completed loader hides itself after a moment (`autoHide: false` keeps it).
  * - `fileInput(target, options)` renders a shared clay drop zone: configurable
  *   copy, accepted types and size/count limits, validated before `onChange`.
@@ -85,6 +87,12 @@ export const uiKitStyles = `
  * `request` in scope and defines `ui`.
  */
 export const uiKitScript = `
+    const kitCopy = ${serializeCopies(kitCopies)};
+    function currentKitCopy() {
+      const locale = document.documentElement.lang;
+      if (Object.hasOwn(kitCopy, locale)) return kitCopy[locale];
+      return kitCopy.en;
+    }
     const clip = (value, max) => typeof value === 'string' ? value.slice(0, max) : '';
     const icons = { done: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>', error: '<svg viewBox="0 0 24 24"><path d="M12 7v6M12 17h.01"/></svg>' };
     function status(target, options = {}) {
@@ -101,9 +109,11 @@ export const uiKitScript = `
       close.addEventListener('click', () => dismiss());
       copy.append(title, detail, bar); card.append(orb, copy, close); host.append(card);
       let state = '';
+      const localizeClose = () => close.setAttribute('aria-label', currentKitCopy().close);
+      addEventListener('trick-it:localechange', localizeClose);
       function dismiss() { card.hidden = true; if (typeof options.onDismiss === 'function') options.onDismiss(); }
       function update(next = {}) {
-        close.setAttribute('aria-label', document.documentElement.lang === 'id' ? 'Tutup' : 'Close');
+        localizeClose();
         // A new state (or new text) shows a dismissed card again; quiet re-renders (locale) do not.
         if (!next.quiet && ((next.state && next.state !== state) || ('title' in next && next.title !== title.textContent))) card.hidden = false;
         if (next.state && next.state !== state) {
@@ -130,7 +140,7 @@ export const uiKitScript = `
         work: (title, detail, progress) => update({ state: 'working', title, detail, progress }),
         done: (title, detail) => update({ state: 'done', title, detail }),
         fail: (title, detail) => update({ state: 'error', title, detail }),
-        remove: () => card.remove()
+        remove: () => { removeEventListener('trick-it:localechange', localizeClose); card.remove(); }
       });
       return update({ state: 'waiting', title: '', detail: '', ...options });
     }
@@ -142,14 +152,17 @@ export const uiKitScript = `
       const item = document.createElement('div'); item.className = 'ti-toast';
       const text = document.createElement('span'); text.textContent = message; text.style.flex = '1';
       const close = document.createElement('button'); close.type = 'button'; close.className = 'ti-close'; close.style.margin = '0';
-      close.setAttribute('aria-label', document.documentElement.lang === 'id' ? 'Tutup' : 'Close');
+      const localizeClose = () => close.setAttribute('aria-label', currentKitCopy().close);
+      const remove = () => { removeEventListener('trick-it:localechange', localizeClose); item.remove(); };
+      addEventListener('trick-it:localechange', localizeClose);
+      localizeClose();
       close.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
-      close.addEventListener('click', () => item.remove());
+      close.addEventListener('click', remove);
       item.append(text, close); stack.append(item);
       while (stack.children.length > 3) stack.firstElementChild.remove();
-      setTimeout(() => item.remove(), 4000);
+      setTimeout(remove, 4000);
     }
-    function localDialog(options) {
+    function localDialog(options, defaultTitle = false) {
       return new Promise(resolve => {
         const dialog = document.createElement('dialog'); dialog.className = 'ti-dialog';
         const heading = document.createElement('h2'); heading.textContent = options.title;
@@ -157,9 +170,20 @@ export const uiKitScript = `
         if (options.message) { const body = document.createElement('p'); body.textContent = options.message; dialog.append(body); }
         if (options.items.length) { const list = document.createElement(options.ordered ? 'ol' : 'ul'); for (const text of options.items) { const item = document.createElement('li'); item.textContent = text; list.append(item); } dialog.append(list); }
         const actions = document.createElement('div'); actions.className = 'ti-actions';
-        const accept = document.createElement('button'); accept.type = 'button'; accept.className = 'ti-primary'; accept.textContent = options.confirmLabel || (options.kind === 'info' ? 'Got it' : 'Continue');
-        const finish = value => { dialog.close(); dialog.remove(); resolve(value); };
-        if (options.kind === 'confirm') { const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = options.cancelLabel || 'Cancel'; cancel.onclick = () => finish(false); actions.append(cancel); }
+        const accept = document.createElement('button'); accept.type = 'button'; accept.className = 'ti-primary';
+        const cancel = document.createElement('button'); cancel.type = 'button';
+        function localize() {
+          const copy = currentKitCopy();
+          let acceptLabel = copy.continue;
+          let title = copy.continueQuestion;
+          if (options.kind === 'info') { acceptLabel = copy.gotIt; title = copy.note; }
+          accept.textContent = options.confirmLabel || acceptLabel;
+          cancel.textContent = options.cancelLabel || copy.cancel;
+          if (defaultTitle) heading.textContent = title;
+        }
+        const finish = value => { removeEventListener('trick-it:localechange', localize); dialog.close(); dialog.remove(); resolve(value); };
+        if (options.kind === 'confirm') { cancel.onclick = () => finish(false); actions.append(cancel); }
+        localize(); addEventListener('trick-it:localechange', localize);
         accept.onclick = () => finish(true); actions.append(accept); dialog.append(actions); document.body.append(dialog);
         dialog.addEventListener('cancel', event => { event.preventDefault(); finish(false); });
         dialog.showModal();
@@ -173,11 +197,11 @@ export const uiKitScript = `
     }
     // A busy host (another popup or a permission prompt is open) is not a reason to
     // open a modal inside the iframe: wait briefly, then give up with 'false'.
-    async function hostDialog(payload) {
+    async function hostDialog(payload, defaultTitle = false) {
       for (let attempt = 0; attempt < 40; attempt++) {
         try { return (await request('ui-dialog', payload)) === true; }
         catch (error) {
-          if (error?.code !== 'busy') return localDialog(payload);
+          if (error?.code !== 'busy') return localDialog(payload, defaultTitle);
           await new Promise(resolve => setTimeout(resolve, 250));
         }
       }
@@ -186,18 +210,16 @@ export const uiKitScript = `
     // Centralized popups: rendered by the host, centred in the real viewport.
     function dialog(options = {}) {
       const items = Array.isArray(options.items) ? options.items.slice(0, 12).map(item => clip(String(item ?? ''), 300)).filter(Boolean) : [];
-      const payload = { kind: options.kind === 'confirm' ? 'confirm' : 'info', title: clip(options.title, 120) || (options.kind === 'confirm' ? 'Continue?' : 'Note'), message: clip(options.message, 800), items, ordered: options.ordered === true, confirmLabel: clip(options.confirmLabel, 40), cancelLabel: clip(options.cancelLabel, 40), tone: options.tone === 'danger' ? 'danger' : 'default' };
-      if (!config.token) return localDialog(payload);
-      return hostDialog(payload);
+      const copy = currentKitCopy();
+      let defaultTitle = copy.note;
+      if (options.kind === 'confirm') defaultTitle = copy.continueQuestion;
+      const payload = { kind: options.kind === 'confirm' ? 'confirm' : 'info', title: clip(options.title, 120) || defaultTitle, message: clip(options.message, 800), items, ordered: options.ordered === true, confirmLabel: clip(options.confirmLabel, 40), cancelLabel: clip(options.cancelLabel, 40), tone: options.tone === 'danger' ? 'danger' : 'default' };
+      if (!config.token) return localDialog(payload, !clip(options.title, 120));
+      return hostDialog(payload, !clip(options.title, 120));
     }
     const confirm = (options = {}) => dialog({ ...options, kind: 'confirm' });
     const info = (options = {}) => dialog({ ...options, kind: 'info' });
-    const fileCopy = { en: { label: 'Drop a file here', labelMany: 'Drop files here', choose: 'Choose file', chooseMany: 'Choose files', upTo: 'up to', any: 'Any file', type: 'This file type is not supported.', size: 'This file is larger than', count: 'Too many files. Maximum:', remove: 'Remove' }, id: { label: 'Letakkan berkas di sini', labelMany: 'Letakkan berkas di sini', choose: 'Pilih berkas', chooseMany: 'Pilih berkas', upTo: 'maks.', any: 'Semua berkas', type: 'Jenis berkas ini tidak didukung.', size: 'Berkas ini lebih besar dari', count: 'Terlalu banyak berkas. Maksimal:', remove: 'Hapus' } };
     const formatBytes = bytes => bytes >= 1048576 ? (bytes / 1048576).toFixed(bytes % 1048576 ? 1 : 0) + ' MB' : bytes >= 1024 ? Math.round(bytes / 1024) + ' KB' : bytes + ' B';
-    const loaderCopy = {
-      en: { waiting: 'Ready to load', loading: 'Loading asset…', verifying: 'Checking asset integrity…', initializing: 'Preparing engine…', done: 'Asset ready', error: 'Could not load asset', failed: 'Check your connection and access permissions, then retry. Your input is preserved.' },
-      id: { waiting: 'Siap memuat', loading: 'Memuat aset…', verifying: 'Memeriksa integritas aset…', initializing: 'Menyiapkan mesin…', done: 'Aset siap', error: 'Gagal memuat aset', failed: 'Periksa koneksi dan izin akses, lalu coba lagi. Input Anda tetap tersimpan.' }
-    };
     // Inline, never a blocking popup. Only the host downloads and verifies pinned assets.
     function loader(target, options = {}) {
       const card = status(target);
@@ -209,7 +231,7 @@ export const uiKitScript = `
       const autoHide = options.autoHide !== false;
       function render(event) {
         if (removed) return;
-        const copy = loaderCopy[document.documentElement.lang === 'id' ? 'id' : 'en'];
+        const copy = currentKitCopy().loader;
         const phase = model.phase;
         const measurable = ['loading', 'verifying'].includes(phase) && Number.isFinite(model.loaded) && Number.isFinite(model.total) && model.loaded >= 0 && model.total > 0;
         const loaded = measurable ? Math.min(model.loaded, model.total) : 0;
@@ -253,7 +275,7 @@ export const uiKitScript = `
     function fileInput(target, options = {}) {
       const host = typeof target === 'string' ? document.querySelector(target) : target;
       if (!(host instanceof Element)) throw new TypeError('trickIt.ui.fileInput needs a target element.');
-      const copy = () => fileCopy[document.documentElement.lang === 'id' ? 'id' : 'en'];
+      const copy = () => currentKitCopy().file;
       const rules = (Array.isArray(options.accept) ? options.accept : typeof options.accept === 'string' ? options.accept.split(',') : []).map(rule => String(rule).trim().toLowerCase()).filter(Boolean);
       const multiple = options.multiple === true; const maxFiles = multiple ? Math.max(1, Number(options.maxFiles) || 20) : 1;
       const maxBytes = Number(options.maxBytes) > 0 ? Number(options.maxBytes) : 0;
@@ -267,6 +289,7 @@ export const uiKitScript = `
       const list = document.createElement('span'); list.className = 'ti-files';
       zone.append(input, orb, label, hint, button, error, list); host.append(zone);
       let files = [];
+      let validationError;
       function text() {
         const t = copy();
         label.textContent = clip(options.label, 120) || (multiple ? t.labelMany : t.label);
@@ -275,6 +298,13 @@ export const uiKitScript = `
         button.textContent = clip(options.buttonLabel, 40) || (multiple ? t.chooseMany : t.choose);
         input.setAttribute('aria-label', label.textContent + '. ' + hint.textContent);
         renderList();
+        if (validationError) error.textContent = validationMessage(validationError);
+      }
+      function validationMessage(value) {
+        const t = copy();
+        if (value.kind === 'count') return t.count + ' ' + maxFiles;
+        if (value.kind === 'type') return value.name + ': ' + t.type;
+        return value.name + ': ' + t.size + ' ' + formatBytes(maxBytes) + '.';
       }
       let previews = [];
       function renderList() {
@@ -296,7 +326,8 @@ export const uiKitScript = `
           chip.append(name, size, remove); return chip;
         }));
       }
-      function fail(message) {
+      function fail(message, validation) {
+        validationError = validation;
         error.textContent = message; zone.removeAttribute('data-error'); void zone.offsetWidth; zone.setAttribute('data-error', '');
         options.onError?.(message);
       }
@@ -304,10 +335,10 @@ export const uiKitScript = `
         if (input.disabled) return;
         const t = copy(); const incoming = Array.from(list || []);
         if (!incoming.length) return;
-        error.textContent = ''; zone.removeAttribute('data-error');
-        if (incoming.length > maxFiles || (multiple && files.length + incoming.length > maxFiles)) return fail(t.count + ' ' + maxFiles);
-        const wrongType = incoming.find(file => !accepts(file, rules)); if (wrongType) return fail(wrongType.name + ': ' + t.type);
-        const tooBig = maxBytes && incoming.find(file => file.size > maxBytes); if (tooBig) return fail(tooBig.name + ': ' + t.size + ' ' + formatBytes(maxBytes) + '.');
+        error.textContent = ''; validationError = undefined; zone.removeAttribute('data-error');
+        if (incoming.length > maxFiles || (multiple && files.length + incoming.length > maxFiles)) return fail(t.count + ' ' + maxFiles, { kind: 'count' });
+        const wrongType = incoming.find(file => !accepts(file, rules)); if (wrongType) return fail(wrongType.name + ': ' + t.type, { kind: 'type', name: wrongType.name });
+        const tooBig = maxBytes && incoming.find(file => file.size > maxBytes); if (tooBig) return fail(tooBig.name + ': ' + t.size + ' ' + formatBytes(maxBytes) + '.', { kind: 'size', name: tooBig.name });
         files = multiple ? files.concat(incoming) : incoming.slice(0, 1);
         renderList(); options.onChange?.(files.slice());
       }
@@ -320,9 +351,9 @@ export const uiKitScript = `
       return Object.freeze({
         element: zone,
         get files() { return files.slice(); },
-        clear() { files = []; error.textContent = ''; zone.removeAttribute('data-error'); renderList(); },
+        clear() { files = []; error.textContent = ''; validationError = undefined; zone.removeAttribute('data-error'); renderList(); },
         setDisabled(value) { input.disabled = !!value; for (const button of list.querySelectorAll('button')) button.disabled = input.disabled; if (value) { zone.setAttribute('data-disabled', ''); zone.removeAttribute('data-dragging'); } else zone.removeAttribute('data-disabled'); },
-        setError(message) { if (message) fail(clip(String(message), 300)); else { error.textContent = ''; zone.removeAttribute('data-error'); } },
+        setError(message) { if (message) fail(clip(String(message), 300)); else { error.textContent = ''; validationError = undefined; zone.removeAttribute('data-error'); } },
         remove() { removeEventListener('trick-it:localechange', text); for (const url of previews) URL.revokeObjectURL(url); zone.remove(); }
       });
     }

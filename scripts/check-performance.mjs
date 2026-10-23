@@ -56,13 +56,16 @@ for (const file of assets) {
   if (/\.(?:webp|svg|png|avif)$/.test(file) && !file.includes('/og/') && !file.includes('/pwa/') && !toolIcon && !legalArt) images += bytes.length;
   if (file.includes('/og/') && file.endsWith('.png') && bytes.length > 200_000) throw new Error(`Social card exceeds 200 kB budget: ${file}`);
   if (file.endsWith('.woff2')) fonts += bytes.length;
-  if (/\/bundles\/.*\.json$/.test(file) && gzipSync(bytes).length > 90_000) throw new Error(`Tool bundle exceeds 90 kB gzip budget: ${relative(client, file)}`);
+  // User-approved multilingual headroom: independent tools may embed complete
+  // local packs and editable AGPL source. This is lazy, per-tool transfer only;
+  // do not increase shared host JS, catalog, icon or the 5 MiB acceptance limits.
+  if (/\/bundles\/.*\.json$/.test(file) && gzipSync(bytes).length > 200_000) throw new Error(`Tool bundle exceeds 200 kB gzip budget: ${relative(client, file)}`);
 }
 // JS budget is enforced per tool, not as one fixed ceiling for the whole marketplace.
 // Host JS (shared trickIt.ui kit, table, control pane, app shell) is fixed at the 18-tool baseline.
 // Each additional tool raises the shared-JS ceiling by TOOL_JS_ALLOWANCE gzip bytes (its marginal catalog cost),
 // and no single tool's standalone catalog entry may exceed MAX_TOOL_ENTRY_GZIP. Tool code itself stays in lazily loaded bundles
-// (90 kB gzip each, checked above) and icons keep their own 12 kB budget.
+// (200 kB gzip each, checked above) and icons keep their own 12 kB budget.
 const HOST_JS_BASELINE_TOOLS = 18;
 // The native EN/ID flag picker adds under 0.4% to the shared shell; keep a fixed,
 // reviewable 512-byte allowance without loosening per-tool bundle ceilings.
@@ -83,19 +86,20 @@ const HOST_JS_BASELINE_TOOLS = 18;
 // Measured across 19 pinned grammars: +34.7 KiB gzip vs the no-highlighter baseline.
 // The 2.5 KiB increment covers C++, Kotlin and Swift without changing per-tool limits.
 const SHARED_CODE_HIGHLIGHT_BUDGET = 35_328;
-// Ten additional Paraglide language packs add measured ~27.7 KiB gzip across
-// *all* emitted route chunks. This is an aggregate artifact-size allowance, not
-// a per-visit download budget: a browser never fetches all localized routes.
-// Keep it explicit, proportional to supported locales, and capped at 3 KiB each
-// instead of silently weakening the shared host/per-tool limits.
-const ADDITIONAL_LOCALE_JS_ALLOWANCE = 3_072;
+// User-approved multilingual headroom: complete platform, runtime and shared-UI
+// packs now add ~78 KiB gzip across all emitted routes (not one page visit).
+// Allow 8 KiB per added locale; keep this proportional and independent of tool,
+// catalog and artwork budgets rather than raising a whole-marketplace ceiling.
+const ADDITIONAL_LOCALE_JS_ALLOWANCE = 8_192;
 const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048 + 1_024 + 2_048 + 2_048 + SHARED_CODE_HIGHLIGHT_BUDGET
   + Math.max(0, languageCodes.length - 2) * ADDITIONAL_LOCALE_JS_ALLOWANCE;
 // User-approved catalog headroom: 64 extra gzip bytes per tool for richer EN/ID metadata.
 // The image-editor registration exceeded the previous aggregate ceiling by 12 bytes.
 // Keep the fixed host baseline and individual entry, bundle and icon ceilings unchanged.
 const TOOL_JS_ALLOWANCE = 1_088;
-const MAX_TOOL_ENTRY_GZIP = 4_096;
+// User-approved per-tool localization headroom includes native metadata and
+// bounded permission reasons; shared host JavaScript is still budgeted below.
+const MAX_TOOL_ENTRY_GZIP = 8_192;
 for (const tool of catalog) {
   const entryBytes = gzipSync(JSON.stringify(tool)).length;
   if (entryBytes > MAX_TOOL_ENTRY_GZIP) throw new Error(`Tool "${tool.id}" catalog entry is ${entryBytes} bytes gzip, over the ${MAX_TOOL_ENTRY_GZIP} byte per-tool budget`);

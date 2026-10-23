@@ -7,7 +7,7 @@ export type ToolAsset = { id: string; url: string; sha256: string; bytes: number
 export type ToolService = { id: string; handler: 'pagespeed-seo' | 'tracker-audit'; rateLimit: { limit: number; periodSeconds: 10 | 60 }; turnstile: boolean };
 export type ToolSeo = { title: string; description: string; keywords: string[]; robots: 'index' | 'noindex' };
 export type ToolGuide = { summary: string; steps: string[] };
-export type ToolTranslation = { name: string; description: string; guide?: ToolGuide; seo?: ToolSeo };
+export type ToolTranslation = { name: string; description: string; guide?: ToolGuide; seo?: ToolSeo; permissionReasons?: Partial<Record<ToolPermissionName, string>> };
 
 /** Public normalized metadata. Legacy v2 inputs receive safe, nonprivileged defaults. */
 export type ToolManifest = {

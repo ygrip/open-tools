@@ -5,6 +5,7 @@ import { dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url';
 import { build, transform } from 'esbuild';
 import { compile, compileModule } from 'svelte/compiler';
+import { languageCodes } from '../../src/lib/languages.js';
 
 const hostRoot = fileURLToPath(new URL('../../', import.meta.url));
 const publicRoot = resolve(hostRoot, 'static');
@@ -45,17 +46,11 @@ export function runtimeMountScript() {
   return compiled ??= build({
     stdin: {
       contents: `import { mount } from 'svelte';
-        import Runtime from './src/lib/components/ToolRuntime.svelte';
-        import HostUi from './src/lib/components/HostUi.svelte';
+        import Harness from './tests/tool-harness/LocaleHarness.svelte';
         async function boot() {
           const manifest = window.__toolTestTool ?? await (await fetch('/__test__/tool.json')).json();
-          const locale = document.documentElement.lang === 'id' ? 'id' : 'en';
-          const translated = manifest.translations?.[locale];
-          const tool = { ...manifest, name: translated?.name ?? manifest.name, description: translated?.description ?? manifest.description, guide: translated?.guide ?? manifest.guide };
-          const target = document.createElement('main'); target.className = 'container';
-          document.body.replaceChildren(target);
-          mount(Runtime, { target, props: { tool, locale } });
-          mount(HostUi, { target: document.body });
+          document.body.replaceChildren();
+          mount(Harness, { target: document.body, props: { manifest, initialLocale: document.documentElement.lang } });
         }
         void boot();`,
       resolveDir: hostRoot
@@ -96,7 +91,13 @@ export async function serveToolHost({ toolRoot, port = 4190 }) {
   if (!head || !/<meta\s+http-equiv="Content-Security-Policy"[^>]*>/i.test(head)) throw new Error('The host navigation CSP is missing.');
   const bundle = JSON.stringify({ id: tool.id, version: tool.version, sha256: tool.bundle.sha256, html });
   const route = tool.path || '/' + tool.id;
-  const pages = new Set(['/', route, route + '/', '/id' + route, '/id' + route + '/']);
+  const pages = new Map([['/', 'en']]);
+  for (const locale of languageCodes) {
+    let localizedRoute = route;
+    if (locale !== 'en') localizedRoute = '/' + locale + route;
+    pages.set(localizedRoute, locale);
+    pages.set(localizedRoute + '/', locale);
+  }
   /** @type {Record<string, string>} */
   const mime = { '.svg': 'image/svg+xml', '.webp': 'image/webp', '.png': 'image/png', '.woff2': 'font/woff2', '.woff': 'font/woff' };
   const server = createServer(async (request, response) => {
@@ -123,7 +124,7 @@ export async function serveToolHost({ toolRoot, port = 4190 }) {
         return send(200, mime[extname(file)] ?? 'application/octet-stream', await readFile(file));
       }
       if (!pages.has(path)) return send(404, 'text/plain', 'Not found');
-      const locale = path.startsWith('/id/') ? 'id' : 'en';
+      const locale = pages.get(path);
       send(200, 'text/html; charset=utf-8', `<!doctype html><html lang="${locale}" dir="ltr" data-theme="light"><head>${head}<link rel="stylesheet" href="/__test__/host.css"><title>Tool runtime test harness</title></head><body><script src="/__test__/runtime.js"></script></body></html>`);
     } catch (error) {
       if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return send(404, 'text/plain', 'Not found');

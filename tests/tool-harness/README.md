@@ -29,6 +29,8 @@ Install dependencies in both checkouts, install the matching Playwright Chromium
 TRICK_IT_DIR=/path/to/trick-it npm run test:host
 ```
 
+The harness serves all twelve supported locale routes (English at the unprefixed route). Its test-only **Test host locale** select updates the real runtime's locale prop without remounting the iframe. Use it to assert live translations, fallback, focus and preserved input/output; use the site's actual language selector separately for navigation coverage. The selector is harness-only and is never shipped in production.
+
 The default port is 4190; suites run sequentially. A browser executable override must match the runner version. Mock protected endpoints and browser camera/clipboard implementations in the owning tests when required. Normal publication still requires registry validation and the release checklist; this harness does not certify manifest trust, UI compliance or live provider access.
 
 The host retains generic runtime/SDK/security/permission, catalog, navigation, SEO and PWA tests. Tool transformations, format-specific controls, imports/exports, image/decoder behavior and result assertions belong to the tool.
