@@ -91,7 +91,13 @@ const SHARED_CODE_HIGHLIGHT_BUDGET = 35_328;
 // Allow 8 KiB per added locale; keep this proportional and independent of tool,
 // catalog and artwork budgets rather than raising a whole-marketplace ceiling.
 const ADDITIONAL_LOCALE_JS_ALLOWANCE = 8_192;
+// Save My Wiki 0.4.0 adds optional multilingual semantic-PPT capabilities and consent metadata.
+// Measured pinned-source delta against the passing 0.3.0 host build: +602 gzip bytes.
+// Reserve 640 bytes for this catalog update, retaining roughly the former host headroom.
+// Per-tool entry, bundle and icon limits are enforced separately and remain unchanged.
+const WIKI_SEMANTIC_PPT_CATALOG_BUDGET = 640;
 const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048 + 1_024 + 2_048 + 2_048 + SHARED_CODE_HIGHLIGHT_BUDGET
+  + WIKI_SEMANTIC_PPT_CATALOG_BUDGET
   + Math.max(0, languageCodes.length - 2) * ADDITIONAL_LOCALE_JS_ALLOWANCE;
 // User-approved catalog headroom: 64 extra gzip bytes per tool for richer EN/ID metadata.
 // The image-editor registration exceeded the previous aggregate ceiling by 12 bytes.
