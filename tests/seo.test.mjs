@@ -111,3 +111,15 @@ test('generation writes cache-busted social cards and config, keeping a tool nam
     assert.ok((await readFile(join(root, 'static/robots.txt'), 'utf8')).includes('Allow: /'));
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+test('additional languages have stable prefixed routes without falsely advertising indexed translations', () => {
+  for (const code of ['ms', 'fil', 'th', 'vi', 'zh', 'my', 'km', 'lo', 'ja', 'hi']) {
+    assert.equal(localePath('/id/json-tools/', code), `/${code}/json-tools/`);
+    assert.equal(localePath(`/${code}/privacy/`, 'en'), '/privacy/');
+    const view = seoMetadata({ title: 'Tool', description: 'A tool.', path: '/json-tools/', origin, locale: code });
+    assert.equal(view.path, `/${code}/json-tools/`);
+    assert.equal(view.robots, 'noindex,nofollow');
+    assert.equal(view.image, `${origin}/og/home-en.png`);
+    assert.ok(view.locale !== 'en_US');
+  }
+});

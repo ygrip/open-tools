@@ -48,9 +48,19 @@ for (const locale of ['en', 'id']) test(`${locale} platform and tool SEO is rend
 test('language links preserve query/hash and reach the isolated frame', async ({ page }) => {
   await page.goto('/id/json-tools/?keep=1#guide');
   await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang', 'id');
-  const english = page.getByRole('link', { name: 'EN English', exact: true });
+  await page.getByRole('button', { name: 'Bahasa: Bahasa Indonesia' }).click();
+  const english = page.getByRole('dialog', { name: 'Bahasa' }).getByRole('link', { name: /English/ });
   await expect(english).toHaveAttribute('href', '/json-tools/?keep=1#guide');
   await english.click();
   await expect(page).toHaveURL(/\/json-tools\/\?keep=1#guide$/);
   await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang', 'en');
+});
+
+test('new locales use correct HTML language and noindex until SEO content is reviewed', async ({ page }) => {
+  await page.goto('/zh/');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh');
+  await expect(page.getByRole('heading', { name: '有什么可以帮你？' })).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex,nofollow');
+  const image = await page.locator('meta[property="og:image"]').getAttribute('content');
+  expect(image).toMatch(/\/og\/home-en\.[a-f0-9]+\.png$/);
 });
