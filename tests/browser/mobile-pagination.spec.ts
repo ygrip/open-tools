@@ -19,8 +19,8 @@ for (const width of [320, 375, 430]) test(`mobile header exposes navigation and 
   await settings.focus();
   await page.keyboard.press('ArrowDown');
   await expect(settings).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.getByRole('link', { name: 'EN English' })).toBeFocused();
-  for (const control of [page.getByRole('link', { name: 'EN English' }), page.getByRole('link', { name: 'ID Bahasa Indonesia' }), page.getByRole('button', { name: /Switch to .* theme/ })]) {
+  await expect(page.getByRole('button', { name: 'Languages: English' })).toBeFocused();
+  for (const control of [page.getByRole('button', { name: 'Languages: English' }), page.getByRole('button', { name: /Switch to .* theme/ })]) {
     await expect(control).toBeVisible();
     // Poll: the items spring in from 0.6 scale.
     await expect.poll(async () => { const box = (await control.boundingBox())!; return Math.min(box.width, box.height); }).toBeGreaterThanOrEqual(44);
