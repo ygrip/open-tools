@@ -82,7 +82,12 @@ const HOST_JS_BASELINE_TOOLS = 18;
 // Measured across 19 pinned grammars: +34.7 KiB gzip vs the no-highlighter baseline.
 // The 2.5 KiB increment covers C++, Kotlin and Swift without changing per-tool limits.
 const SHARED_CODE_HIGHLIGHT_BUDGET = 35_328;
-const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048 + 1_024 + 2_048 + 2_048 + SHARED_CODE_HIGHLIGHT_BUDGET;
+// Save My Wiki 0.4.0 adds optional multilingual semantic-PPT capabilities and consent metadata.
+// Measured pinned-source delta against the passing 0.3.0 host build: +602 gzip bytes.
+// Reserve 640 bytes for this catalog update, retaining roughly the former host headroom.
+// Per-tool entry, bundle and icon limits are enforced separately and remain unchanged.
+const WIKI_SEMANTIC_PPT_CATALOG_BUDGET = 640;
+const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048 + 1_024 + 2_048 + 2_048 + SHARED_CODE_HIGHLIGHT_BUDGET + WIKI_SEMANTIC_PPT_CATALOG_BUDGET;
 // User-approved catalog headroom: 64 extra gzip bytes per tool for richer EN/ID metadata.
 // The image-editor registration exceeded the previous aggregate ceiling by 12 bytes.
 // Keep the fixed host baseline and individual entry, bundle and icon ceilings unchanged.
