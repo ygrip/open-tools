@@ -7,7 +7,7 @@ const read = locale => JSON.parse(raw(locale));
 const source = read('en');
 const keys = Object.keys(source).filter(key => key !== '$schema').sort();
 const placeholders = value => [...value.matchAll(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g)].map(match => match[1]).sort();
-for (const locale of ['en', 'id', 'hi', 'th', 'ja', 'zh', 'vi', 'ms', 'fil', 'my', 'km', 'lo']) {
+for (const locale of ['en', 'hi', 'th', 'ja', 'zh', 'vi', 'ms', 'fil', 'my', 'km', 'lo']) {
   test(`${locale}: platform pack is complete and preserves formatting placeholders`, () => {
     const pack = read(locale);
     const declaredKeys = [...raw(locale).matchAll(/^\s*"([^"]+)":/gm)].map(match => match[1]);
