@@ -3,6 +3,14 @@
 Open Tools resolves GitHub credentials **during registry sync/build**, separately for every repository. Registering a repository does not expose a token to that tool or its browser bundle. Public catalog metadata still includes the repository URL, even if its source is private.
 
 
+## Private language packs in the Pages deployment
+
+Prefer `localePacks[locale] = { file: "dist/locales/<locale>.json", sha256, bytes }` in each tool's manifest. Registry sync reads these files using the **same repository-aware build credential and pinned commit** as the manifest/HTML. A read-only Contents PAT or GitHub App installation is sufficient; no browser or runtime GitHub credential is needed.
+
+Sync verifies every pack's exact 1–65,536-byte size, SHA-256, UTF-8 and nonblank string-message JSON before replacing the staged bundles. The Pages build contains `/bundles/<tool-id>/locales/<sha256>.json` alongside the tool HTML; private source repositories remain private, but the selected published interface copy is public. A failed verification aborts sync without replacing the previous bundles/catalog. The registry snapshot detects missing, changed or extra pack files before a verified build.
+
+Runtime loads only the selected same-origin pack and re-verifies it before transferring bytes to the existing iframe. File packs require neither external-origin approval nor an `external-assets` grant. Legacy public HTTPS `url` packs retain their origin approval and independent hosting requirements. Do not put a PAT in the manifest, HTML, pack, generated catalog, deployment output or browser request.
+
 ## Multi-owner CI and private tool permissions
 
 The host can register public repositories without authentication, or private

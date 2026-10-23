@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir, rm, rename, mkdtemp } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { createGithubClient, loadSource, artIconName } from './lib/bundles.mjs';
 import { createCredentialResolver } from './lib/credentials.mjs';
 import { readToolRegistrations } from './lib/registrations.mjs';
@@ -60,8 +60,13 @@ loaded.sort((a, b) => a.manifest.name.localeCompare(b.manifest.name));
 await mkdir(resolve(root, 'static'), { recursive: true });
 const stage = await mkdtemp(resolve(root, 'static/.bundles-'));
 try {
-  for (const { manifest, html } of loaded) {
+  for (const { manifest, html, localePacks } of loaded) {
     await mkdir(resolve(stage, manifest.id));
+    for (const [path, bytes] of localePacks ?? []) {
+      const destination = resolve(stage, path.slice('/bundles/'.length));
+      await mkdir(dirname(destination), { recursive: true });
+      await writeFile(destination, bytes);
+    }
     await writeFile(resolve(stage, manifest.id, `${manifest.bundle.sha256}.json`), JSON.stringify({ id: manifest.id, version: manifest.version, sha256: manifest.bundle.sha256, html }).replaceAll('<', '\\u003c'));
   }
   await rm(resolve(root, 'static/bundles'), { recursive: true, force: true });

@@ -9,6 +9,10 @@ export type ToolSeo = { title: string; description: string; keywords: string[]; 
 export type ToolGuide = { summary: string; steps: string[] };
 export type ToolTranslation = { name: string; description: string; guide?: ToolGuide; seo?: ToolSeo; permissionReasons?: Partial<Record<ToolPermissionName, string>> };
 
+export type ToolLocalePack = { sha256: string; bytes: number } & (
+  { file: string; url?: never } | { url: string; file?: never }
+);
+
 /** Public normalized metadata. Legacy v2 inputs receive safe, nonprivileged defaults. */
 export type ToolManifest = {
   schemaVersion: 2 | 3;
@@ -30,7 +34,7 @@ export type ToolManifest = {
   permissions: ToolPermission[];
   assets: ToolAsset[];
   /** Verified, separately downloadable tool-owned translation packs. */
-  localePacks?: Partial<Record<ToolLocale, { url: string; sha256: string; bytes: number }>>;
+  localePacks?: Partial<Record<ToolLocale, ToolLocalePack>>;
   services: ToolService[];
   translations: Partial<Record<ToolLocale, ToolTranslation>>;
   bundle: { format: 'html'; file: string; sha256: string };

@@ -99,6 +99,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
       let reportedAt = -Infinity;
       promise = loadAsset(tool, asset, {
         signal,
+        deploymentUrl: new URL(`${base}/`, window.location.origin).href,
         onProgress: (bytes, phase = 'loading') => {
           if (current !== session.generation || signal.aborted) return;
           const now = performance.now();

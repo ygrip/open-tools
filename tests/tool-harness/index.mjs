@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { build, transform } from 'esbuild';
 import { compile, compileModule } from 'svelte/compiler';
 import { languageCodes } from '../../src/lib/languages.js';
+import { readLocalePacks } from '../../scripts/lib/locale-packs.mjs';
 
 const hostRoot = fileURLToPath(new URL('../../', import.meta.url));
 const publicRoot = resolve(hostRoot, 'static');
@@ -38,7 +39,16 @@ export async function readToolArtifact(toolRoot) {
   const html = bytes.toString('utf8');
   if (!Buffer.from(html, 'utf8').equals(bytes)) throw new Error('The tool bundle must be UTF-8.');
   if (createHash('sha256').update(bytes).digest('hex') !== tool.bundle.sha256) throw new Error('Build the tool first: its manifest checksum does not match the HTML.');
-  return { tool, html };
+  const localePacks = await readLocalePacks(tool, async (file, maximum) => {
+    const candidate = resolve(root, file);
+    if (!inside(root, candidate)) throw new Error('Unsafe locale pack path.');
+    const path = await realpath(candidate);
+    if (!inside(root, path)) throw new Error('Unsafe locale pack symlink.');
+    const info = await stat(path);
+    if (!info.isFile() || extname(path) !== '.json' || info.size > maximum) throw new Error('Invalid locale pack file.');
+    return readFile(path);
+  });
+  return { tool, html, localePacks };
 }
 
 /** Shared platform implementation only; no tool-specific UI or expectations. */
@@ -85,7 +95,7 @@ export function toolHostConfig({ toolRoot, port = 4190 }) {
  */
 export async function serveToolHost({ toolRoot, port = 4190 }) {
   toolHostConfig({ toolRoot, port });
-  const { tool, html } = await readToolArtifact(toolRoot);
+  const { tool, html, localePacks } = await readToolArtifact(toolRoot);
   const [script, css, app] = await Promise.all([runtimeMountScript(), readFile(resolve(hostRoot, 'src/routes/app.css'), 'utf8'), readFile(resolve(hostRoot, 'src/app.html'), 'utf8')]);
   const head = app.match(/<head>([\s\S]*?)<\/head>/i)?.[1].replaceAll('%sveltekit.assets%', '').replace('%sveltekit.head%', '');
   if (!head || !/<meta\s+http-equiv="Content-Security-Policy"[^>]*>/i.test(head)) throw new Error('The host navigation CSP is missing.');
@@ -113,7 +123,9 @@ export async function serveToolHost({ toolRoot, port = 4190 }) {
       if (path === '/__test__/runtime.js') return send(200, 'text/javascript; charset=utf-8', script);
       if (path === '/__test__/host.css') return send(200, 'text/css; charset=utf-8', css);
       if (path === '/__test__/tool.json') return send(200, 'application/json; charset=utf-8', JSON.stringify(tool));
-      if (path.startsWith(`/bundles/${tool.id}/`)) return send(200, 'application/json; charset=utf-8', bundle);
+      const pack = localePacks.get(path);
+      if (pack) return send(200, 'application/json; charset=utf-8', pack);
+      if (path === `/bundles/${tool.id}/${tool.bundle.sha256}.json`) return send(200, 'application/json; charset=utf-8', bundle);
       // Tests must mock protected endpoints; never proxy credentials or providers.
       if (path.startsWith('/api/')) return send(503, 'application/json', '{"error":"test-harness"}');
       if (/^\/(icons|fonts|brand)\//.test(path)) {

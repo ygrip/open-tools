@@ -1,4 +1,5 @@
 import { languageCodes } from '../languages.js';
+import { MAX_LOCALE_PACK_BYTES } from './locale-packs.js';
 export const reservedIds = new Set(['api', 'policy', 'privacy', 'terms', 'bundles', 'icons', 'brand', 'illustrations', 'index', '404', '500', '503', '_app', 'offline', 'manifest', 'manifest-webmanifest', 'service-worker', 'pwa', 'id', 'og', 'robots', 'sitemap']);
 for (const code of languageCodes) if (code !== 'en') reservedIds.add(code);
 export const permissionNames = new Set(['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'external-assets', 'wasm', 'workers', 'services', 'wiki-read', 'dns-query']);
@@ -168,7 +169,7 @@ export function validateManifest(manifest) {
   if (!Array.isArray(locales) || !locales.length || locales.length > languageCodes.length || new Set(locales).size !== locales.length || locales.some((locale) => !languageCodes.includes(locale))) throw new Error('invalid supported tool locales');
   // Locales are UI copy, not arbitrary external-script privileges. They receive a
   // read-only broker operation bound to hashes declared by the tool release.
-  /** @type {Record<string, {url: string, sha256: string, bytes: number}>} */
+  /** @type {Record<string, import('./types').ToolLocalePack>} */
   const localePacks = {};
   if (manifest.localePacks !== undefined) {
     if (!modern) throw new Error('language packs require schemaVersion 3');
@@ -176,10 +177,18 @@ export function validateManifest(manifest) {
     for (const [locale, value] of Object.entries(manifest.localePacks)) {
       if (locale === 'en' || !locales.includes(locale)) throw new Error('locale pack must be a supported non-English locale');
       object(value, 'locale pack');
-      if (Object.keys(value).some(key => !['url','sha256','bytes'].includes(key)) ||
+      if (Object.keys(value).some(key => !['file','url','sha256','bytes'].includes(key)) ||
           typeof value.sha256 !== 'string' || !digest.test(value.sha256) ||
-          !Number.isSafeInteger(value.bytes) || value.bytes < 1 || value.bytes > 65536) throw new Error('invalid locale pack');
-      localePacks[locale] = { url: assetUrl(value.url).href, sha256: value.sha256, bytes: value.bytes };
+          !Number.isSafeInteger(value.bytes) || value.bytes < 1 || value.bytes > MAX_LOCALE_PACK_BYTES) throw new Error('invalid locale pack');
+      if (value.file !== undefined) {
+        if (value.url !== undefined || typeof value.file !== 'string' || value.file.length > 240 ||
+            !/^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.json$/.test(value.file)) {
+          throw new Error('invalid locale pack file');
+        }
+        localePacks[locale] = { file: value.file, sha256: value.sha256, bytes: value.bytes };
+      } else {
+        localePacks[locale] = { url: assetUrl(value.url).href, sha256: value.sha256, bytes: value.bytes };
+      }
     }
     if (locales.some(locale => locale !== 'en' && !localePacks[locale])) throw new Error('missing declared locale pack');
   }
@@ -203,7 +212,8 @@ export function validateAssetOrigins(manifest, configuredOrigins = []) {
     if (parsed.origin !== origin) throw new Error('trustedAssetOrigins entries must be exact HTTPS origins');
     return parsed.origin;
   }));
-  for (const asset of [...manifest.assets, ...Object.values(manifest.localePacks ?? {})]) {
+  const externalPacks = Object.values(manifest.localePacks ?? {}).filter(pack => pack.url !== undefined);
+  for (const asset of [...manifest.assets, ...externalPacks]) {
     if (!origins.has(assetUrl(asset.url).origin)) throw new Error('asset origin is not approved in trustedAssetOrigins');
   }
 }

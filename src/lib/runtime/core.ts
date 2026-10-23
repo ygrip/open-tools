@@ -1,4 +1,5 @@
-import type { ToolService } from '../registry/types';
+import type { ToolService, ToolLocalePack } from '../registry/types';
+import { localePackPath } from '../registry/locale-packs.js';
 import { pruneAssetCaches, touchAssetCache } from './asset-cache.js';
 import { DOWNLOAD_LIMITS } from './download-policy';
 export type PermissionName = 'clipboard-read' | 'clipboard-write' | 'geolocation' | 'downloads' | 'camera-capture' | 'share-image' | 'external-assets' | 'wasm' | 'workers' | 'services' | 'wiki-read' | 'dns-query';
@@ -7,7 +8,7 @@ export type RuntimeAsset = { id: string; url: string; sha256: string; bytes: num
 export type RuntimeTool = {
   schemaVersion: number; id: string; name: string; version: string; bundle: { sha256: string }; locales?: string[]; icon?: string;
   permissions?: RuntimePermission[]; assets?: RuntimeAsset[]; services?: ToolService[];
-  localePacks?: Record<string, { url: string; sha256: string; bytes: number }>;
+  localePacks?: Partial<Record<string, ToolLocalePack>>;
   translations?: Record<string, { permissionReasons?: Partial<Record<PermissionName, string>> }>;
   guide?: { summary: string; steps: string[] };
 };
@@ -70,15 +71,30 @@ export async function loadBundle(tool: RuntimeTool, url: string, signal: AbortSi
   checkAbort(signal);
   return bundle.html;
 }
-export function assetRequestUrl(asset: RuntimeAsset): string {
+type AssetDeployment = { toolId: string; deploymentUrl?: string };
+function resolveAssetUrl(asset: RuntimeAsset, deployment?: AssetDeployment): URL {
+  if (!asset.url.startsWith('/')) return new URL(asset.url);
+  if (!deployment?.deploymentUrl || !/^locale-[a-z]{2,3}$/.test(asset.id) ||
+      asset.url !== localePackPath(deployment.toolId, asset.sha256)) {
+    throw new RuntimeFailure('invalid-asset');
+  }
+  const site = new URL(deployment.deploymentUrl);
+  if (!['https:', 'http:'].includes(site.protocol) || site.username || site.password || site.search || site.hash || !site.pathname.endsWith('/')) {
+    throw new RuntimeFailure('invalid-asset');
+  }
+  return new URL(asset.url.slice(1), site);
+}
+export function assetRequestUrl(asset: RuntimeAsset, deployment?: AssetDeployment): string {
   let url: URL;
-  try { url = new URL(asset.url); } catch { throw new RuntimeFailure('invalid-asset'); }
-  if (url.protocol !== 'https:' || url.username || url.password || url.hash || !HASH.test(asset.sha256) || !Number.isSafeInteger(asset.bytes) || asset.bytes < 1 || asset.bytes > MAX_ASSET) throw new RuntimeFailure('invalid-asset');
-  url.searchParams.set('trick-it-sha256', asset.sha256);
+  try { url = resolveAssetUrl(asset, deployment); } catch { throw new RuntimeFailure('invalid-asset'); }
+  const local = asset.url.startsWith('/');
+  if ((!local && url.protocol !== 'https:') || url.username || url.password || url.hash || !HASH.test(asset.sha256) || !Number.isSafeInteger(asset.bytes) || asset.bytes < 1 || asset.bytes > MAX_ASSET) throw new RuntimeFailure('invalid-asset');
+  if (!local) url.searchParams.set('trick-it-sha256', asset.sha256);
   return url.href;
 }
 type AssetOptions = {
   signal: AbortSignal; fetcher?: typeof fetch; cacheStorage?: CacheStorage | null; timeoutMs?: number;
+  deploymentUrl?: string;
   onProgress?: (bytes: number, phase?: 'loading' | 'verifying') => void; onWarning?: (warning: CacheWarning) => void;
 };
 export async function loadAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetOptions): Promise<Uint8Array> {
@@ -94,7 +110,7 @@ export async function loadAsset(tool: RuntimeTool, asset: RuntimeAsset, options:
 }
 async function readAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetOptions): Promise<Uint8Array> {
   const { signal, onWarning, onProgress } = options;
-  const url = assetRequestUrl(asset);
+  const url = assetRequestUrl(asset, { toolId: tool.id, deploymentUrl: options.deploymentUrl });
   const name = `trick-it-assets-${tool.id}-${tool.version}-${tool.bundle.sha256}`;
   let cache: Cache | undefined;
   let storage: CacheStorage | null | undefined;
@@ -187,7 +203,10 @@ export function parseRuntimeRequest(event: Pick<MessageEvent, 'source' | 'data'>
         payload.locale === 'en' || !tool.locales?.includes(payload.locale)) return { request, error: 'invalid-request' };
     const pack = tool.localePacks?.[payload.locale];
     if (!pack || pack.bytes > 65536) return { request, error: 'invalid-request' };
-    return { request, asset: { id: 'locale-' + payload.locale, ...pack, type: 'data', defer: true } };
+    let url = pack.url;
+    if (pack.file !== undefined) url = localePackPath(tool.id, pack.sha256);
+    if (!url) return { request, error: 'invalid-request' };
+    return { request, asset: { id: 'locale-' + payload.locale, url, sha256: pack.sha256, bytes: pack.bytes, type: 'data', defer: true } };
   }
   if (request.operation === 'asset') {
     if (!declared('external-assets')) return { request, error: 'denied' };

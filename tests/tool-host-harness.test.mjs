@@ -27,6 +27,33 @@ test('shared tool harness reads the owning artifact and rejects stale or escaped
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
 
+test('the harness reads verified repository locale packs and rejects corrupt or escaped copy', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'trick-it-pack-harness-'));
+  const root = join(directory, 'tool');
+  const html = '<!doctype html><title>Fixture</title>';
+  const bytes = Buffer.from('{"title":"音楽"}');
+  const digest = createHash('sha256').update(bytes).digest('hex');
+  const manifest = {
+    schemaVersion: 3, runtimeVersion: 1, id: 'fixture-tool', version: '1.0.0',
+    bundle: { file: 'dist/index.html', sha256: createHash('sha256').update(html).digest('hex') },
+    localePacks: { ja: { file: 'dist/ja.json', sha256: digest, bytes: bytes.length } }
+  };
+  try {
+    await mkdir(join(root, 'dist'), { recursive: true });
+    await writeFile(join(root, 'tool.manifest.json'), JSON.stringify(manifest));
+    await writeFile(join(root, 'dist/index.html'), html);
+    await writeFile(join(root, 'dist/ja.json'), bytes);
+    const artifact = await readToolArtifact(root);
+    assert.deepEqual(artifact.localePacks.get(`/bundles/fixture-tool/locales/${digest}.json`), bytes);
+    await writeFile(join(root, 'dist/ja.json'), Buffer.alloc(bytes.length));
+    await assert.rejects(readToolArtifact(root), /integrity/);
+    await rm(join(root, 'dist/ja.json'));
+    await writeFile(join(directory, 'outside.json'), bytes);
+    await symlink(join(directory, 'outside.json'), join(root, 'dist/ja.json'));
+    await assert.rejects(readToolArtifact(root), /Unsafe locale pack symlink/);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
 test('tool suites run from their own repository without a second host Playwright instance', () => {
   const config = toolHostConfig({ toolRoot: '/own-tool', port: 4190 });
   assert.match(config.testDir, /own-tool.*tests.*host/);

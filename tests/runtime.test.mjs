@@ -17,6 +17,54 @@ const tool = { schemaVersion: 3, id: 'fixture', name: 'Fixture', version: '1.0.0
 const controller = () => new AbortController();
 const response = (value) => new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' } });
 
+test('repository locale requests use the existing bridge without external-assets permission', async () => {
+  const bytes = new TextEncoder().encode('{"title":"音楽"}');
+  const digest = await sha256(bytes);
+  const localized = { ...tool, locales: ['en', 'ja'], localePacks: { ja: { file: 'dist/locales/ja.json', sha256: digest, bytes: bytes.length } } };
+  const frame = {};
+  const message = { type: 'trick-it:request', version: 1, token: 'session', id: 'locale-request', operation: 'locale-pack', payload: { locale: 'ja' } };
+  const parsed = parseRuntimeRequest({ source: frame, data: message }, frame, 'session', localized, []);
+  assert.equal(parsed.error, undefined);
+  assert.equal(parsed.asset.url, `/bundles/${tool.id}/locales/${digest}.json`);
+  const cache = memoryCache();
+  let requests = 0;
+  const options = {
+    signal: controller().signal, cacheStorage: cache.storage, deploymentUrl: 'https://tools.example/subpath/',
+    fetcher: async (url, request) => {
+      requests++;
+      assert.equal(url, `https://tools.example/subpath/bundles/${tool.id}/locales/${digest}.json`);
+      assert.equal(request.credentials, 'omit');
+      assert.equal(request.redirect, 'error');
+      return new Response(bytes);
+    }
+  };
+  assert.deepEqual(await loadAsset(localized, parsed.asset, options), bytes);
+  assert.deepEqual(await loadAsset(localized, parsed.asset, options), bytes);
+  assert.equal(requests, 1);
+  for (const locale of ['en', 'id', 'constructor']) {
+    const denied = parseRuntimeRequest({ source: frame, data: { ...message, payload: { locale } } }, frame, 'session', localized, []);
+    assert.equal(denied.error, 'invalid-request');
+  }
+  assert.equal(parseRuntimeRequest({ source: {}, data: message }, frame, 'session', localized, []), null);
+  assert.equal(parseRuntimeRequest({ source: frame, data: { ...message, token: 'wrong' } }, frame, 'session', localized, []), null);
+});
+
+test('only exact hosted pack paths resolve against the trusted deployment URL', () => {
+  const digest = 'a'.repeat(64);
+  const local = { id: 'locale-ja', url: `/bundles/${tool.id}/locales/${digest}.json`, sha256: digest, bytes: 20, type: 'data', defer: true };
+  const deployment = { toolId: tool.id, deploymentUrl: 'http://127.0.0.1:4190/' };
+  assert.equal(assetRequestUrl(local, deployment), `http://127.0.0.1:4190${local.url}`);
+  assert.throws(() => assetRequestUrl(local), /invalid-asset/);
+  for (const url of ['//evil.example/copy.json', '/private.json', local.url + '?secret=token', local.url.replace(tool.id, 'other'), local.url.replace(digest, 'b'.repeat(64))]) {
+    assert.throws(() => assetRequestUrl({ ...local, url }, deployment), /invalid-asset/);
+  }
+  assert.throws(() => assetRequestUrl({ ...local, id: 'ordinary-asset' }, deployment), /invalid-asset/);
+  assert.throws(() => assetRequestUrl({ ...local, url: 'http://external.example/copy.json' }, deployment), /invalid-asset/);
+  for (const deploymentUrl of ['https://user:secret@tools.example/', 'file:///tmp/', 'https://tools.example/?token=secret']) {
+    assert.throws(() => assetRequestUrl(local, { ...deployment, deploymentUrl }), /invalid-asset/);
+  }
+});
+
 test('bundle loader verifies exact HTML bytes, identity, version and SHA before rendering', async () => {
   const valid = { id: tool.id, version: tool.version, sha256: htmlHash, html };
   assert.equal(await loadBundle(tool, '/bundle', controller().signal, async () => response(valid)), html);

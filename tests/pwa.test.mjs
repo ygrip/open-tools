@@ -15,6 +15,21 @@ test('offline cache accepts only explicit public files or digest-pinned tool rel
   assert.equal(accepts('/', 'POST'), false);
   assert.equal(accepts('/', 'GET', true), false);
 });
+test('hosted packs are lazy immutable same-origin files, not installation prerequisites', async () => {
+  const path = `/bundles/locale-fixture/locales/${'a'.repeat(64)}.json`;
+  assert.equal(accepts(path), true);
+  for (const url of [path + '?token=secret', path.replace('a'.repeat(64), 'latest'), 'https://external.example' + path]) {
+    assert.equal(accepts(url), false);
+  }
+  assert.equal(cacheableRequest(new URL('/subpath' + path, origin), origin, new Set(), 'GET', false, '/subpath'), true);
+  const { makePrecachePlan } = await import('../src/lib/pwa-precache.js');
+  const plan = makePrecachePlan([], [path], []);
+  assert.equal(plan.requiredPaths.has(path), false);
+  assert.equal(plan.precachePaths.has(path), false);
+  const headers = await readFile(new URL('../static/_headers', import.meta.url), 'utf8');
+  assert.match(headers, /\/bundles\/\*\n  Cache-Control: public, max-age=31536000, immutable\n  X-Content-Type-Options: nosniff/);
+});
+
 test('private, varying, and failed responses never enter the offline cache', () => {
   assert.ok(cacheableResponse(new Response('ok')));
   assert.ok(cacheableResponse(new Response('ok', { headers: { vary: 'Accept-Encoding' } })));

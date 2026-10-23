@@ -62,6 +62,31 @@ An entry may include `permissionReasons`, a map from already declared permission
 
 Metadata localization does not translate the HTML bundle. Declare actual interface languages in optional `locales` (a nonempty unique list of supported codes, default `["en"]`), and use the runtime locale bridge described in [the runtime guide](tool-runtime.md). Unsupported interface locales use the tool's first supported language while platform navigation keeps its selected language. New localized SEO pages remain noindex pending reviewed copy.
 
+## Language packs
+
+New scaffolds and localization migrations use Paraglide-generated English in the HTML and separate JSON files for non-English interfaces. Existing inline-localized releases remain schema-compatible; the scaffold release gate requires the efficient separate-pack approach for new work.
+
+```json
+{
+  "locales": ["en", "id"],
+  "localePacks": {
+    "id": {
+      "file": "dist/locales/id.json",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "bytes": 1234
+    }
+  }
+}
+```
+
+Replace the example digest/size with the exact final UTF-8 JSON bytes. `localePacks` is v3-only; descriptors require `sha256`, `bytes` and exactly one of `file` or `url`. The digest is 64 lowercase hexadecimal characters and size is an integer from 1 to 65,536 bytes. If the map is present, every declared non-English locale must have an entry. English, unsupported locale keys, unknown descriptor fields and combined `file`/`url` entries are rejected.
+
+`file` is the preferred form, including for private repositories. It is a safe repository-relative `.json` path (letters, digits, underscores, hyphens and directory separators; no absolute path, dot segments, escaping symlink, query or URL). `registry:sync` fetches it at the registration's immutable commit using the same build-only credentials as the HTML. Before staging any outputs, sync verifies exact size, SHA-256, valid UTF-8 and a nonempty JSON object of nonblank string messages. It publishes the exact bytes under `/bundles/<tool-id>/locales/<sha256>.json` alongside the HTML in the Pages deployment. The public catalog retains the `file` descriptor; the host runtime derives a same-origin URL under the configured site base. No GitHub token or private source request reaches the browser. File packs need no `trustedAssetOrigins` entry and are covered by the verified registry snapshot.
+
+Legacy `url` descriptors remain supported. Their public immutable HTTPS URLs must pass existing asset-URL validation and exact `trustedAssetOrigins` approval. They are fetched and verified by the host browser, not mirrored by sync. A private GitHub tag is not public CDN hosting. Different locales may use different forms, but each descriptor has exactly one source.
+
+Packs are **not** generic `assets` and do not consume their 16-entry allowance or require `external-assets` consent. They are read-only copy, not executable scripts or additional capabilities. `translations` still describes catalog/consent metadata, not interface packs. `trickIt.localePack(locale)` accepts only a declared locale, verifies bounded bytes and SHA-256 in the host, then transfers them into the existing iframe. There is no arbitrary URL parameter, iframe fetch, CSP relaxation or `allow-same-origin` exception. See [runtime loading and failure behavior](tool-runtime.md#language-packs).
+
 ## Layout contract
 
 The manifest does not prescribe a frame height. The platform owns the available width, starting-height fallback, and sandbox isolation; each tool owns its responsive HTML/CSS and natural page height. A host-installed observer sizes the iframe to the rendered tool content so the outer page scrolls normally. No new schema field or runtime permission is required, and existing v2 tools receive the same behavior.

@@ -56,9 +56,10 @@ for (const file of assets) {
   if (/\.(?:webp|svg|png|avif)$/.test(file) && !file.includes('/og/') && !file.includes('/pwa/') && !toolIcon && !legalArt) images += bytes.length;
   if (file.includes('/og/') && file.endsWith('.png') && bytes.length > 200_000) throw new Error(`Social card exceeds 200 kB budget: ${file}`);
   if (file.endsWith('.woff2')) fonts += bytes.length;
-  // User-approved multilingual headroom: independent tools may embed complete
-  // local packs and editable AGPL source. This is lazy, per-tool transfer only;
-  // do not increase shared host JS, catalog, icon or the 5 MiB acceptance limits.
+  // Tool bootstrap and language packs are lazy, separate transfers. Do not use
+  // the bootstrap ceiling to embed every language or editable source archive.
+  // Shared host JS, catalog, icon and the 5 MiB acceptance limits stay separate.
+  if (/\/bundles\/[^/]+\/locales\/[a-f0-9]{64}\.json$/.test(file) && bytes.length > 65_536) throw new Error(`Locale pack exceeds 64 KiB: ${relative(client, file)}`);
   if (/\/bundles\/.*\.json$/.test(file) && gzipSync(bytes).length > 200_000) throw new Error(`Tool bundle exceeds 200 kB gzip budget: ${relative(client, file)}`);
 }
 // JS budget is enforced per tool, not as one fixed ceiling for the whole marketplace.
