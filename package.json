@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "predev": "npm run registry:sync && npm run seo:generate",
+    "predev": "npm run i18n:compile && npm run registry:sync && npm run seo:generate",
     "dev": "vite dev",
     "build": "npm run registry:sync && npm run build:verified",
     "preview": "vite preview",
@@ -15,10 +15,10 @@
     "test:e2e": "playwright test",
     "performance:check": "node scripts/check-performance.mjs",
     "prepare": "svelte-kit sync || echo ''",
-    "i18n:compile": "paraglide-js compile --project ./project.inlang",
+    "i18n:compile": "paraglide-js compile --project ./project.inlang && node scripts/generate-host-locales.mjs",
     "services:generate": "node scripts/generate-services.mjs",
-    "pretest": "npm run services:generate",
-    "build:verified": "node scripts/verify-registry-snapshot.mjs && npm run services:generate && npm run seo:generate && vite build && node scripts/export-error-page.mjs && node scripts/verify-seo.mjs"
+    "pretest": "npm run i18n:compile && npm run services:generate",
+    "build:verified": "node scripts/verify-registry-snapshot.mjs && npm run services:generate && npm run seo:generate && npm run i18n:compile && vite build && node scripts/export-error-page.mjs && node scripts/verify-seo.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
