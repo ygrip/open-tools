@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
+import { readFileSync } from 'node:fs';
 import { build } from 'esbuild';
 
 async function loadModule(path) {
@@ -58,5 +59,17 @@ test('shared dictionaries are safely embedded and every generated script parses'
   for (const script of [uiKitScript, tableScript, codeBlockScript]) {
     assert.doesNotThrow(() => new vm.Script(script));
     assert.doesNotMatch(script, /documentElement\.lang === 'id'/);
+  }
+});
+
+test('generated host and shared UI strings match the Paraglide JSON source exactly', () => {
+  for (const locale of codes) {
+    const catalog = JSON.parse(readFileSync(new URL('../messages/' + locale + '.json', import.meta.url), 'utf8'));
+    for (const [namespace, dictionary] of [['runtime', runtimeCopies[locale]], ['ui', sharedCopies[locale]]]) {
+      for (const [path, value] of leaves(dictionary)) {
+        const key = namespace + '__' + path.replaceAll('.', '__').replaceAll('-', '_');
+        assert.equal(catalog[key], value, locale + ':' + key);
+      }
+    }
   }
 });
