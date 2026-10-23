@@ -148,7 +148,7 @@ export function validateManifest(manifest) {
     for (const [locale, value] of Object.entries(manifest.translations)) {
       if (!languageCodes.includes(locale)) throw new Error('unsupported translation locale');
       object(value, 'translation');
-      translations[locale] = {
+      translations[/** @type {import('./types').ToolLocale} */ (locale)] = {
         name: text(value.name, 80, 'translated name'), description: text(value.description, 240, 'translated description'),
         ...(value.guide === undefined ? {} : { guide: guide(value.guide) }),
         ...(value.seo === undefined ? {} : { seo: seo(value.seo) })
