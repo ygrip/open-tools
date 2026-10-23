@@ -29,6 +29,8 @@ export type ToolManifest = {
   guide: ToolGuide;
   permissions: ToolPermission[];
   assets: ToolAsset[];
+  /** Verified, separately downloadable tool-owned translation packs. */
+  localePacks?: Partial<Record<ToolLocale, { url: string; sha256: string; bytes: number }>>;
   services: ToolService[];
   translations: Partial<Record<ToolLocale, ToolTranslation>>;
   bundle: { format: 'html'; file: string; sha256: string };

@@ -166,10 +166,26 @@ export function validateManifest(manifest) {
   }
   const locales = manifest.locales ?? ['en'];
   if (!Array.isArray(locales) || !locales.length || locales.length > languageCodes.length || new Set(locales).size !== locales.length || locales.some((locale) => !languageCodes.includes(locale))) throw new Error('invalid supported tool locales');
+  // Locales are UI copy, not arbitrary external-script privileges. They receive a
+  // read-only broker operation bound to hashes declared by the tool release.
+  const localePacks = {};
+  if (manifest.localePacks !== undefined) {
+    if (!modern) throw new Error('language packs require schemaVersion 3');
+    object(manifest.localePacks, 'locale packs');
+    for (const [locale, value] of Object.entries(manifest.localePacks)) {
+      if (locale === 'en' || !locales.includes(locale)) throw new Error('locale pack must be a supported non-English locale');
+      object(value, 'locale pack');
+      if (Object.keys(value).some(key => !['url','sha256','bytes'].includes(key)) ||
+          typeof value.sha256 !== 'string' || !digest.test(value.sha256) ||
+          !Number.isSafeInteger(value.bytes) || value.bytes < 1 || value.bytes > 65536) throw new Error('invalid locale pack');
+      localePacks[locale] = { url: assetUrl(value.url).href, sha256: value.sha256, bytes: value.bytes };
+    }
+    if (locales.some(locale => locale !== 'en' && !localePacks[locale])) throw new Error('missing declared locale pack');
+  }
   return {
     schemaVersion: manifest.schemaVersion, runtimeVersion: 1, locales: [...locales], appearance: { theme: 'host', protocolVersion: 1 },
     id: manifest.id, name, description, path: manifest.path, category: manifest.category, repository: manifest.repository,
-    version: manifest.version, status: manifest.status, capabilities, icon, seo: toolSeo, guide: toolGuide, permissions, assets, services, translations,
+    version: manifest.version, status: manifest.status, capabilities, icon, seo: toolSeo, guide: toolGuide, permissions, assets, services, translations, ...(manifest.localePacks === undefined ? {} : { localePacks }),
     bundle: { format: 'html', file: bundle.file, sha256: bundle.sha256 },
     ...(artwork ? { artwork } : {})
   };
@@ -186,7 +202,7 @@ export function validateAssetOrigins(manifest, configuredOrigins = []) {
     if (parsed.origin !== origin) throw new Error('trustedAssetOrigins entries must be exact HTTPS origins');
     return parsed.origin;
   }));
-  for (const asset of manifest.assets) {
+  for (const asset of [...manifest.assets, ...Object.values(manifest.localePacks ?? {})]) {
     if (!origins.has(assetUrl(asset.url).origin)) throw new Error('asset origin is not approved in trustedAssetOrigins');
   }
 }

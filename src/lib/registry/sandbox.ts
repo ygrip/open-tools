@@ -114,13 +114,13 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
         return downloadStream({ filename: payload.filename, mime: payload.mime, size: bytes.byteLength,
           chunks: (async function* () { yield bytes; })(), onProgress });
       }
-      const hostUi = operation === 'ui-toast' || operation === 'ui-dialog';
+      const hostUi = operation === 'ui-toast' || operation === 'ui-dialog' || operation === 'locale-pack';
       if (!config.token || (!hostUi && operation !== 'asset' && !config.permissions.includes(operation) && !(operation.startsWith('download-') && config.permissions.includes('downloads'))) || (operation === 'asset' && !config.permissions.includes('external-assets'))) return Promise.reject(new Error('Permission not granted.'));
       if (pending.size >= 16 && operation !== 'download-cancel') return Promise.reject(new Error('Too many pending requests.'));
       const id = String(++sequence);
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => { pending.delete(id); reject(new Error('Capability request timed out.')); }, 330000);
-        const focusTarget = operation !== 'asset' && operation !== 'ui-toast' && document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        const focusTarget = operation !== 'asset' && operation !== 'locale-pack' && operation !== 'ui-toast' && document.activeElement instanceof HTMLElement ? document.activeElement : null;
         pending.set(id, { resolve, reject, timer, operation, onProgress, focusTarget });
         try { parent.postMessage({ type: 'trick-it:request', version: 1, token: config.token, id, operation, payload }, '*', transfer); }
         catch { clearTimeout(timer); pending.delete(id); reject(new Error('Invalid capability payload.')); }
@@ -187,7 +187,7 @@ ${uiKitScript}
         if (!produced) { try { Promise.resolve(iterator?.return?.()).catch(() => undefined); } catch {} }
       }
     }
-    Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, downloadStream, downloadLimits, ui, asset: (id, options = {}) => request('asset', { id }, options.onProgress), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
+    Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, downloadStream, downloadLimits, ui, asset: (id, options = {}) => request('asset', { id }, options.onProgress), localePack: locale => request('locale-pack', { locale }), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
   })();`;
   // Host controls can only change an existing isolated frame. No reload and no
   // permission escalation; browser/page zoom remains under the user's control.

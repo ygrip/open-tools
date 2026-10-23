@@ -7,6 +7,7 @@ export type RuntimeAsset = { id: string; url: string; sha256: string; bytes: num
 export type RuntimeTool = {
   schemaVersion: number; id: string; name: string; version: string; bundle: { sha256: string }; locales?: string[]; icon?: string;
   permissions?: RuntimePermission[]; assets?: RuntimeAsset[]; services?: ToolService[];
+  localePacks?: Record<string, { url: string; sha256: string; bytes: number }>;
   translations?: Record<string, { permissionReasons?: Partial<Record<PermissionName, string>> }>;
   guide?: { summary: string; steps: string[] };
 };
@@ -152,7 +153,7 @@ async function readAsset(tool: RuntimeTool, asset: RuntimeAsset, options: AssetO
   } else if (cache) onWarning?.('cache-unavailable');
   return bytes;
 }
-export type RuntimeRequest = { type: 'trick-it:request'; version: 1; token: string; id: string; operation: PermissionName | 'download-begin' | 'download-chunk' | 'download-end' | 'download-cancel' | 'asset' | 'ui-toast' | 'ui-dialog'; payload?: unknown };
+export type RuntimeRequest = { type: 'trick-it:request'; version: 1; token: string; id: string; operation: PermissionName | 'download-begin' | 'download-chunk' | 'download-end' | 'download-cancel' | 'asset' | 'locale-pack' | 'ui-toast' | 'ui-dialog'; payload?: unknown };
 export type UiToast = { message: string; tone: 'info' | 'success' | 'error' };
 export type UiDialog = { kind: 'info' | 'confirm'; title: string; message: string; items: string[]; ordered: boolean; confirmLabel: string; cancelLabel: string; tone: 'default' | 'danger' };
 export type ParsedRequest = { request: RuntimeRequest; error?: RuntimeErrorCode; asset?: RuntimeAsset; toast?: UiToast; dialog?: UiDialog };
@@ -180,6 +181,14 @@ export function parseRuntimeRequest(event: Pick<MessageEvent, 'source' | 'data'>
   if (Object.keys(message).some((key) => !['type', 'version', 'token', 'id', 'operation', 'payload'].includes(key))) return null;
   const request = message as RuntimeRequest;
   const declared = (name: string) => tool.permissions?.some((permission) => permission.name === name) && grants.includes(name);
+  if (request.operation === 'locale-pack') {
+    const payload = request.payload;
+    if (!plainObject(payload, ['locale']) || typeof payload.locale !== 'string' ||
+        payload.locale === 'en' || !tool.locales?.includes(payload.locale)) return { request, error: 'invalid-request' };
+    const pack = tool.localePacks?.[payload.locale];
+    if (!pack || pack.bytes > 65536) return { request, error: 'invalid-request' };
+    return { request, asset: { id: 'locale-' + payload.locale, ...pack, type: 'data', defer: true } };
+  }
   if (request.operation === 'asset') {
     if (!declared('external-assets')) return { request, error: 'denied' };
     const payload = request.payload as { id?: unknown } | undefined;
