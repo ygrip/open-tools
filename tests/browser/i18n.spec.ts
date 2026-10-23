@@ -43,6 +43,25 @@ test('language changes preserve tool route and sandbox language fallback', async
   const workspace = await stateProbe(page);
   await workspace.fill('Keep this workspace through language navigation');
   await page.locator('iframe').evaluate(element => { element.dataset.identity = 'original-frame'; });
+  // Capture both the iframe element and its browsing context before any SPA navigation.
+  // A hard navigation loses this probe; remounting the iframe changes either identity.
+  await page.evaluate(() => {
+    const frame = document.querySelector<HTMLIFrameElement>('iframe');
+    if (!frame) throw new Error('Tool iframe was not mounted');
+    (window as Window & { __localeFrameProbe?: { element: HTMLIFrameElement; context: Window | null } }).__localeFrameProbe = {
+      element: frame,
+      context: frame.contentWindow
+    };
+  });
+  await page.frameLocator('iframe').locator('body').evaluate(body => { body.dataset.localeDocument = 'original-document'; });
+  const expectSameFrame = async () => {
+    expect(await page.evaluate(() => {
+      const probe = (window as Window & { __localeFrameProbe?: { element: HTMLIFrameElement; context: Window | null } }).__localeFrameProbe;
+      const current = document.querySelector<HTMLIFrameElement>('iframe');
+      return !!probe && !!current && current === probe.element && current.contentWindow === probe.context;
+    })).toBe(true);
+    await expect(page.frameLocator('iframe').locator('body')).toHaveAttribute('data-locale-document', 'original-document');
+  };
   await page.getByRole('button', { name: 'Languages: English' }).click();
   const picker = page.getByRole('dialog', { name: 'Languages' });
   await picker.getByRole('searchbox', { name: 'Search languages…' }).fill('Japanese');
@@ -58,11 +77,13 @@ test('language changes preserve tool route and sandbox language fallback', async
   await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('iframe')).toHaveAttribute('data-identity', 'original-frame');
   await expect(workspace).toHaveValue('Keep this workspace through language navigation');
+  await expectSameFrame();
   await page.getByRole('button', { name: '言語: 日本語' }).click();
   await page.getByRole('dialog', { name: '言語' }).getByRole('link', { name: /English/ }).click();
   await expect(page).toHaveURL(/\/json-tools\/\?keep=1#guide$/);
   await expect(page.locator('iframe')).toHaveAttribute('data-identity', 'original-frame');
   await expect(workspace).toHaveValue('Keep this workspace through language navigation');
+  await expectSameFrame();
 });
 
 test('mobile quick settings launches the same filterable modal without horizontal overflow', async ({ page }) => {
