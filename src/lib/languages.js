@@ -22,9 +22,11 @@ export const languages = [
 export const languageCodes = languages.map(({ code }) => code);
 const prefix = new RegExp(`^/(${languageCodes.filter((code) => code !== 'en').join('|')})(?=/|$)`);
 
+/** @param {string} pathname */
 export function stripLanguagePrefix(pathname) {
   return pathname.replace(prefix, '') || '/';
 }
+/** @param {string} locale */
 export function isSupportedLanguage(locale) {
   return languageCodes.includes(locale);
 }

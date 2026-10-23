@@ -1,3 +1,4 @@
+export type ToolLocale = 'en' | 'id' | 'ms' | 'fil' | 'th' | 'vi' | 'zh' | 'my' | 'km' | 'lo' | 'ja' | 'hi';
 export type ToolCategory = 'media' | 'developer' | 'data' | 'productivity' | 'other';
 export type ToolIcon = 'braces' | 'toolbox' | 'grid' | 'sparkles' | 'bolt' | 'heart' | 'filter' | 'lock' | 'shield' | 'search';
 export type ToolPermissionName = 'clipboard-read' | 'clipboard-write' | 'geolocation' | 'downloads' | 'camera-capture' | 'share-image' | 'external-assets' | 'wasm' | 'workers' | 'services' | 'wiki-read' | 'dns-query';
@@ -12,7 +13,7 @@ export type ToolTranslation = { name: string; description: string; guide?: ToolG
 export type ToolManifest = {
   schemaVersion: 2 | 3;
   runtimeVersion: 1;
-  locales: ('en' | 'id')[];
+  locales: ToolLocale[];
   appearance: { theme: 'host'; protocolVersion: 1 };
   id: string;
   name: string;
@@ -29,7 +30,7 @@ export type ToolManifest = {
   permissions: ToolPermission[];
   assets: ToolAsset[];
   services: ToolService[];
-  translations: Partial<Record<'en' | 'id', ToolTranslation>>;
+  translations: Partial<Record<ToolLocale, ToolTranslation>>;
   bundle: { format: 'html'; file: string; sha256: string };
   /** Host registration date (UTC ISO), used for "newest first" sorting. */
   addedAt?: string;

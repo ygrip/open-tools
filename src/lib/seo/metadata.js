@@ -43,7 +43,7 @@ export function safeJsonLd(value) {
 const applicationCategories = /** @type {Record<string, string>} */ ({ developer: 'DeveloperApplication', media: 'MultimediaApplication', data: 'BusinessApplication', productivity: 'UtilitiesApplication' });
 /** @param {{title:string,description:string,path:string,locale?:string,origin?:string,base?:string,image?:string,keywords?:string[],robots?:string,tool?:SeoTool}} options */
 export function seoMetadata(options) {
-  const locale = isSupportedLanguage(options.locale) ? options.locale : 'en';
+  const locale = options.locale && isSupportedLanguage(options.locale) ? options.locale : 'en';
   const origin = siteOrigin(options.origin);
   const base = options.base || '';
   const path = localePath(options.path, locale, base);
@@ -72,6 +72,6 @@ export function seoMetadata(options) {
   return { title, description: options.description, path, canonical, image,
     imageAlt: `${options.tool?.name || 'trick-it'} — ${options.description}`,
     keywords: (options.keywords || []).join(', '), robots: indexable ? 'index,follow' : 'noindex,nofollow',
-    locale: ({ en: 'en_US', id: 'id_ID', ms: 'ms_MY', fil: 'fil_PH', th: 'th_TH', vi: 'vi_VN', zh: 'zh_CN', my: 'my_MM', km: 'km_KH', lo: 'lo_LA', ja: 'ja_JP', hi: 'hi_IN' })[locale] ?? 'en_US', alternateLocale: locale === 'id' ? 'en_US' : 'id_ID',
+    locale: /** @type {Record<string, string>} */ ({ en: 'en_US', id: 'id_ID', ms: 'ms_MY', fil: 'fil_PH', th: 'th_TH', vi: 'vi_VN', zh: 'zh_CN', my: 'my_MM', km: 'km_KH', lo: 'lo_LA', ja: 'ja_JP', hi: 'hi_IN' })[locale] ?? 'en_US', alternateLocale: locale === 'id' ? 'en_US' : 'id_ID',
     alternates, defaultHref: origin ? `${origin}${localePath(options.path, 'en', base)}` : '', schema };
 }

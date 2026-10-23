@@ -91,9 +91,6 @@ test('language picker supports arrow navigation, modal focus and backdrop close'
   await expect(picker).not.toBeVisible();
   await expect(trigger).toBeFocused();
   await trigger.click();
-  await picker.locator('.language-dialog-inner').evaluate((node) => { node.scrollTop = 0; });
-  await picker.click({ position: { x: 2, y: 2 }, force: true });
-  // Clicking the panel edge is not necessarily the backdrop; the close button is always available.
   await picker.getByRole('button', { name: 'Close search' }).click();
   await expect(picker).not.toBeVisible();
 });

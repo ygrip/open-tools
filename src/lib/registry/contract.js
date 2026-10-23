@@ -1,4 +1,6 @@
+import { languageCodes } from '../languages.js';
 export const reservedIds = new Set(['api', 'policy', 'privacy', 'terms', 'bundles', 'icons', 'brand', 'illustrations', 'index', '404', '500', '503', '_app', 'offline', 'manifest', 'manifest-webmanifest', 'service-worker', 'pwa', 'id', 'og', 'robots', 'sitemap']);
+for (const code of languageCodes) if (code !== 'en') reservedIds.add(code);
 export const permissionNames = new Set(['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'external-assets', 'wasm', 'workers', 'services', 'wiki-read', 'dns-query']);
 export const iconNames = new Set(['braces', 'toolbox', 'grid', 'sparkles', 'bolt', 'heart', 'filter', 'lock', 'shield', 'search']);
 export const MAX_ASSET_BYTES = 128 * 1024 * 1024;
@@ -144,7 +146,7 @@ export function validateManifest(manifest) {
   if (manifest.translations !== undefined) {
     object(manifest.translations, 'translations');
     for (const [locale, value] of Object.entries(manifest.translations)) {
-      if (locale !== 'en' && locale !== 'id') throw new Error('unsupported translation locale');
+      if (!languageCodes.includes(locale)) throw new Error('unsupported translation locale');
       object(value, 'translation');
       translations[locale] = {
         name: text(value.name, 80, 'translated name'), description: text(value.description, 240, 'translated description'),
@@ -154,7 +156,7 @@ export function validateManifest(manifest) {
     }
   }
   const locales = manifest.locales ?? ['en'];
-  if (!Array.isArray(locales) || !locales.length || locales.length > 2 || new Set(locales).size !== locales.length || locales.some((locale) => locale !== 'en' && locale !== 'id')) throw new Error('invalid supported tool locales');
+  if (!Array.isArray(locales) || !locales.length || locales.length > languageCodes.length || new Set(locales).size !== locales.length || locales.some((locale) => !languageCodes.includes(locale))) throw new Error('invalid supported tool locales');
   return {
     schemaVersion: manifest.schemaVersion, runtimeVersion: 1, locales: [...locales], appearance: { theme: 'host', protocolVersion: 1 },
     id: manifest.id, name, description, path: manifest.path, category: manifest.category, repository: manifest.repository,
