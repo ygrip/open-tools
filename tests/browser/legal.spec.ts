@@ -14,6 +14,14 @@ for (const locale of ['en', 'id'] as const) {
       await expect(page.locator('.legal-lede')).not.toBeEmpty();
       await expect(page.locator('.legal-summary p')).not.toBeEmpty();
       await expect(page.locator('.legal-section')).toHaveCount(route === 'privacy' ? 7 : 5);
+      if (route === 'privacy') {
+        await expect(page.locator('.legal-sections')).toContainText('Google AdSense');
+        await expect(page.locator('a[href="https://policies.google.com/technologies/partner-sites"]')).toBeVisible();
+      }
+      if (route === 'policy') {
+        await expect(page.locator('.legal-sections')).toContainText('host');
+        await expect(page.locator('.legal-sections')).toContainText(/advertising|iklan/);
+      }
       const image = page.locator('.legal-hero-art');
       await expect(image).toHaveAttribute('alt', /.+/);
       const src = await image.getAttribute('src');

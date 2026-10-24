@@ -2,6 +2,8 @@
   import './app.css';
   import { onMount } from 'svelte';
   import { containHostZoom } from '$lib/host-zoom';
+  import { adsConfig } from '$lib/ads/settings.js';
+  import { installAdvertisingConsentBridge } from '$lib/ads/consent';
   import { browser } from '$app/environment';
   import { page } from '$app/state';
   import { getLocale, getLocaleForUrl, overwriteGetLocale } from '$lib/paraglide/runtime.js';
@@ -13,6 +15,9 @@
 
   let { children } = $props();
   onMount(() => containHostZoom(document));
+  onMount(() => {
+    if (adsConfig.enabled) return installAdvertisingConsentBridge();
+  });
   // Read SvelteKit's reactive URL so client-side locale navigation updates
   // translations without replacing a running tool's iframe.
   if (browser) overwriteGetLocale(() => getLocaleForUrl(page.url));

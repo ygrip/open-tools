@@ -1,5 +1,6 @@
 <script lang="ts">
   import SiteFooter from '$lib/components/SiteFooter.svelte';
+  import AdSlot from '$lib/components/AdSlot.svelte';
   import ShareButton from '$lib/components/ShareButton.svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
@@ -37,6 +38,7 @@
     <p>{m.tool_isolated()}</p>
     <a class="clay-button small" href={localizedPath('/policy/')}>{m.tool_policy_link()} <Icon name="arrow-right" size={18} /></a>
   </aside>
+  {#key tool.id}<AdSlot placement="tool" />{/key}
   <noscript>{m.tool_noscript()}</noscript>
   <SiteFooter />
 </main>

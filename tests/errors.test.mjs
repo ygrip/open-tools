@@ -9,6 +9,14 @@ function moduleUrl(source) {
 }
 const errorsUrl = moduleUrl(await readFile(new URL('../src/lib/errors.ts', import.meta.url), 'utf8'));
 const { errorPresentation, reportUnexpectedError } = await import(errorsUrl);
+const adsPolicyUrl = moduleUrl(await readFile(new URL('../src/lib/ads/config.js', import.meta.url), 'utf8'));
+const adsSettings = JSON.parse(await readFile(new URL('../config/ads.json', import.meta.url), 'utf8'));
+const adsSettingsUrl = moduleUrl(`import { validateAdsConfig } from '${adsPolicyUrl}'; export const adsConfig = validateAdsConfig(${JSON.stringify(adsSettings)});`);
+
+function withAdvertisingImports(source) {
+  return source.replace("from '$lib/ads/settings.js'", `from '${adsSettingsUrl}'`)
+    .replace("from '$lib/ads/config.js'", `from '${adsPolicyUrl}'`);
+}
 
 test('global errors have friendly status-specific messages and illustrated recovery states', () => {
   for (const status of [400, 401, 403, 404, 408, 429, 500, 502, 503]) {
@@ -29,7 +37,7 @@ test('client and server error hooks never expose raw exceptions, stacks, or secr
   console.error = (...args) => diagnostics.push(args);
   try {
     for (const kind of ['client', 'server']) {
-      const source = (await readFile(new URL(`../src/hooks.${kind}.ts`, import.meta.url), 'utf8'))
+      const source = withAdvertisingImports(await readFile(new URL(`../src/hooks.${kind}.ts`, import.meta.url), 'utf8'))
         .replace("from '$lib/errors'", `from '${errorsUrl}'`)
         .replace("from '$lib/paraglide/server.js'", `from '${moduleUrl("export const paraglideMiddleware = (request, callback) => callback({ request, locale: 'en' });")}'`)
         .replace("from '$lib/paraglide/runtime.js'", `from '${moduleUrl("export const getTextDirection = () => 'ltr';")}'`);
@@ -47,7 +55,7 @@ test('client and server error hooks never expose raw exceptions, stacks, or secr
 });
 
 test('server error responses retain their status and body and cannot be cached', async () => {
-  const source = (await readFile(new URL('../src/hooks.server.ts', import.meta.url), 'utf8')).replace("from '$lib/errors'", `from '${errorsUrl}'`);
+  const source = withAdvertisingImports(await readFile(new URL('../src/hooks.server.ts', import.meta.url), 'utf8')).replace("from '$lib/errors'", `from '${errorsUrl}'`);
   const middlewareUrl = moduleUrl(`export const paraglideMiddleware = (request, callback) => callback({ request, locale: 'en' });`);
   const runtimeUrl = moduleUrl(`export const getTextDirection = () => 'ltr';`);
   const wrapped = source

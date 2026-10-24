@@ -6,6 +6,7 @@
   import { localizedPath } from '$lib/i18n';
   import SiteHeader from '$lib/components/SiteHeader.svelte';
   import SiteFooter from '$lib/components/SiteFooter.svelte';
+  import AdSlot from '$lib/components/AdSlot.svelte';
   import SupportSection from '$lib/components/SupportSection.svelte';
   import { base } from '$app/paths';
   import Icon from '$lib/components/Icon.svelte';
@@ -189,6 +190,7 @@
       <ol class="how-steps"><li><span class="step-number peach">01</span><div><h3>{m.step_find()}</h3><p>{m.step_find_desc()}</p></div></li><li><span class="step-number mint">02</span><div><h3>{m.step_use()}</h3><p>{m.step_use_desc()}</p></div></li><li><span class="step-number lavender">03</span><div><h3>{m.step_done()}</h3><p>{m.step_done_desc()}</p></div></li></ol>
     </section>
 
+    <AdSlot placement="home" />
     <SupportSection />
   </main>
 

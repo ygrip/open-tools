@@ -33,7 +33,7 @@ export function legalCopy(kind: LegalKind, locale: LegalLocale) {
       { title: t.privacy_online_title, text: t.privacy_online_text },
       { title: t.privacy_protection_title, text: t.privacy_protection_text },
       { title: t.privacy_storage_title, text: t.privacy_storage_text },
-      { title: t.privacy_analytics_title, text: t.privacy_analytics_text },
+      { title: t.privacy_analytics_title, text: t.privacy_analytics_text, link: { href: 'https://policies.google.com/technologies/partner-sites', label: `Google · ${t.footer_privacy}` } },
       { title: t.privacy_links_title, text: t.privacy_links_text }
     ]
   };
