@@ -1,5 +1,6 @@
 import { base } from '$app/paths';
 import { getLocale, type Locale } from '$lib/paraglide/runtime.js';
+import { stripLanguagePrefix } from '$lib/languages.js';
 
 /**
  * Site-local, absolute navigation URLs for prerendered pages.
@@ -9,6 +10,6 @@ import { getLocale, type Locale } from '$lib/paraglide/runtime.js';
  */
 export function localizedPath(pathname: string, locale: Locale = getLocale()): string {
   const path = pathname.startsWith('/') ? pathname : `/${pathname}`;
-  const unprefixed = path.replace(/^\/id(?=\/|$)/, '') || '/';
-  return `${base}${locale === 'id' ? `/id${unprefixed}` : unprefixed}`;
+  const unprefixed = stripLanguagePrefix(path);
+  return `${base}${locale === 'en' ? unprefixed : `/${locale}${unprefixed}`}`;
 }

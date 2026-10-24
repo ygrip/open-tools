@@ -13,7 +13,7 @@
   import Seo from '$lib/components/Seo.svelte';
   import Pagination from '$lib/components/Pagination.svelte';
   import { getPagination } from '$lib/pagination.js';
-  import { categories, tools } from '$lib/registry/tools';
+  import type { PageData } from './$types';
   import ToolArt from '$lib/components/ToolArt.svelte';
   import { readRecentEntries, relativeTime, clearRecentTools, readToolSort, saveToolSort, sortTools, toolSorts, type ToolSort } from '$lib/recent';
 
@@ -24,6 +24,9 @@
     return (hash % 12) * 30 + 12;
   }
 
+  let { data }: { data: PageData } = $props();
+  const categories = $derived(data.categories);
+  const tools = $derived(data.tools);
   const pageSize = 6;
   let currentPage = $state(1);
   let selectedCategory = $state('all');
@@ -31,12 +34,12 @@
   let searchOpen = $state(false);
   let searchError = $state('');
   let SearchOverlay = $state<typeof import('$lib/components/SearchOverlay.svelte').default | null>(null);
-  const categoryNames: Record<string, string> = { all: m.category_all(), data: m.category_data(), developer: m.category_developer(), media: m.category_media(), productivity: m.category_productivity(), other: m.category_other() };
-  const catalog = $derived(tools.map((tool) => localizedTool(tool, getLocale())));
+  const categoryNames: Record<string, string> = $derived({ all: m.category_all(), data: m.category_data(), developer: m.category_developer(), media: m.category_media(), productivity: m.category_productivity(), other: m.category_other() });
+  const catalog = $derived(data.tools.map((tool) => localizedTool(tool, getLocale())));
   // Browser-only preferences: hydrated after mount so prerendered HTML stays deterministic.
   let recentEntries = $state<{ id: string; at?: number }[]>([]);
   let sortOrder = $state<ToolSort>('az');
-  const sortNames: Record<ToolSort, string> = { az: m.sort_az(), za: m.sort_za(), newest: m.sort_newest(), oldest: m.sort_oldest() };
+  const sortNames: Record<ToolSort, string> = $derived({ az: m.sort_az(), za: m.sort_za(), newest: m.sort_newest(), oldest: m.sort_oldest() });
   const recentTools = $derived(recentEntries.flatMap((entry) => { const tool = catalog.find((item) => item.id === entry.id); return tool ? [{ tool, when: relativeTime(entry.at, getLocale()) }] : []; }));
   const filteredTools = $derived(sortTools(catalog, sortOrder, getLocale()).filter((tool) =>
     (selectedCategory === 'all' || tool.category === selectedCategory) &&

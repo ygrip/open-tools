@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getLocale } from '$lib/paraglide/runtime.js';
+  import { getLocale, type Locale } from '$lib/paraglide/runtime.js';
   import config from '$lib/seo/generated.json';
   import { seoMetadata, safeJsonLd } from '$lib/seo/metadata.js';
 
@@ -11,11 +11,11 @@
     keywords?: string[];
     robots?: 'index' | 'noindex';
     tool?: { id: string; name: string; version: string; category: string; description?: string; locales?: string[]; capabilities?: string[]; addedAt?: string };
-    locale?: 'en' | 'id';
+    locale?: Locale;
   } = $props();
   const generatedImages: Record<string, string> = config.images;
   const language = $derived(locale ?? getLocale());
-  const socialImage = $derived(image ?? generatedImages[`${tool ? `tools/${tool.id}` : 'home'}-${language}`]);
+  const socialImage = $derived(image ?? generatedImages[`${tool ? `tools/${tool.id}` : 'home'}-${language}`] ?? generatedImages[`${tool ? `tools/${tool.id}` : 'home'}-en`]);
   const toolIcons: Record<string, string> = (config as { icons?: Record<string, string> }).icons ?? {};
   const toolIcon = $derived(tool ? toolIcons[tool.id] : undefined);
   const metadata = $derived(seoMetadata({ title, description, path, image: socialImage, keywords, robots, tool, locale: language, origin: config.origin, base: config.base }));

@@ -19,7 +19,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
   const frameLocale = $derived(tool.locales?.includes(locale) ? locale : tool.locales?.[0] ?? 'en');
   const permissions = $derived(tool.permissions ?? []);
   const assets = $derived(tool.assets ?? []);
-  const release = $derived(JSON.stringify([tool.id, tool.version, tool.bundle.sha256, tool.permissions, tool.assets, tool.services]));
+  const release = $derived(JSON.stringify([tool.id, tool.version, tool.bundle.sha256, tool.permissions, tool.assets, tool.localePacks, tool.services]));
   let mounted = $state(false);
   let frame = $state<HTMLIFrameElement | null>(null);
   let frameDocument = $state('');
@@ -99,6 +99,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
       let reportedAt = -Infinity;
       promise = loadAsset(tool, asset, {
         signal,
+        deploymentUrl: new URL(`${base}/`, window.location.origin).href,
         onProgress: (bytes, phase = 'loading') => {
           if (current !== session.generation || signal.aborted) return;
           const now = performance.now();

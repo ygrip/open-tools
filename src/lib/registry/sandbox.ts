@@ -5,6 +5,7 @@ import { codeBlockScript, codeBlockStyles } from './ui-code-block';
 import { highlightRuntime } from './highlight-runtime';
 import { DOWNLOAD_LIMITS } from '../runtime/download-policy';
 import { TOOL_ZOOM } from '../runtime/tool-zoom';
+import { languageCodes, isSupportedLanguage } from '../languages.js';
 
 // The policy precedes tool markup and cannot be relaxed by a later meta tag.
 // Opaque-origin sandboxing is also mandatory: never add allow-same-origin.
@@ -65,7 +66,8 @@ export type RuntimeOptions = { locale?: string; token?: string; permissions?: re
 
 export function sandboxDocument(html: string, initialTheme: Theme = 'light', options: RuntimeOptions = {}): string {
   const theme = isTheme(initialTheme) ? initialTheme : 'light';
-  const locale = options.locale === 'id' ? 'id' : 'en';
+  let locale = 'en';
+  if (options.locale && isSupportedLanguage(options.locale)) locale = options.locale;
   const initialZoom = Number.isInteger(options.zoomPercent) && (options.zoomPercent ?? 0) >= TOOL_ZOOM.min && (options.zoomPercent ?? 0) <= TOOL_ZOOM.max ? options.zoomPercent! : TOOL_ZOOM.default;
   const permissions = options.permissions ?? [];
   let policy = bundlePolicy;
@@ -76,6 +78,7 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
   const config = JSON.stringify({ token, permissions: permissions.filter((name) => ['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'external-assets', 'wasm', 'workers', 'services', 'wiki-read', 'dns-query'].includes(name)) }).replaceAll('<', '\\u003c');
   const sdk = `(() => {
     const config = ${config};
+    const supportedLocales = ${JSON.stringify(languageCodes)};
     const downloadLimits = Object.freeze(${JSON.stringify({ ...DOWNLOAD_LIMITS, maxBytes: options.nativeDownloads ? DOWNLOAD_LIMITS.maxBytes : DOWNLOAD_LIMITS.bufferedMaxBytes })});
     const pending = new Map(); let sequence = 0;
     const activeDownloads = new Map();
@@ -83,7 +86,7 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
     addEventListener('message', event => {
       if (event.source !== parent) return;
       const data = event.data;
-      if (data?.type === 'trick-it:locale' && data.version === 1 && (data.locale === 'en' || data.locale === 'id') && data.locale !== document.documentElement.lang) {
+      if (data?.type === 'trick-it:locale' && data.version === 1 && supportedLocales.includes(data.locale) && data.locale !== document.documentElement.lang) {
         document.documentElement.lang = data.locale;
         dispatchEvent(new CustomEvent('trick-it:localechange', { detail: { locale: data.locale } }));
       }
@@ -111,13 +114,13 @@ export function sandboxDocument(html: string, initialTheme: Theme = 'light', opt
         return downloadStream({ filename: payload.filename, mime: payload.mime, size: bytes.byteLength,
           chunks: (async function* () { yield bytes; })(), onProgress });
       }
-      const hostUi = operation === 'ui-toast' || operation === 'ui-dialog';
+      const hostUi = operation === 'ui-toast' || operation === 'ui-dialog' || operation === 'locale-pack';
       if (!config.token || (!hostUi && operation !== 'asset' && !config.permissions.includes(operation) && !(operation.startsWith('download-') && config.permissions.includes('downloads'))) || (operation === 'asset' && !config.permissions.includes('external-assets'))) return Promise.reject(new Error('Permission not granted.'));
       if (pending.size >= 16 && operation !== 'download-cancel') return Promise.reject(new Error('Too many pending requests.'));
       const id = String(++sequence);
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => { pending.delete(id); reject(new Error('Capability request timed out.')); }, 330000);
-        const focusTarget = operation !== 'asset' && operation !== 'ui-toast' && document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        const focusTarget = operation !== 'asset' && operation !== 'locale-pack' && operation !== 'ui-toast' && document.activeElement instanceof HTMLElement ? document.activeElement : null;
         pending.set(id, { resolve, reject, timer, operation, onProgress, focusTarget });
         try { parent.postMessage({ type: 'trick-it:request', version: 1, token: config.token, id, operation, payload }, '*', transfer); }
         catch { clearTimeout(timer); pending.delete(id); reject(new Error('Invalid capability payload.')); }
@@ -184,7 +187,7 @@ ${uiKitScript}
         if (!produced) { try { Promise.resolve(iterator?.return?.()).catch(() => undefined); } catch {} }
       }
     }
-    Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, downloadStream, downloadLimits, ui, asset: (id, options = {}) => request('asset', { id }, options.onProgress), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
+    Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, downloadStream, downloadLimits, ui, asset: (id, options = {}) => request('asset', { id }, options.onProgress), localePack: locale => request('locale-pack', { locale }), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
   })();`;
   // Host controls can only change an existing isolated frame. No reload and no
   // permission escalation; browser/page zoom remains under the user's control.

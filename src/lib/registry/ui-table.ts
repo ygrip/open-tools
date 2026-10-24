@@ -1,3 +1,5 @@
+import { tableCopies, serializeCopies } from './ui-copy';
+
 /**
  * Shared sandbox table with an integrated control pane.
  * Injected by the host, not bundled into individual tools.
@@ -45,15 +47,16 @@ export const tableStyles = `
 `;
 
 export const tableScript = `
-    const tableCopy = {
-      en: { search: 'Search records', columns: 'Columns', rows: 'Rows', density: 'Density', comfortable: 'Comfortable', compact: 'Compact', copy: 'Copy', page: 'Page', of: 'of', showing: 'Showing', noResults: 'No matching rows.', previous: 'Previous page', next: 'Next page', sortAsc: 'Sort ascending', sortDesc: 'Sort descending' },
-      id: { search: 'Cari data', columns: 'Kolom', rows: 'Baris', density: 'Kerapatan', comfortable: 'Normal', compact: 'Ringkas', copy: 'Salin', page: 'Halaman', of: 'dari', showing: 'Menampilkan', noResults: 'Tidak ada baris yang cocok.', previous: 'Halaman sebelumnya', next: 'Halaman berikutnya', sortAsc: 'Urut naik', sortDesc: 'Urut turun' }
-    };
+    const tableCopy = ${serializeCopies(tableCopies)};
     function table(target, options = {}) {
       const host = typeof target === 'string' ? document.querySelector(target) : target;
       if (!(host instanceof Element)) throw new TypeError('trickIt.ui.table needs a target element.');
       const make = (tag, cls) => { const node = document.createElement(tag); if (cls) node.className = cls; return node; };
-      const copy = () => tableCopy[document.documentElement.lang === 'id' ? 'id' : 'en'];
+      function copy() {
+        const locale = document.documentElement.lang;
+        if (Object.hasOwn(tableCopy, locale)) return tableCopy[locale];
+        return tableCopy.en;
+      }
       const root = make('div', 'ti-grid');
       root.dataset.density = options.density === 'compact' ? 'compact' : 'comfortable';
       const toolbar = make('div', 'ti-grid-toolbar');

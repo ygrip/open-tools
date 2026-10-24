@@ -1,217 +1,195 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { browser } from '$app/environment';
-  import { getLocale, locales } from '$lib/paraglide/runtime.js';
+  import { onMount, tick } from 'svelte';
+  import { getLocale, locales, type Locale } from '$lib/paraglide/runtime.js';
   import { localizedPath } from '$lib/i18n';
+  import { languages } from '$lib/languages.js';
   import { m } from '$lib/paraglide/messages.js';
   import ClayFlag from './ClayFlag.svelte';
   import Icon from './Icon.svelte';
 
-  // Desktop gets a compact, accessible popover. The mobile quick-settings
-  // control continues to use the two direct language links.
-  let { popover = false }: { popover?: boolean } = $props();
-  type Locale = (typeof locales)[number];
-  const labels: Record<Locale, string> = { en: 'English', id: 'Bahasa Indonesia' };
+  // Mobile quick settings closes before this modal opens. Both viewports use
+  // this exact same searchable dialog, with one scrollable results area.
+  let { onopen, onclose }: { onopen?: () => void; onclose?: () => void } = $props();
   const uid = $props.id();
-  const panelId = uid + '-language-panel';
-  let open = $state(false);
-  let root: HTMLElement;
+  const titleId = uid + '-language-title';
+  let dialog = $state<HTMLDialogElement | undefined>(undefined);
   let trigger = $state<HTMLButtonElement | undefined>(undefined);
+  let searchInput = $state<HTMLInputElement | undefined>(undefined);
+  let query = $state('');
+  let open = $state(false);
+  let ready = $state(false);
+  onMount(() => { ready = true; });
+  const current = $derived(languages.find((item) => item.code === getLocale()) ?? languages[0]);
+  const visible = $derived(languages.filter((item) =>
+    locales.includes(item.code as Locale) &&
+    [item.native, item.english, item.code, item.aliases].join(' ').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(query.trim().toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
+  ));
 
   function href(locale: Locale) {
     return localizedPath(page.url.pathname, locale) + (browser ? page.url.search + page.url.hash : '');
   }
 
-  function close(restoreFocus = false) {
+  async function show() {
+    onopen?.();
+    await tick();
+    query = '';
+    dialog?.showModal();
+    open = true;
+    await tick();
+    searchInput?.focus();
+  }
+
+  function close() {
+    dialog?.close();
     open = false;
-    if (restoreFocus) trigger?.focus();
+    // On mobile the quick-settings menu has already collapsed, so its
+    // language trigger is hidden. Restore focus to the visible settings button.
+    if (onclose) onclose();
+    else trigger?.focus();
+  }
+
+  // A modal nested inside a collapsed quick-settings item inherits its
+  // visibility:hidden and inert state. Portalling the dialog into <body>
+  // gives desktop and mobile identical top-layer focus/visibility behavior.
+  function portal(node: HTMLDialogElement) {
+    document.body.appendChild(node);
+    return { destroy: () => node.remove() };
   }
 
   function onKeydown(event: KeyboardEvent) {
-    if (!popover) return;
-    if (event.key === 'Escape' && open) {
+    if (event.key === 'Escape') {
       event.preventDefault();
-      close(true);
+      close();
       return;
     }
-    if (!open || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
-    const options = Array.from(root.querySelectorAll<HTMLAnchorElement>('.language-option'));
-    const index = options.indexOf(document.activeElement as HTMLAnchorElement);
-    const direction = event.key === 'ArrowDown' ? 1 : -1;
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    const options = Array.from(dialog?.querySelectorAll<HTMLAnchorElement>('.language-option') ?? []);
+    const selected = options.indexOf(document.activeElement as HTMLAnchorElement);
     if (!options.length) return;
     event.preventDefault();
-    options[index < 0 ? (direction > 0 ? 0 : options.length - 1) : (index + direction + options.length) % options.length].focus();
-  }
-
-  function onFocusOut(event: FocusEvent) {
-    if (popover && open && (!event.relatedTarget || !root.contains(event.relatedTarget as Node))) {
-      close();
-    }
-  }
-
-  function onOutsidePointerDown(event: PointerEvent) {
-    if (popover && open && !root.contains(event.target as Node)) close();
+    const next = selected < 0 ? (event.key === 'ArrowDown' ? 0 : options.length - 1)
+      : (selected + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+    options[next]?.focus();
   }
 </script>
 
-<svelte:window onpointerdowncapture={onOutsidePointerDown} />
+<nav class="language-switcher" aria-label={m.languages()}>
+  <button bind:this={trigger} class="language-trigger" type="button"
+    aria-label={m.languages() + ': ' + current.native} aria-haspopup="dialog" aria-expanded={open} disabled={!ready}
+    onclick={show}>
+    <span class="trigger-globe"><Icon name="globe" size={22} /></span>
+    <span class="trigger-flag"><ClayFlag locale={getLocale()} size={23} /></span>
+  </button>
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<nav bind:this={root} class="language-switcher" class:language-popover={popover} aria-label={m.languages()} onkeydown={onKeydown} onfocusout={onFocusOut}>
-  {#if popover}
-    <button bind:this={trigger} class="language-trigger" type="button"
-      aria-label={m.languages() + ': ' + labels[getLocale()]}
-      aria-expanded={open} aria-controls={open ? panelId : undefined}
-      onclick={() => (open = !open)}>
-      <span class="trigger-globe"><Icon name="globe" size={22} /></span>
-      <span class="trigger-flag"><ClayFlag locale={getLocale()} size={23} /></span>
-    </button>
-    {#if open}
-      <div id={panelId} class="language-panel" role="group" aria-label={m.languages()}>
-        <span class="language-title">{m.languages()}</span>
-        {#each locales as locale}
-          <a class="language-option" href={href(locale)} hreflang={locale} lang={locale}
-            aria-current={getLocale() === locale ? 'page' : undefined} data-sveltekit-reload>
-            <ClayFlag {locale} size={34} />
-            <span class="option-label">{labels[locale]}</span>
-            {#if getLocale() === locale}<Icon name="check" size={17} />{/if}
+  <dialog bind:this={dialog} use:portal class="language-dialog surface" aria-labelledby={titleId}
+    onkeydown={onKeydown}
+    oncancel={(event) => { event.preventDefault(); close(); }}
+    onclick={(event) => { if (event.target === dialog) close(); }}
+    onclose={() => { open = false; }}>
+    <div class="language-dialog-inner">
+      <div class="language-heading">
+        <div class="language-heading-copy">
+          <span class="language-heading-icon"><Icon name="globe" size={22} /></span>
+          <h2 id={titleId}>{m.languages()}</h2>
+        </div>
+        <button type="button" class="language-close" aria-label={m.overlay_close()} onclick={close}><Icon name="x" size={19} /></button>
+      </div>
+      <label class="language-search">
+        <Icon name="search" size={21} />
+        <span class="sr-only">{m.language_search()}</span>
+        <input bind:this={searchInput} type="search" bind:value={query} autocomplete="off"
+          placeholder={m.language_search()} aria-label={m.language_search()} />
+      </label>
+      <div class="language-results" role="group" aria-label={m.languages()}>
+        {#each visible as item (item.code)}
+          <a class="language-option" href={href(item.code as Locale)} hreflang={item.code} lang={item.code}
+            aria-current={getLocale() === item.code ? 'page' : undefined} onclick={close}>
+            <span class="language-option-flag"><ClayFlag locale={item.code} size={37} /></span>
+            <span class="language-option-copy"><strong>{item.native}</strong><small>{item.english === item.native ? item.code.toUpperCase() : item.english}</small></span>
+            {#if getLocale() === item.code}<span class="language-selected"><Icon name="check" size={18} /></span>{/if}
           </a>
+        {:else}
+          <p class="language-empty" role="status">{m.language_empty()}</p>
         {/each}
       </div>
-    {/if}
-  {:else}
-    {#each locales as locale}
-      <a href={href(locale)} aria-current={getLocale() === locale ? 'page' : undefined}
-        hreflang={locale} lang={locale} data-sveltekit-reload>
-        <ClayFlag {locale} size={28} />
-        <span class="language-code">{locale.toUpperCase()}</span>
-        <span class="sr-only"> {labels[locale]}</span>
-      </a>
-    {/each}
-  {/if}
+      <p class="language-tip">{m.language_hint()}</p>
+    </div>
+  </dialog>
 </nav>
 
 <style>
-  .language-switcher {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 4px;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    background: var(--surface);
-    white-space: nowrap;
-  }
-  .language-switcher:not(.language-popover) a {
-    min-width: 40px;
-    min-height: 40px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    padding: 0 3px;
-    border-radius: 10px;
-    font-size: 11px;
-    font-weight: 850;
-    color: var(--muted);
-    text-decoration: none;
-  }
-  .language-switcher:not(.language-popover) a[aria-current='page'] {
-    background: var(--peach);
-    color: var(--text);
-  }
-  .language-code { font-size: 10px; }
-  .language-switcher a:focus-visible, .language-trigger:focus-visible {
-    outline: 3px solid var(--accent-strong);
-    outline-offset: 2px;
-  }
-
-  .language-popover {
-    position: relative;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    flex: 0 0 auto;
-  }
+  .language-switcher { position: relative; flex: 0 0 auto; }
   .language-trigger {
-    position: relative;
-    display: grid;
-    place-items: center;
-    width: 48px;
-    height: 48px;
-    padding: 0;
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    background: var(--surface);
-    color: var(--text);
+    position: relative; display: grid; place-items: center; width: 48px; height: 48px;
+    padding: 0; border: 1px solid var(--line); border-radius: 16px;
+    background: var(--surface); color: var(--text);
     box-shadow: 0 3px 0 var(--line), inset 1px 2px 2px var(--highlight);
     cursor: pointer;
     transition: transform var(--duration-quick) var(--ease-smooth-out), background var(--duration-quick) var(--ease-smooth-out);
   }
   .language-trigger:hover { transform: translateY(-2px); background: var(--surface-strong); }
-  .language-trigger:active { transform: translateY(2px); }
-  .language-trigger[aria-expanded='true'] { background: var(--peach); }
+  .language-trigger:active { transform: translateY(1px); }
+  .language-trigger:focus-visible, .language-close:focus-visible, .language-option:focus-visible,
+  .language-search:focus-within { outline: 3px solid var(--accent-strong); outline-offset: 2px; }
   .trigger-globe { display: grid; place-items: center; transform: translate(-3px, -3px); }
-  .trigger-flag {
-    position: absolute;
-    right: 2px;
-    bottom: 2px;
-    padding: 2px 1px;
-    background: var(--surface);
-    border-radius: 5px;
-    pointer-events: none;
-  }
+  .trigger-flag { position: absolute; right: 2px; bottom: 2px; padding: 2px 1px; background: var(--surface); border-radius: 5px; pointer-events: none; }
 
-  .language-panel {
-    position: absolute;
-    z-index: 50;
-    top: calc(100% + 13px);
-    right: 0;
-    width: max-content;
-    min-width: 246px;
-    padding: 10px;
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    background: var(--surface-strong);
-    color: var(--text);
-    box-shadow: 0 5px 0 -1px var(--line), 0 20px 35px -14px var(--shadow), inset 2px 3px 2px var(--highlight);
-    transform-origin: right top;
-    animation: language-in var(--duration-fast) var(--ease-smooth-out);
+  /* Native modal places the selector above quick-settings/backdrop and traps focus. */
+  .language-dialog {
+    position: fixed; inset: 0; margin: auto; box-sizing: border-box;
+    width: min(480px, calc(100vw - 28px)); max-width: none;
+    height: min(640px, calc(100dvh - 44px)); max-height: none;
+    padding: 0; color: var(--text); background: var(--surface-strong);
+    border: 1px solid var(--line); border-radius: 24px;
+    box-shadow: 0 6px 0 -1px var(--line), 0 24px 60px -15px var(--shadow), inset 2px 3px 2px var(--highlight);
+    overscroll-behavior: contain;
   }
-  .language-title {
-    display: block;
-    padding: 4px 11px 9px;
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 850;
+  .language-dialog::backdrop { background: rgb(18 21 28 / .54); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+  .language-dialog[open] { animation: language-enter var(--duration-fast) var(--ease-smooth-out); }
+  .language-dialog-inner { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+  .language-heading {
+    flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center;
+    padding: 17px 18px 10px; gap: 12px;
+  }
+  .language-heading-copy { display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .language-heading-icon { display: grid; place-items: center; width: 38px; height: 38px; color: var(--accent-strong); background: var(--peach); border-radius: 13px; }
+  .language-heading h2 { margin: 0; font-size: 18px; font-weight: 850; }
+  .language-close { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 13px; border: 1px solid var(--line); background: var(--surface); color: var(--text); display: grid; place-items: center; cursor: pointer; }
+  .language-search {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 10px; margin: 5px 18px 10px; padding: 0 13px;
+    min-height: 52px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); color: var(--muted);
+  }
+  .language-search input {
+    width: 100%; min-width: 0; height: 50px; background: transparent; border: none;
+    outline: none; color: var(--text); font: inherit; font-size: 15px;
+  }
+  .language-search input::placeholder { color: var(--muted); }
+  .language-results {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-gutter: stable; padding: 2px 12px 12px 18px; display: flex; flex-direction: column; gap: 4px;
   }
   .language-option {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-height: 52px;
-    padding: 9px 10px;
-    border-radius: 13px;
-    color: var(--text);
-    font-size: 14px;
-    font-weight: 850;
-    text-decoration: none;
+    display: flex; align-items: center; min-height: 63px; gap: 12px; padding: 9px 11px;
+    border-radius: 15px; color: var(--text); text-decoration: none;
     transition: background var(--duration-quick) var(--ease-smooth-out);
   }
-  .language-option:hover, .language-option:focus-visible { background: var(--peach); }
-  .language-option[aria-current='page'] { background: var(--peach); }
-  .option-label { flex: 1; }
-  .language-option :global(svg:last-child:not(:first-child)) { color: var(--accent-strong); }
-  @keyframes language-in {
-    from { opacity: 0; transform: translateY(-5px) scale(.97); }
-    to { opacity: 1; transform: none; }
+  .language-option:hover, .language-option:focus-visible, .language-option[aria-current='page'] { background: var(--peach); }
+  .language-option-flag { width: 48px; height: 43px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 12px; background: var(--surface); box-shadow: inset 0 2px 2px var(--highlight), 0 2px 0 var(--line); }
+  .language-option-copy { display: grid; gap: 3px; min-width: 0; flex: 1; }
+  .language-option-copy strong { font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+  .language-option-copy small { font-size: 12px; color: var(--muted); }
+  .language-selected { color: var(--accent-strong); flex: 0 0 auto; }
+  .language-empty { padding: 28px 12px; text-align: center; color: var(--muted); }
+  .language-tip { margin: 0; padding: 12px 20px 15px; flex: 0 0 auto; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+  @keyframes language-enter { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+  @media (max-width: 480px) {
+    .language-dialog { height: min(620px, calc(100dvh - 24px)); border-radius: 20px; }
+    .language-results { padding-left: 10px; padding-right: 6px; }
+    .language-option { min-height: 61px; }
   }
-  @media (prefers-reduced-motion: reduce) {
-    .language-panel { animation: none; }
-    .language-trigger, .language-option { transition: none; }
-  }
-  @media (forced-colors: active) {
-    .language-trigger, .language-panel, .language-option[aria-current='page'] { border: 1px solid ButtonText; }
-  }
+  @media (prefers-reduced-motion: reduce) { .language-dialog[open] { animation: none; } .language-trigger, .language-option { transition: none; } }
+  @media (forced-colors: active) { .language-trigger, .language-option[aria-current='page'], .language-dialog { border: 1px solid ButtonText; } }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 </style>

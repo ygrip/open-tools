@@ -6,7 +6,9 @@ export function appPath(url, base = '') {
 export function bundlePath(url, base = '') { return /^\/bundles\/[a-z0-9-]+\/[a-f0-9]{64}\.json$/.test(appPath(url, base)); }
 /** Only these resources can safely be shared across app releases. @param {URL} url @param {string} base */
 export function immutablePath(url, base = '') {
-  return /^\/_app\/immutable\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_.-]+\.(?:js|css|woff2?|png|svg|webp|avif)$/.test(appPath(url, base));
+  const path = appPath(url, base);
+  return /^\/_app\/immutable\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_.-]+\.(?:js|css|woff2?|png|svg|webp|avif)$/.test(path) ||
+    /^\/bundles\/[a-z0-9]+(?:-[a-z0-9]+)*\/locales\/[a-f0-9]{64}\.json$/.test(path);
 }
 /** Version discovery must never be answered from a release-pinned offline cache. @param {URL} url @param {string} base */
 export function mutableReleasePath(url, base = '') {

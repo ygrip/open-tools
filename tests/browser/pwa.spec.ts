@@ -165,7 +165,7 @@ test('desktop language picker shows flags and preserves the current route', asyn
   await expect(trigger).toBeVisible();
   await expect(trigger.locator('img.clay-flag')).toHaveAttribute('src', /\/brand\/flag-en\.svg$/);
   await trigger.click();
-  const panel = switcher.getByRole('group', { name: 'Languages' });
+  const panel = page.getByRole('dialog', { name: 'Languages' });
   await expect(panel.getByRole('link', { name: 'English' }).locator('img.clay-flag')).toHaveAttribute('src', /\/brand\/flag-en\.svg$/);
   await expect(panel.getByRole('link', { name: 'Bahasa Indonesia' }).locator('img.clay-flag')).toHaveAttribute('src', /\/brand\/flag-id\.svg$/);
   await panel.getByRole('link', { name: 'Bahasa Indonesia' }).click();
@@ -173,12 +173,16 @@ test('desktop language picker shows flags and preserves the current route', asyn
   await expect(page.locator('html')).toHaveAttribute('lang', 'id');
 });
 
-test('mobile quick settings keeps a flagged two-choice language switcher', async ({ page }) => {
+test('mobile quick settings opens a filterable flagged language dialog', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
   const settings = page.locator('.header-actions > .quick-settings');
   await settings.locator('.qs-trigger').click();
-  const choices = settings.locator('.qs-panel .language-switcher');
+  const trigger = settings.getByRole('button', { name: 'Languages: English' });
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+  const choices = page.getByRole('dialog', { name: 'Languages' });
+  await expect(choices.getByRole('searchbox', { name: 'Search languages…' })).toBeFocused();
   await expect(choices.locator('a[hreflang="en"] img.clay-flag')).toHaveAttribute('src', /\/brand\/flag-en\.svg$/);
   await expect(choices.locator('a[hreflang="id"] img.clay-flag')).toHaveAttribute('src', /\/brand\/flag-id\.svg$/);
   await choices.locator('a[hreflang="id"]').click();

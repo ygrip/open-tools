@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createToolRuntimeHost } from '$lib/runtime/host.svelte';
-  import type { RuntimeTool } from '$lib/runtime/core';
+  import type { RuntimePermission, RuntimeTool } from '$lib/runtime/core';
   import type { WikiReadRequest } from '$lib/runtime/wiki';
   import type { StreamStart } from '$lib/runtime/downloads';
   import { DOWNLOAD_LIMITS } from '$lib/runtime/download-policy';
@@ -15,6 +15,16 @@
   const text = $derived(runtimeStrings(locale));
   let zoomPercent = $state<number>(TOOL_ZOOM.default);
   const host = createToolRuntimeHost(() => tool, () => locale, () => zoomPercent);
+  function permissionReason(permission: RuntimePermission) {
+    return tool.translations?.[locale]?.permissionReasons?.[permission.name] ?? permission.reason;
+  }
+  const pendingReason = $derived.by(() => {
+    let operation = host.pending?.operation;
+    if (operation === 'download-begin') operation = 'downloads';
+    const permission = host.permissions.find((item) => item.name === operation);
+    if (permission) return permissionReason(permission);
+    return undefined;
+  });
 </script>
 
 {#if host.frameLocale !== locale}<p class="runtime-notice" role="status">{text.languageFallback}</p>{/if}
@@ -33,7 +43,7 @@
     <h2 id="runtime-consent-title">{text.permissions}</h2>
     <p>{text.permissionHelp}</p>
     {#each host.startupPermissions as permission}
-      <label class="permission"><input type="checkbox" value={permission.name} required={permission.required} bind:group={host.selected} /><span><strong>{text.labels[permission.name]}</strong> <small>({permission.required ? text.required : text.optional})</small><span>{permission.reason}</span></span></label>
+      <label class="permission"><input type="checkbox" value={permission.name} required={permission.required} bind:group={host.selected} /><span><strong>{text.labels[permission.name]}</strong> <small>({permission.required ? text.required : text.optional})</small><span>{permissionReason(permission)}</span></span></label>
     {/each}
     {#if host.assets.length}
       <h3>{text.assets}</h3><p>{text.assetHelp}</p>
@@ -85,16 +95,17 @@
     <h2 id="runtime-operation-title">{text.confirm}</h2>
     <p><strong>{tool.name}: {text.labels[(host.pending.operation === 'download-begin' ? 'downloads' : host.pending.operation) as keyof typeof text.labels]}</strong></p>
     <p>{host.pendingAsk ? text.rememberHelp : text.confirmHelp}</p>
-    {#if host.pendingService && host.pendingInput}<p>{host.pendingService.handler === 'tracker-audit' ? (locale === 'id' ? 'URL publik akan diperiksa oleh Google PageSpeed Insights dan Worker trick-it. Google dapat memuat skrip halaman dalam browser uji terisolasi. Jangan gunakan URL privat atau bertanda tangan.' : 'The public URL is sent to Google PageSpeed Insights and inspected by the trick-it Worker. Google may load page scripts in an isolated test browser. Do not submit private or signed URLs.') : text.seoHelp}</p><pre>{host.pendingInput.url}</pre><p>{host.pendingInput.strategy === 'mobile' ? text.seoMobile : text.seoDesktop} · {text.serviceLimit}: {host.pendingService.rateLimit.limit} / {host.pendingService.rateLimit.periodSeconds}s</p>{#if host.pendingService.turnstile}<ServiceChallenge endpoint={host.serviceEndpoint(host.pendingService.id)} version={tool.version} sha256={tool.bundle.sha256} {locale} onToken={(token) => host.verificationToken = token} />{/if}{/if}
+    {#if pendingReason}<p>{pendingReason}</p>{/if}
+    {#if host.pendingService && host.pendingInput}<p>{host.pendingService.handler === 'tracker-audit' ? text.trackerHelp : text.seoHelp}</p><pre>{host.pendingInput.url}</pre><p>{host.pendingInput.strategy === 'mobile' ? text.seoMobile : text.seoDesktop} · {text.serviceLimit}: {host.pendingService.rateLimit.limit} / {host.pendingService.rateLimit.periodSeconds}s</p>{#if host.pendingService.turnstile}<ServiceChallenge endpoint={host.serviceEndpoint(host.pendingService.id)} version={tool.version} sha256={tool.bundle.sha256} {locale} onToken={(token) => host.verificationToken = token} />{/if}{/if}
     {#if host.pending.operation === 'clipboard-write'}<pre>{(host.pending.payload as string).slice(0, 240)}</pre>{/if}
-    {#if host.pending.operation === 'dns-query'}<p>{locale === 'id' ? 'Nama host dikirim ke resolver DNS-over-HTTPS publik (Cloudflare, termasuk resolver keamanannya, dan Google). Situs itu sendiri tidak dihubungi.' : 'The hostname is sent to public DNS-over-HTTPS resolvers (Cloudflare, including its security-filtering resolver, and Google). The site itself is not contacted.'}</p>{/if}
-    {#if host.pending.operation === 'wiki-read'}<p>{locale === 'id' ? 'Situs tujuan akan menerima permintaan dari browser Anda. Tidak ada proxy server.' : 'Your browser will contact this wiki directly. No server proxy is used.'}</p><pre>{(host.pending.payload as WikiReadRequest).site}
+    {#if host.pending.operation === 'dns-query'}<p>{text.dnsHelp}</p>{/if}
+    {#if host.pending.operation === 'wiki-read'}<p>{text.wikiHelp}</p><pre>{(host.pending.payload as WikiReadRequest).site}
 {(host.pending.payload as WikiReadRequest).title}</pre>{/if}
     {#if host.pending.operation === 'download-begin'}<p>{(host.pending.payload as StreamStart).filename} · {host.formatBytes((host.pending.payload as StreamStart).size)}</p><p>{host.nativeDownloads() ? text.downloadNative : text.downloadBuffered} {text.downloadLimit}: {host.formatBytes(host.nativeDownloads() ? DOWNLOAD_LIMITS.maxBytes : DOWNLOAD_LIMITS.bufferedMaxBytes)}.</p>{/if}
     {#if host.pending.operation === 'downloads'}<p>{(host.pending.payload as { filename: string }).filename} · {(host.pending.payload as { mime: string }).mime} · {((host.pending.payload as { bytes: ArrayBuffer }).bytes.byteLength / 1024).toFixed(1)} KiB</p>{/if}
     {#if host.pending.operation === 'camera-capture' && host.cameraStage !== 'off'}
-      <p>{locale === 'id' ? 'Foto hanya dikirim ke alat setelah Anda menekan Ambil foto.' : 'Only the photo you capture is sent to this tool.'}</p>
-      <video bind:this={host.cameraVideo} autoplay muted playsinline class="camera-preview" aria-label={locale === 'id' ? 'Pratinjau kamera' : 'Camera preview'}></video>
+      <p>{text.camera.help}</p>
+      <video bind:this={host.cameraVideo} autoplay muted playsinline class="camera-preview" aria-label={text.camera.preview}></video>
     {/if}
     {#if host.locationActive}
       {#if host.locationStage === 'locating'}<p role="status">{text.location.locating}</p>{/if}
@@ -106,7 +117,7 @@
       {/if}
     {/if}
     <div class="dialog-actions">
-      <button class="clay-button" type="button" onclick={host.denyPending}>{host.cameraStage === 'off' && !host.locationActive ? text.deny : locale === 'id' ? 'Batal' : 'Cancel'}</button>
+      <button class="clay-button" type="button" onclick={host.denyPending}>{host.cameraStage === 'off' && !host.locationActive ? text.deny : text.cancel}</button>
       {#if host.locationActive}
         {#if host.locationStage === 'blocked'}<button class="clay-button primary" type="button" onclick={() => host.pending && host.startLocation(host.pending)}>{text.location.retry}</button>{/if}
         {#if host.locationStage === 'locating'}<button class="clay-button primary" type="button" disabled>{text.location.locatingShort}</button>{/if}
@@ -115,7 +126,7 @@
           <button class="clay-button primary" type="button" onclick={() => host.shareLocation(true)}>{text.location.precise}</button>
         {/if}
       {:else if host.pending.operation === 'camera-capture' && host.cameraStage !== 'off'}
-        <button class="clay-button primary" type="button" disabled={host.cameraStage !== 'ready'} onclick={host.captureCamera}>{host.cameraStage === 'ready' ? locale === 'id' ? 'Ambil foto' : 'Capture photo' : locale === 'id' ? 'Menyiapkan kamera…' : 'Starting camera…'}</button>
+        <button class="clay-button primary" type="button" disabled={host.cameraStage !== 'ready'} onclick={host.captureCamera}>{host.cameraStage === 'ready' ? text.camera.capture : text.camera.starting}</button>
       {:else}
         <button class="clay-button primary" type="button" disabled={host.pendingService?.turnstile && !host.verificationToken} onclick={host.approvePending}>{text.allow}</button>
       {/if}

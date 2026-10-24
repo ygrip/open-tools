@@ -1,10 +1,13 @@
 import { createServer } from 'node:http';
-import { createHash } from 'node:crypto';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build, transform } from 'esbuild';
 import { compile, compileModule } from 'svelte/compiler';
+import { languageCodes } from '../../src/lib/languages.js';
+import { parseManifestBytes } from '../../scripts/lib/manifest.mjs';
+import { MAX_BUNDLE_BYTES, verifyBundle } from '../../scripts/lib/bundle-artifact.mjs';
+import { readLocalePacks } from '../../scripts/lib/locale-packs.mjs';
 
 const hostRoot = fileURLToPath(new URL('../../', import.meta.url));
 const publicRoot = resolve(hostRoot, 'static');
@@ -24,7 +27,7 @@ function inside(root, path) {
  */
 export async function readToolArtifact(toolRoot) {
   const root = await realpath(toolRoot);
-  const tool = JSON.parse(await readFile(resolve(root, 'tool.manifest.json'), 'utf8'));
+  const tool = parseManifestBytes(await readFile(resolve(root, 'tool.manifest.json')));
   if (tool.schemaVersion !== 3 || tool.runtimeVersion !== 1 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(tool.id ?? '') || typeof tool.bundle?.file !== 'string') {
     throw new Error('The tool harness requires a v3 manifest with a safe tool ID and HTML bundle.');
   }
@@ -32,12 +35,18 @@ export async function readToolArtifact(toolRoot) {
   if (!inside(root, candidate)) throw new Error('Unsafe tool bundle path.');
   const path = await realpath(candidate);
   if (!inside(root, path)) throw new Error('Unsafe tool bundle symlink.');
-  if (extname(path) !== '.html' || (await stat(path)).size > 5 * 1024 * 1024) throw new Error('Invalid HTML bundle size or type.');
-  const bytes = await readFile(path);
-  const html = bytes.toString('utf8');
-  if (!Buffer.from(html, 'utf8').equals(bytes)) throw new Error('The tool bundle must be UTF-8.');
-  if (createHash('sha256').update(bytes).digest('hex') !== tool.bundle.sha256) throw new Error('Build the tool first: its manifest checksum does not match the HTML.');
-  return { tool, html };
+  if (extname(path) !== '.html' || (await stat(path)).size > MAX_BUNDLE_BYTES) throw new Error('Invalid HTML bundle size or type.');
+  const html = verifyBundle(await readFile(path), tool);
+  const localePacks = await readLocalePacks(tool, async (file, maximum) => {
+    const candidate = resolve(root, file);
+    if (!inside(root, candidate)) throw new Error('Unsafe locale pack path.');
+    const path = await realpath(candidate);
+    if (!inside(root, path)) throw new Error('Unsafe locale pack symlink.');
+    const info = await stat(path);
+    if (!info.isFile() || extname(path) !== '.json' || info.size > maximum) throw new Error('Invalid locale pack file.');
+    return readFile(path);
+  });
+  return { tool, html, localePacks };
 }
 
 /** Shared platform implementation only; no tool-specific UI or expectations. */
@@ -45,17 +54,11 @@ export function runtimeMountScript() {
   return compiled ??= build({
     stdin: {
       contents: `import { mount } from 'svelte';
-        import Runtime from './src/lib/components/ToolRuntime.svelte';
-        import HostUi from './src/lib/components/HostUi.svelte';
+        import Harness from './tests/tool-harness/LocaleHarness.svelte';
         async function boot() {
           const manifest = window.__toolTestTool ?? await (await fetch('/__test__/tool.json')).json();
-          const locale = document.documentElement.lang === 'id' ? 'id' : 'en';
-          const translated = manifest.translations?.[locale];
-          const tool = { ...manifest, name: translated?.name ?? manifest.name, description: translated?.description ?? manifest.description, guide: translated?.guide ?? manifest.guide };
-          const target = document.createElement('main'); target.className = 'container';
-          document.body.replaceChildren(target);
-          mount(Runtime, { target, props: { tool, locale } });
-          mount(HostUi, { target: document.body });
+          document.body.replaceChildren();
+          mount(Harness, { target: document.body, props: { manifest, initialLocale: document.documentElement.lang } });
         }
         void boot();`,
       resolveDir: hostRoot
@@ -90,13 +93,19 @@ export function toolHostConfig({ toolRoot, port = 4190 }) {
  */
 export async function serveToolHost({ toolRoot, port = 4190 }) {
   toolHostConfig({ toolRoot, port });
-  const { tool, html } = await readToolArtifact(toolRoot);
+  const { tool, html, localePacks } = await readToolArtifact(toolRoot);
   const [script, css, app] = await Promise.all([runtimeMountScript(), readFile(resolve(hostRoot, 'src/routes/app.css'), 'utf8'), readFile(resolve(hostRoot, 'src/app.html'), 'utf8')]);
   const head = app.match(/<head>([\s\S]*?)<\/head>/i)?.[1].replaceAll('%sveltekit.assets%', '').replace('%sveltekit.head%', '');
   if (!head || !/<meta\s+http-equiv="Content-Security-Policy"[^>]*>/i.test(head)) throw new Error('The host navigation CSP is missing.');
   const bundle = JSON.stringify({ id: tool.id, version: tool.version, sha256: tool.bundle.sha256, html });
   const route = tool.path || '/' + tool.id;
-  const pages = new Set(['/', route, route + '/', '/id' + route, '/id' + route + '/']);
+  const pages = new Map([['/', 'en']]);
+  for (const locale of languageCodes) {
+    let localizedRoute = route;
+    if (locale !== 'en') localizedRoute = '/' + locale + route;
+    pages.set(localizedRoute, locale);
+    pages.set(localizedRoute + '/', locale);
+  }
   /** @type {Record<string, string>} */
   const mime = { '.svg': 'image/svg+xml', '.webp': 'image/webp', '.png': 'image/png', '.woff2': 'font/woff2', '.woff': 'font/woff' };
   const server = createServer(async (request, response) => {
@@ -112,7 +121,9 @@ export async function serveToolHost({ toolRoot, port = 4190 }) {
       if (path === '/__test__/runtime.js') return send(200, 'text/javascript; charset=utf-8', script);
       if (path === '/__test__/host.css') return send(200, 'text/css; charset=utf-8', css);
       if (path === '/__test__/tool.json') return send(200, 'application/json; charset=utf-8', JSON.stringify(tool));
-      if (path.startsWith(`/bundles/${tool.id}/`)) return send(200, 'application/json; charset=utf-8', bundle);
+      const pack = localePacks.get(path);
+      if (pack) return send(200, 'application/json; charset=utf-8', pack);
+      if (path === `/bundles/${tool.id}/${tool.bundle.sha256}.json`) return send(200, 'application/json; charset=utf-8', bundle);
       // Tests must mock protected endpoints; never proxy credentials or providers.
       if (path.startsWith('/api/')) return send(503, 'application/json', '{"error":"test-harness"}');
       if (/^\/(icons|fonts|brand)\//.test(path)) {
@@ -123,7 +134,7 @@ export async function serveToolHost({ toolRoot, port = 4190 }) {
         return send(200, mime[extname(file)] ?? 'application/octet-stream', await readFile(file));
       }
       if (!pages.has(path)) return send(404, 'text/plain', 'Not found');
-      const locale = path.startsWith('/id/') ? 'id' : 'en';
+      const locale = pages.get(path);
       send(200, 'text/html; charset=utf-8', `<!doctype html><html lang="${locale}" dir="ltr" data-theme="light"><head>${head}<link rel="stylesheet" href="/__test__/host.css"><title>Tool runtime test harness</title></head><body><script src="/__test__/runtime.js"></script></body></html>`);
     } catch (error) {
       if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return send(404, 'text/plain', 'Not found');

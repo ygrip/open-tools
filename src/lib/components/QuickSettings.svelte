@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { m } from '$lib/paraglide/messages.js';
   import Icon from './Icon.svelte';
   import LanguageSwitcher from './LanguageSwitcher.svelte';
@@ -14,6 +14,8 @@
   const uid = $props.id();
   const panelId = `${uid}-panel`;
   let open = $state(false);
+  let ready = $state(false);
+  onMount(() => { ready = true; });
   let root: HTMLDivElement;
   let trigger: HTMLButtonElement;
   let panel: HTMLDivElement;
@@ -137,6 +139,7 @@
     bind:this={trigger}
     class="qs-trigger"
     type="button"
+    disabled={!ready}
     aria-expanded={open}
     aria-controls={panelId}
     aria-label={m.quick_options()}
@@ -148,7 +151,7 @@
   </button>
 
   <div bind:this={panel} id={panelId} class="qs-panel" role="group" aria-label={m.quick_options()} inert={!open}>
-    <div class="qs-item qs-lang"><LanguageSwitcher /></div>
+    <div class="qs-item qs-lang"><LanguageSwitcher onopen={() => close(true)} onclose={() => trigger.focus()} /></div>
     <div class="qs-item qs-theme"><ThemeToggle /></div>
     {#if share}
       <div class="qs-item qs-share">
@@ -163,9 +166,9 @@
   .quick-settings {
     --size: 48px;
     --gap: 10px;
-    /* Language pill: two 44px targets + 4px inset, so every option meets the 44px touch-target guideline. */
-    --lang-width: 104px;
-    --lang-height: 52px;
+    /* Single 48px language button opens the same searchable modal as desktop. */
+    --lang-width: 48px;
+    --lang-height: 48px;
     --lang-y: calc(var(--size) + var(--gap));
     --theme-y: calc(var(--lang-y) + var(--lang-height) + var(--gap));
     --share-y: calc(var(--theme-y) + var(--size) + var(--gap));
@@ -264,15 +267,16 @@
   .open .qs-share { transform: translateY(var(--share-y)); transition-delay: 200ms, 120ms, 0s; }
 
   /* Reused controls drop their own chrome; the blob behind them is the surface. */
-  .qs-item :global(.language-switcher) { padding: 4px; gap: 4px; border: 0; background: transparent; }
-  .qs-item :global(.language-switcher a) { min-width: 44px; min-height: 44px; font-size: 14px; border-radius: 999px; }
+  .qs-item :global(.language-switcher) { padding: 0; border: 0; background: transparent; }
+  .qs-item :global(.language-trigger) { border: 0; border-radius: 999px; background: transparent; box-shadow: none; }
+  .qs-item :global(.language-trigger:hover) { background: transparent; }
   .qs-item :global(.theme-toggle) { width: var(--size); height: var(--size); border: 0; border-radius: 999px; background: transparent; box-shadow: none; }
 
   /* High-visibility focus: 3px ring with an inner surface gap so it reads on the blob and the page alike. */
   .qs-trigger:focus-visible,
   .qs-share-button:focus-visible,
   .qs-item :global(.theme-toggle:focus-visible),
-  .qs-item :global(.language-switcher a:focus-visible) {
+  .qs-item :global(.language-trigger:focus-visible) {
     outline: 3px solid var(--accent-strong);
     outline-offset: 2px;
     box-shadow: 0 0 0 2px var(--surface);

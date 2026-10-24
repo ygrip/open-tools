@@ -10,7 +10,7 @@ for (const locale of ['en', 'id'] as const) {
       await page.goto(`${prefix}/${route}/`);
       await expect(page.locator('html')).toHaveAttribute('lang', locale);
       await expect(page.locator('.legal-hero h1')).toBeVisible();
-      await expect(page.locator('.legal-top .language-switcher a')).toHaveCount(2);
+      await expect(page.locator('.legal-top .language-switcher .language-trigger')).toHaveCount(1);
       await expect(page.locator('.legal-lede')).not.toBeEmpty();
       await expect(page.locator('.legal-summary p')).not.toBeEmpty();
       await expect(page.locator('.legal-section')).toHaveCount(route === 'privacy' ? 7 : 5);

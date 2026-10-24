@@ -14,6 +14,46 @@ If an existing tool uses a competing hosted implementation, modify that tool's s
 
 The counter below demonstrates a real shared toast on Clear; it has no files, popup or asynchronous work, so those components are not applicable. For a tool with optional model resources, use `const loading = trickIt.ui.loader(target); const resource = await loading.asset('model');` and show engine initialization separately before declaring readiness. Update the API docs and scaffold skill whenever extending the kit.
 
+## Required: Paraglide and separate language files
+
+New production tools and localization migrations **must use Paraglide JS at build time**, with one maintained `messages/<locale>.json` catalog per language and `project.inlang/settings.json`. Pin the compiler and message-format plugin. Validate raw catalogs for matching nonblank keys before Paraglide fallback, compile them, then evaluate generated messages with explicit `{ locale }` options to produce release copy.
+
+Embed generated English fallback only in the HTML. Emit `dist/locales/<locale>.json` for every other supported language and declare `{ file: "dist/locales/<locale>.json", sha256, bytes }` under [`localePacks`](tool-contract-v3.md#language-packs). Each pack is at most 65,536 bytes. `registry:sync` uses the build-only PAT to fetch the pinned repository's files, verifies size/hash/UTF-8/message JSON, and stages the exact bytes at `/bundles/<tool-id>/locales/<sha256>.json` in the Pages output. The host derives same-origin URLs under the site base. Private repositories stay private, the PAT never enters browser output, and repository files need no external-origin approval. Existing public `{ url, sha256, bytes }` packs remain compatible but require approved HTTPS origins. Keep packs separate from generic `assets` and metadata `translations`; load only the selected pack through [`trickIt.localePack(locale)`](tool-runtime.md#language-packs), with no external-assets grant or direct iframe requests. Do not embed all Paraglide runtime locales, duplicate catalogs, phrase-replacement scripts or editable-source archives in the HTML. If offered, ship the source archive as a separate verified deferred asset.
+
+Listen to `trick-it:localechange`, cache successful parsed packs, deduplicate in-flight loads, allow retry after failures, and guard against stale responses. Preserve #101's no-refresh behavior (`63a0222e4b9ff88fae590e78d472824b04d9cb48`): host client-side navigation updates the **existing iframe**, never its `srcdoc` or document identity. Update text/status/accessibility copy without clearing input/output/focus or stopping running jobs. Never use default `setLocale()` or experimental full-document locale builds in the iframe. Older hosts without `localePack` retain readable English without bypassing the sandbox.
+
+The dependency-free English counter below illustrates layout, shared UI and artifact mechanics only. **It is not an exception to this production gate**: integrate Paraglide-generated copy and the pack loader before publishing it, including its count/status/toast text. Declare only languages actually translated; do not advertise all twelve for an English fixture.
+
+Require tool-owned browser evidence for each initial language, same-iframe live switches, racing/repeated loads, corrupt/offline packs and retry, preserved active work, both themes and 320–375px layouts. Compare two consecutive builds byte-for-byte across HTML, every pack, any source archive and the manifest; CI must reject any stale artifact. Do not dump generated base64 files into CI logs. Exercise file packs through the host harness's real local endpoints; do not mock GitHub or a CDN in the browser for them. Commit packs with the matching HTML/manifest and pin that source commit, then deploy the complete Pages output together. Only legacy external URL packs need separately published public immutable hosting.
+
+## Production localization and release checks
+
+Run the structural gate from the **owning tool repository**, using an installed compatible host checkout:
+
+```sh
+export TRICK_IT_DIR=/path/to/trick-it
+npm ci
+npm test
+npm run test:host
+node "$TRICK_IT_DIR/scripts/check-tool-release.mjs" --tool-root "$PWD" --baseline origin/main
+```
+
+Fetch `origin/main` before comparing an existing release. Omit `--baseline` only for the first release; automated baseline ordering supports stable `x.y.z` versions, while prerelease ordering needs explicit review. Pin a host commit containing this checker in CI.
+
+The checker derives the required locale set from `src/lib/languages.js` (`languageCodes`), not a copied list. It also preflights the unchanged 8,192-byte gzip catalog-entry ceiling, using the same shared budget constant as the production performance check. Keep catalog guides concise native quick-starts; retain complete native instructions in the tool's selected locale pack/help UI rather than duplicating long manuals in shared client JavaScript. Final registry performance checks remain authoritative for the actual registration timestamp and complete site. The host keeps the complete catalog behind a server-only boundary and prerenders route data with English fallback plus only the active locale's metadata; do not import all tool translations into client JavaScript. Locale navigation must load its static `__data.json` without replacing a running iframe. It rejects missing/blank authored keys and changed placeholders **before compiler fallback can hide them**, missing native metadata/consent reasons, floating compiler/plugin versions, missing or inconsistent lockfiles, unchanged release versions, and missing, nested, corrupt or incorrectly projected locale packs. Repository-file packs must be flat objects of nonblank string messages. If the application uses nested error/issue groups, reconstruct those groups **after** validating the flat delivered pack; do not publish nested JSON that passes a tool-only test but fails the real host.
+
+This is a structural gate, **not** a native-language or UI certification. It cannot prove that every message is actually used, detect all English literals, or certify a translator. Inventory visible and accessibility copy in initial, help, invalid-input, busy, cancellation, retry and completed states. Generate `translations[locale].name/description` and permission reasons from authored native copy, with regression tests; a manifest listing locales is insufficient. Keep unreviewed localized SEO `noindex`. Existing runtime compatibility with legacy inline dictionaries does not make that layout a valid new scaffold: new production releases use English-only bootstrap plus separate packs.
+
+Real-host browser tests must use the owning built bundle through `tests/tool-harness`, **not an older production catalog pin**. The harness validates the entire registry manifest before starting: localized descriptions must fit 240 characters, and any supplied SEO object needs its title, description, keywords and robots fields even when `robots` is `noindex`. Derive their locale loop from the same host `languageCodes`; assert native labels/errors, the same iframe/contentWindow, editor node and selection, imported file/input identities, generated data and pending work at 320–375px and desktop. Switch through multiple new locales and back to English. Also test missing/corrupt packs, retry, racing responses and initial non-English startup. A mocked SDK or compiler-only/VM test is not a replacement for this browser evidence. Keep tool-specific suites in the tool repository.
+
+Read the owner's CI fixture setup before local runs: verified model/resource caches and environment variables are not implicitly supplied. Suites sharing harness port 4190 run sequentially. For `downloadStream`, test both the native file-picker sink and the buffered Blob sink; neither is the legacy `request('downloads')` API. A native save is not a browser `download` event, and each `download-begin` requires fresh user activation even after approval. Preserve remembered-denial coverage separately. A mocked picker proves stream handling, not real OS picker/user-activation behavior.
+
+Release evidence must name the **exact tested SHA**, Node/npm versions and results. An ancestor's green CI does not validate a newer `[skip ci]` artifact commit. Distinguish passing, missing, pending, genuinely failed and billing-blocked checks; override only explicitly authorized billing-only failures with proof that jobs never started and exact-head local checks passed. Never call unavailable CI green or weaken tests/permissions to merge.
+
+Use `npm ci` with the committed lockfile. Diagnose the first npm error, working directory and Node/npm/configuration before changing dependencies. When creating a genuinely missing lock, resolve it in a clean disposable checkout without `node_modules`, then prove ordinary `npm ci` and builds/tests succeed. Preserve existing dependency graphs for version-only edits; do not regenerate unrelated locks, use `--force`, or bypass peer resolution to obtain a pass. Ignore `node_modules/`, `test-results/`, `playwright-report/` and temporary host checkouts; commit catalogs/config, lockfile, HTML, packs, manifest and any separate source archive together.
+
+Build twice and compare every release byte. Rebuild the intended merge result; matching Git trees alone is not a rebuild check. Rebuild and verify the actual merged SHA before publishing its version tag/release or pinning it. Never move an existing release tag. Preserve each registration's `added` timestamp and pin the full merged commit SHA on the requested host branch, not a feature head, tag name or unrelated `main`. A published tool release, host-PR pin, deployed host and fluent-copy approval are distinct states.
+
 ## 1. Create the local scaffold
 
 ```sh
@@ -39,6 +79,10 @@ Create `examples/text-counter/.gitignore`:
 
 ```gitignore
 node_modules/
+src/paraglide/
+test-results/
+playwright-report/
+.host/
 .env
 .env.*
 .DS_Store
@@ -175,6 +219,7 @@ const manifest = JSON.parse(await readFile(manifestUrl, 'utf8'));
 if (manifest.bundle?.format !== 'html' || manifest.bundle.file !== 'dist/index.html') {
   throw new Error('This builder outputs dist/index.html only');
 }
+manifest.version = JSON.parse(await readFile(new URL('package.json', root), 'utf8')).version;
 manifest.bundle.sha256 = createHash('sha256').update(bytes).digest('hex');
 await mkdir(new URL('dist/', root), { recursive: true });
 await writeFile(new URL('dist/index.html', root), bytes);
@@ -196,6 +241,8 @@ test('release contains the expected HTML and matching theme-aware v3 manifest', 
   const manifest = JSON.parse(await readFile(new URL('tool.manifest.json', root), 'utf8'));
   assert.equal(manifest.schemaVersion, 3);
   assert.equal(manifest.runtimeVersion, 1);
+  const pkg = JSON.parse(await readFile(new URL('package.json', root), 'utf8'));
+  assert.equal(manifest.version, pkg.version);
   assert.deepEqual(manifest.appearance, { theme: 'host', protocolVersion: 1 });
   assert.equal(manifest.path, `/${manifest.id}`);
   assert.equal(manifest.bundle.sha256, createHash('sha256').update(bytes).digest('hex'));
@@ -242,7 +289,7 @@ npm run performance:check
 npm run test:e2e
 ```
 
-Playwright requires Chromium (`npx playwright install chromium` on a fresh setup). Registry sync validates the complete contract, repository identity, uniqueness, checksum, UTF-8 and size; it does not execute the tool's build. Current performance policy also caps each compressed tool at 90,000 gzip bytes, below the 5 MiB hard acceptance limit.
+Playwright requires Chromium (`npx playwright install chromium` on a fresh setup). Registry sync validates the complete contract, repository identity, uniqueness, checksum, UTF-8 and size; it does not execute the tool's build. Current performance policy caps each compressed tool at 200,000 gzip bytes, below the unchanged 5 MiB hard acceptance limit. This user-approved per-tool ceiling does not justify embedding all language catalogs or source archives; use the separate-pack gate above. The per-tool catalog-entry ceiling is 8,192 gzip bytes for localized metadata and consent reasons. Shared JavaScript and artwork budgets remain separately enforced.
 
 For deferred models, scripts, workers and browser capabilities, read [the v3 contract](tool-contract-v3.md) and [runtime/consent guide](tool-runtime.md). Assets need approved `trustedAssetOrigins`, exact byte sizes and SHA-256. The host downloads and verifies them only after consent; the iframe still cannot fetch arbitrary URLs. Use `trickIt.ui.loader(target).asset(id)` for visible verified-resource loading (or `trickIt.asset(id, { onProgress })` when integrating a shared loader already in use), and `request(permission, payload)` for brokered capabilities. Do not bundle credentials or add `allow-same-origin`. New tools should declare translated metadata and respond to `trick-it:localechange` without clearing input. See [SEO configuration](seo.md) for automatic social cards and production canonical URLs.
 
@@ -268,8 +315,13 @@ cd ../text-counter
 git init -b main
 git config user.name ygrip
 git config user.email yunaz.gilang@gmail.com
+# Complete the production Paraglide/pack/browser gate above first.
+: "${TRICK_IT_DIR:?Set an installed compatible host checkout}"
+npm ci
 npm test
-git add package.json src scripts test dist tool.manifest.json .gitignore
+npm run test:host
+node "$TRICK_IT_DIR/scripts/check-tool-release.mjs" --tool-root "$PWD"
+git add package.json package-lock.json messages project.inlang src scripts test tests dist tool.manifest.json .gitignore
 GIT_AUTHOR_NAME=ygrip GIT_AUTHOR_EMAIL=yunaz.gilang@gmail.com \
 GIT_COMMITTER_NAME=ygrip GIT_COMMITTER_EMAIL=yunaz.gilang@gmail.com \
   git commit -m "feat: release independent text counter"
@@ -280,7 +332,7 @@ git log -1 --format='%H %an <%ae> | %cn <%ce>'
 
 Use the configured personal SSH alias shown above only if it exists in your environment; otherwise configure the correct personal account before pushing. Both author **and committer** must be `ygrip <yunaz.gilang@gmail.com>`, not inherited corporate defaults. Verify the printed identity and copy the full 40-character commit SHA. Add a tool-specific README explaining behavior, limitations, build/test commands and privacy before a real release.
 
-The standalone source commit must contain the matching `dist/index.html` and manifest. Open Tools downloads these artifacts only; it never installs dependencies or builds an untrusted tool repository. Never commit credentials or real private input samples.
+The standalone source commit must contain the matching `dist/index.html`, generated `dist/locales/*.json`, separate source archive (if provided), source catalogs/config, dependency lockfile and manifest. Open Tools downloads these artifacts only; it never installs dependencies or builds an untrusted tool repository. Never commit credentials or real private input samples.
 
 ## 5. Pin and release through trick-it
 

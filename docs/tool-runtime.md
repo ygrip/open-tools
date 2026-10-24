@@ -18,24 +18,68 @@ The resize bridge is **host-managed**. Tools do not need to post sizing messages
 
 ## Locale and theme without losing work
 
-The host initializes `html.lang` and `html[data-theme]` before parsing the tool's own script. Declare actual UI support with `locales: ["en", "id"]`; omitted `locales` means English only. Platform/guide translations are independent from tool interface support. Unsupported interface locales use the tool's first declared language, while platform navigation stays in the selected language. Consume the root `--ot-*` color tokens. Listen for locale changes to update **labels**, not to recreate the editor:
+The host initializes `html.lang` and `html[data-theme]` before parsing the tool's own script. The locale bridge accepts `en`, `id`, `ms`, `fil`, `th`, `vi`, `zh` (Simplified Chinese), `my`, `km`, `lo`, `ja` and `hi`. Declare only actual tool-owned UI support, for example `locales: ["en", "id"]`; omitted `locales` means English only. Switching the host language uses client-side navigation and updates the existing iframe through the locale bridge; it must not reload the workspace. Platform/guide translations are independent from tool interface support. Unsupported interface locales use the tool's first declared language, while platform navigation stays in the selected language. Consume the root `--ot-*` color tokens. Listen for locale changes to update **labels**, not to recreate the editor:
 
-```js
-const labels = {
-  en: { run: 'Run', input: 'Input' },
-  id: { run: 'Jalankan', input: 'Input' }
-};
-function translate() {
-  const locale = window.trickIt?.locale ?? document.documentElement.lang;
-  const text = labels[locale] ?? labels.en;
-  document.getElementById('run').textContent = text.run;
-  document.querySelector('label[for="input"]').textContent = text.input;
-}
-translate();
-addEventListener('trick-it:localechange', translate);
-```
+New tools and localization migrations must compile their own Paraglide catalogs and use the separate-file loader below. Do not maintain a second handwritten translation dictionary, use DOM phrase replacement, or bundle all language catalogs into the iframe HTML. Evaluate generated message functions with explicit `{ locale }` options during build. Default Paraglide `setLocale()` and experimental per-locale document builds can navigate/reload; neither belongs in this iframe bridge.
 
 Theme updates require no custom receiver if styles use the host tokens. Do not read browser storage, introduce a competing preference, replace input values or reload the document on a locale/theme change. A v2 release without localized controls can still use the existing theme contract; metadata translations alone do not translate its operation UI.
+
+### Language packs
+
+Declare generated JSON packs in [`localePacks`](tool-contract-v3.md#language-packs), preferably as `{ file: "dist/locales/<locale>.json", sha256, bytes }`. Registry sync fetches repository files with build-only credentials at the pinned commit and stages verified bytes into the Pages deployment; the runtime derives `/bundles/<tool-id>/locales/<sha256>.json` under the configured site base. Browser requests are same-origin and contain no GitHub credentials. Existing approved public `url` descriptors still work. `await window.trickIt.localePack(locale)` returns `{ bytes: ArrayBuffer, type: 'data' }` after the host verifies the declared size and SHA-256 again. Only a declared non-English locale is accepted; no URL is supplied by the tool. This dedicated read-only operation requires no `external-assets` grant, leaves `connect-src 'none'` intact, and does not occupy a generic `assets` slot. The host deduplicates and caches verified bytes by tool release and pack digest; tools should also cache parsed copy.
+
+For example, after injecting `EN_MESSAGES` from compiled Paraglide English during build (the example's keys are `run` and `input`):
+
+```js
+const packs = new Map([['en', EN_MESSAGES]]);
+const pending = new Map();
+let generation = 0;
+
+async function downloadPack(locale) {
+  if (!window.trickIt?.localePack) throw new Error('Language-pack host unavailable');
+  const response = await window.trickIt.localePack(locale);
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(response.bytes);
+  const pack = JSON.parse(text);
+  const keys = Object.keys(EN_MESSAGES);
+  if (!pack || typeof pack !== 'object' || Array.isArray(pack) ||
+      Object.keys(pack).length !== keys.length ||
+      keys.some(key => !Object.hasOwn(pack, key) || typeof pack[key] !== 'string' || !pack[key].trim())) {
+    throw new Error('Invalid language pack');
+  }
+  packs.set(locale, pack);
+  return pack;
+}
+
+async function loadPack(locale) {
+  if (packs.has(locale)) return packs.get(locale);
+  if (pending.has(locale)) return pending.get(locale);
+  const request = downloadPack(locale);
+  pending.set(locale, request);
+  try { return await request; }
+  finally { pending.delete(locale); } // Failed downloads may be retried.
+}
+
+async function translate() {
+  const current = ++generation;
+  const requested = window.trickIt?.locale ?? document.documentElement.lang;
+  let locale = requested;
+  let text = EN_MESSAGES;
+  try { text = await loadPack(requested); }
+  catch (error) {
+    console.warn('Language pack unavailable; using English.', error);
+    locale = 'en';
+  }
+  if (current !== generation) return; // Newest selection wins.
+  document.documentElement.lang = locale;
+  document.getElementById('run').textContent = text.run;
+  document.querySelector('label[for="input"]').textContent = text.input;
+  // Update status/error/aria copy too, never input.value or editor state.
+}
+void translate();
+addEventListener('trick-it:localechange', () => { void translate(); });
+```
+
+Use `textContent`/safe attributes, never execute a pack or insert its strings as HTML. Failed/offline/corrupt packs keep readable English and all workspace state; retry on a subsequent selection. Never fall back to direct fetch, generic asset permissions or a replacement iframe. Test rapid switches and repeated requests, corrupt/offline responses and retry, preserved input/output/focus/files/running work, and the same iframe identity. The shared host harness serves verified file packs on the same content-addressed paths as Pages; test file packs through those endpoints without CDN mocks. External URL fixtures may still intercept exact bytes, which does not verify production CDN availability.
 
 ## Shared clay UI (`trickIt.ui`)
 

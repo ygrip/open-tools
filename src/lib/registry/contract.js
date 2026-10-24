@@ -1,4 +1,7 @@
+import { languageCodes } from '../languages.js';
+import { MAX_LOCALE_PACK_BYTES } from './locale-packs.js';
 export const reservedIds = new Set(['api', 'policy', 'privacy', 'terms', 'bundles', 'icons', 'brand', 'illustrations', 'index', '404', '500', '503', '_app', 'offline', 'manifest', 'manifest-webmanifest', 'service-worker', 'pwa', 'id', 'og', 'robots', 'sitemap']);
+for (const code of languageCodes) if (code !== 'en') reservedIds.add(code);
 export const permissionNames = new Set(['clipboard-read', 'clipboard-write', 'geolocation', 'downloads', 'camera-capture', 'share-image', 'external-assets', 'wasm', 'workers', 'services', 'wiki-read', 'dns-query']);
 export const iconNames = new Set(['braces', 'toolbox', 'grid', 'sparkles', 'bolt', 'heart', 'filter', 'lock', 'shield', 'search']);
 export const MAX_ASSET_BYTES = 128 * 1024 * 1024;
@@ -20,6 +23,14 @@ function text(value, maximum, label) {
 function texts(value, maximum, length, label) {
   if (!Array.isArray(value) || value.length > maximum) throw new Error(`invalid ${label}`);
   return value.map((item) => text(item, length, label));
+}
+/** @param {any} value @param {Set<string>} declared */
+function permissionReasons(value, declared) {
+  object(value, 'translated permission reasons');
+  return Object.fromEntries(Object.entries(value).map(([name, reason]) => {
+    if (!declared.has(name)) throw new Error('translated reason requires a declared permission');
+    return [name, text(reason, 240, 'translated permission reason')];
+  }));
 }
 /** @param {any} value */
 function seo(value) {
@@ -144,21 +155,47 @@ export function validateManifest(manifest) {
   if (manifest.translations !== undefined) {
     object(manifest.translations, 'translations');
     for (const [locale, value] of Object.entries(manifest.translations)) {
-      if (locale !== 'en' && locale !== 'id') throw new Error('unsupported translation locale');
+      if (!languageCodes.includes(locale)) throw new Error('unsupported translation locale');
       object(value, 'translation');
-      translations[locale] = {
+      translations[/** @type {import('./types').ToolLocale} */ (locale)] = {
         name: text(value.name, 80, 'translated name'), description: text(value.description, 240, 'translated description'),
         ...(value.guide === undefined ? {} : { guide: guide(value.guide) }),
+        ...(value.permissionReasons === undefined ? {} : { permissionReasons: permissionReasons(value.permissionReasons, grantedNames) }),
         ...(value.seo === undefined ? {} : { seo: seo(value.seo) })
       };
     }
   }
   const locales = manifest.locales ?? ['en'];
-  if (!Array.isArray(locales) || !locales.length || locales.length > 2 || new Set(locales).size !== locales.length || locales.some((locale) => locale !== 'en' && locale !== 'id')) throw new Error('invalid supported tool locales');
+  if (!Array.isArray(locales) || !locales.length || locales.length > languageCodes.length || new Set(locales).size !== locales.length || locales.some((locale) => !languageCodes.includes(locale))) throw new Error('invalid supported tool locales');
+  // Locales are UI copy, not arbitrary external-script privileges. They receive a
+  // read-only broker operation bound to hashes declared by the tool release.
+  /** @type {Record<string, import('./types').ToolLocalePack>} */
+  const localePacks = {};
+  if (manifest.localePacks !== undefined) {
+    if (!modern) throw new Error('language packs require schemaVersion 3');
+    object(manifest.localePacks, 'locale packs');
+    for (const [locale, value] of Object.entries(manifest.localePacks)) {
+      if (locale === 'en' || !locales.includes(locale)) throw new Error('locale pack must be a supported non-English locale');
+      object(value, 'locale pack');
+      if (Object.keys(value).some(key => !['file','url','sha256','bytes'].includes(key)) ||
+          typeof value.sha256 !== 'string' || !digest.test(value.sha256) ||
+          !Number.isSafeInteger(value.bytes) || value.bytes < 1 || value.bytes > MAX_LOCALE_PACK_BYTES) throw new Error('invalid locale pack');
+      if (value.file !== undefined) {
+        if (value.url !== undefined || typeof value.file !== 'string' || value.file.length > 240 ||
+            !/^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.json$/.test(value.file)) {
+          throw new Error('invalid locale pack file');
+        }
+        localePacks[locale] = { file: value.file, sha256: value.sha256, bytes: value.bytes };
+      } else {
+        localePacks[locale] = { url: assetUrl(value.url).href, sha256: value.sha256, bytes: value.bytes };
+      }
+    }
+    if (locales.some(locale => locale !== 'en' && !localePacks[locale])) throw new Error('missing declared locale pack');
+  }
   return {
     schemaVersion: manifest.schemaVersion, runtimeVersion: 1, locales: [...locales], appearance: { theme: 'host', protocolVersion: 1 },
     id: manifest.id, name, description, path: manifest.path, category: manifest.category, repository: manifest.repository,
-    version: manifest.version, status: manifest.status, capabilities, icon, seo: toolSeo, guide: toolGuide, permissions, assets, services, translations,
+    version: manifest.version, status: manifest.status, capabilities, icon, seo: toolSeo, guide: toolGuide, permissions, assets, services, translations, ...(manifest.localePacks === undefined ? {} : { localePacks }),
     bundle: { format: 'html', file: bundle.file, sha256: bundle.sha256 },
     ...(artwork ? { artwork } : {})
   };
@@ -175,7 +212,8 @@ export function validateAssetOrigins(manifest, configuredOrigins = []) {
     if (parsed.origin !== origin) throw new Error('trustedAssetOrigins entries must be exact HTTPS origins');
     return parsed.origin;
   }));
-  for (const asset of manifest.assets) {
+  const externalPacks = Object.values(manifest.localePacks ?? {}).filter(pack => pack.url !== undefined);
+  for (const asset of [...manifest.assets, ...externalPacks]) {
     if (!origins.has(assetUrl(asset.url).origin)) throw new Error('asset origin is not approved in trustedAssetOrigins');
   }
 }

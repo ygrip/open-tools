@@ -1,17 +1,11 @@
 import { createHash } from 'node:crypto';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
-import { validateManifest, validateAssetOrigins } from '../../src/lib/registry/contract.js';
-
-export const MAX_BUNDLE_BYTES = 5 * 1024 * 1024;
-
-export function verifyBundle(bytes, manifest) {
-  if (!bytes.length || bytes.length > MAX_BUNDLE_BYTES) throw new Error('bundle size must be 1 byte to 5 MiB');
-  if (createHash('sha256').update(bytes).digest('hex') !== manifest.bundle.sha256) throw new Error('bundle integrity mismatch');
-  const html = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
-  if (!/<!doctype html/i.test(html)) throw new Error('bundle must be an HTML document');
-  return html;
-}
+import { validateAssetOrigins } from '../../src/lib/registry/contract.js';
+import { parseManifestBytes } from './manifest.mjs';
+import { readLocalePacks } from './locale-packs.mjs';
+import { MAX_BUNDLE_BYTES, verifyBundle } from './bundle-artifact.mjs';
+export { MAX_BUNDLE_BYTES, verifyBundle } from './bundle-artifact.mjs';
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -89,37 +83,39 @@ export async function loadSource(source, config, root, github) {
     const examplesRoot = await realpath(resolve(root, 'examples'));
     const directory = await realpath(resolve(root, source.local));
     if (!directory.startsWith(examplesRoot + sep)) throw new Error('local source escapes examples/');
-    read = async (file) => {
+    read = async (file, maximum = MAX_BUNDLE_BYTES) => {
       const target = await realpath(resolve(directory, file));
       if (!target.startsWith(directory + sep)) throw new Error('bundle escapes source directory');
       const info = await stat(target);
-      if (!info.isFile() || info.size > MAX_BUNDLE_BYTES) throw new Error('expected regular file within size limit');
+      if (!info.isFile() || info.size > maximum) throw new Error('expected regular file within size limit');
       return readFile(target);
     };
   } else {
     if (!/^[a-f0-9]{40}$/.test(source.ref ?? '')) throw new Error('remote sources require a full commit SHA');
-    read = async (file) => {
+    read = async (file, maximum = MAX_BUNDLE_BYTES) => {
       const path = file.split('/').map(encodeURIComponent).join('/');
       let result = await github(`/repos/${source.repository}/contents/${path}?ref=${source.ref}`);
-      if (result.type !== 'file' || !Number.isInteger(result.size) || result.size > MAX_BUNDLE_BYTES) throw new Error('expected file within size limit');
+      if (result.type !== 'file' || !Number.isInteger(result.size) || result.size < 0 || result.size > maximum) throw new Error('expected file within size limit');
       // Contents API omits base64 data above 1 MiB; the immutable blob API supports our 5 MiB limit.
       if (result.encoding === 'none' && /^[a-f0-9]{40}$/.test(result.sha ?? '')) {
         result = await github(`/repos/${source.repository}/git/blobs/${result.sha}`);
       }
-      if (result.encoding !== 'base64' || typeof result.content !== 'string' || !Number.isInteger(result.size) || result.size > MAX_BUNDLE_BYTES) throw new Error('expected base64 file within size limit');
+      if (result.encoding !== 'base64' || typeof result.content !== 'string' || !Number.isInteger(result.size) || result.size < 0 || result.size > maximum) throw new Error('expected base64 file within size limit');
       const bytes = Buffer.from(result.content.replace(/\n/g, ''), 'base64');
       if (bytes.length !== result.size) throw new Error('GitHub file size mismatch');
       return bytes;
     };
   }
   const manifestBytes = await read('tool.manifest.json');
-  if (manifestBytes.length > 64 * 1024) throw new Error('manifest exceeds 64 KiB');
-  const manifest = validateManifest(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(manifestBytes)));
+  const manifest = parseManifestBytes(manifestBytes);
   if (manifest.repository.toLowerCase() !== `https://github.com/${source.repository}`.toLowerCase()) throw new Error('manifest repository does not match source');
   validateAssetOrigins(manifest, config.trustedAssetOrigins);
   const html = verifyBundle(await read(manifest.bundle.file), manifest);
   const artwork = manifest.artwork
     ? Object.fromEntries(await Promise.all(Object.entries(manifest.artwork).map(async ([kind, entry]) => [kind, verifyArtwork(await read(entry.file), entry, kind)])))
     : undefined;
-  return { manifest, html, ...(artwork ? { artwork } : {}) };
+  const localePacks = await readLocalePacks(manifest, read);
+  const result = { manifest, html, ...(artwork ? { artwork } : {}) };
+  if (localePacks.size) return { ...result, localePacks };
+  return result;
 }
