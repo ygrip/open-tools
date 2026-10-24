@@ -43,7 +43,14 @@ async function fixture(t) {
     const bytes = Buffer.from(JSON.stringify(catalog));
     await writeFile(join(root, 'dist/locales/' + locale + '.json'), bytes);
     manifest.localePacks[locale] = { file: 'dist/locales/' + locale + '.json', sha256: digest(bytes), bytes: bytes.length };
-    manifest.translations[locale] = { name: 'Fixture ' + locale, description: 'Structural fixture ' + locale };
+    manifest.translations[locale] = {
+      name: 'Fixture ' + locale,
+      description: 'Structural fixture ' + locale,
+      guide: {
+        summary: locale + ' guide summary for this fixture',
+        steps: manifest.guide.steps.map((step, index) => locale + ' localized step ' + (index + 1))
+      }
+    };
   }
   await save(root, 'tool.manifest.json', manifest);
   await save(root, 'package.json', { name: manifest.id, version: manifest.version, devDependencies: { '@inlang/paraglide-js': '2.29.0' } });
@@ -71,12 +78,37 @@ const invalid = [
   ['duplicated oversized multilingual catalog guides', async root => {
     const data = await json(root, 'tool.manifest.json');
     for (const locale of languageCodes.filter(code => code !== 'en')) {
-      const steps = Array.from({ length: 5 }, (_, step) =>
-        Array.from({ length: 5 }, (_, part) => digest(Buffer.from(locale + ':' + step + ':' + part))).join(''));
+      const steps = Array.from({ length: data.guide.steps.length }, (_, step) =>
+        Array.from({ length: 7 }, (_, part) => digest(Buffer.from(locale + ':' + step + ':' + part))).join(''));
       data.translations[locale].guide = { summary: 'Synthetic guide.', steps };
     }
     await save(root, 'tool.manifest.json', data);
   }, /fixed per-tool gzip budget/],
+  ['missing native guide', async root => {
+    const data = await json(root, 'tool.manifest.json');
+    delete data.translations.ms.guide;
+    await save(root, 'tool.manifest.json', data);
+  }, /Missing native guide: ms/],
+  ['shortened native guide', async root => {
+    const data = await json(root, 'tool.manifest.json');
+    data.translations.ms.guide.steps.pop();
+    await save(root, 'tool.manifest.json', data);
+  }, /Native guide step count mismatch: ms/],
+  ['untranslated guide summary', async root => {
+    const data = await json(root, 'tool.manifest.json');
+    data.translations.ms.guide.summary = data.guide.summary;
+    await save(root, 'tool.manifest.json', data);
+  }, /Untranslated native guide summary: ms/],
+  ['untranslated natural-language step', async root => {
+    const data = await json(root, 'tool.manifest.json');
+    data.translations.ms.guide.steps[0] = data.guide.steps[0];
+    await save(root, 'tool.manifest.json', data);
+  }, /Untranslated native guide step: ms #1/],
+  ['blank native guide step', async root => {
+    const data = await json(root, 'tool.manifest.json');
+    data.translations.ms.guide.steps[0] = ' ';
+    await save(root, 'tool.manifest.json', data);
+  }, /guide steps/],
   ['missing native consent reason', async root => {
     const data = await json(root, 'tool.manifest.json');
     data.permissions = [{ name: 'downloads', reason: 'Save the result.', required: false }];
