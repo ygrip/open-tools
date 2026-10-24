@@ -35,6 +35,7 @@ for (const width of [375, 1440]) {
     expect(cancelledGestures).toEqual([true, false, true, true]);
     await reset.click();
     await expect(level).toHaveText('100%');
+    await expect.poll(() => frame.evaluate(() => getComputedStyle(document.body).zoom)).toBe('1');
     await frame.evaluate(() => {
       const extra = document.createElement('div');
       extra.id = 'zoom-height-fixture';
@@ -43,6 +44,15 @@ for (const width of [375, 1440]) {
     });
     const height = () => iframe.evaluate((el) => el.getBoundingClientRect().height);
     await expect.poll(height).toBeGreaterThan(600);
+    // The toolbar updates before the sandbox applies zoom and reports its new
+    // height. Wait for that round trip before recording the 100% baseline.
+    await expect.poll(async () => {
+      const contentBottom = await frame.evaluate(() => {
+        const body = document.body;
+        return Math.ceil(body.getBoundingClientRect().bottom + (parseFloat(getComputedStyle(body).marginBottom) || 0));
+      });
+      return Math.abs(await height() - contentBottom);
+    }).toBeLessThanOrEqual(3);
     const beforeHeight = await height();
     const beforeHeading = await frame.evaluate(() => document.querySelector('h1')!.getBoundingClientRect().height);
 
