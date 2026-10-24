@@ -2,7 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { languageCodes } from '../src/lib/languages.js';
-import { MAX_TOOL_ENTRY_GZIP } from './lib/performance-budgets.mjs';
+import { toolEntryGzipBudget } from './lib/performance-budgets.mjs';
 
 async function files(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -69,7 +69,7 @@ for (const file of assets) {
 // JS budget is enforced per tool, not as one fixed ceiling for the whole marketplace.
 // Host JS (shared trickIt.ui kit, table, control pane, app shell) is fixed at the 18-tool baseline.
 // Each additional tool raises the shared-JS ceiling by TOOL_JS_ALLOWANCE gzip bytes (its marginal catalog cost),
-// and no single tool's standalone catalog entry may exceed MAX_TOOL_ENTRY_GZIP. Tool code itself stays in lazily loaded bundles
+// Each standalone catalog entry has a locale-scaled metadata budget. Tool code stays in lazily loaded bundles
 // (200 kB gzip each, checked above) and icons keep their own 12 kB budget.
 const HOST_JS_BASELINE_TOOLS = 18;
 // The native EN/ID flag picker adds under 0.4% to the shared shell; keep a fixed,
@@ -112,7 +112,8 @@ const TOOL_JS_ALLOWANCE = 1_088;
 // bounded permission reasons; shared host JavaScript is still budgeted below.
 for (const tool of catalog) {
   const entryBytes = gzipSync(JSON.stringify(tool)).length;
-  if (entryBytes > MAX_TOOL_ENTRY_GZIP) throw new Error(`Tool "${tool.id}" catalog entry is ${entryBytes} bytes gzip, over the ${MAX_TOOL_ENTRY_GZIP} byte per-tool budget`);
+  const budget = toolEntryGzipBudget(tool.locales ?? []);
+  if (entryBytes > budget) throw new Error(`Tool "${tool.id}" catalog entry is ${entryBytes} bytes gzip, over its ${budget} byte per-tool budget`);
 }
 const budgets = { javascript: HOST_JS_BUDGET + Math.max(0, catalog.length - HOST_JS_BASELINE_TOOLS) * TOOL_JS_ALLOWANCE, css: 20_000, images: 90_000, fonts: 45_000 };
 const totals = { javascript, css, images, fonts };
