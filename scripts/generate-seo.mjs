@@ -75,15 +75,15 @@ function translated(tool, locale) {
   return { ...tool, name: translation?.name ?? tool.name, description: translation?.description ?? tool.description, seo: translation?.seo ?? tool.seo };
 }
 
-/** Produce canonical URLs only for indexable, actually generated routes.
+/** Publish every generated production route in every host locale.
  * `images` (optional) maps `home-<locale>` / `tools/<id>-<locale>` to the social card path. */
 export function sitemapXml(tools, origin, base = '', images = {}) {
   origin = siteOrigin(origin);
   const routes = [
     { path: '/', locales: SEO_LOCALES },
     ...['privacy', 'terms', 'policy'].map((id) => ({ path: `/${id}/`, locales: SEO_LOCALES })),
-    ...tools.map((tool) => ({ path: `${tool.path}/`, image: `tools/${tool.id}`, locales: SEO_LOCALES.filter((locale) => translated(tool, locale).seo?.robots !== 'noindex') }))
-  ].filter((route) => route.locales.length);
+    ...tools.map((tool) => ({ path: `${tool.path}/`, image: `tools/${tool.id}`, locales: SEO_LOCALES }))
+  ];
   routes[0].image = 'home';
   const entries = origin ? routes.flatMap((route) => route.locales.map((locale) => {
     const href = (language) => escapeXml(`${origin}${localePath(route.path, language, base)}`);

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile, access } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
@@ -41,6 +41,7 @@ export async function verifySeoBuild({ root = projectRoot, requireProduction = f
       assert.ok(urls.includes(`${origin}${localePath(path, locale, base)}`), `Production sitemap is missing ${locale} ${path}`);
     }
   }
+  assert.equal(urls.length, SEO_LOCALES.length * (4 + tools.length), 'Production sitemap must include every host and tool route in every locale');
   assert.equal(new Set(urls).size, urls.length, 'Sitemap contains duplicate page URLs');
 
   // A URL is not indexable if the corresponding HTML never made it into the build.
@@ -49,7 +50,8 @@ export async function verifySeoBuild({ root = projectRoot, requireProduction = f
     assert.equal(parsed.origin, origin, 'Sitemap contains a URL outside the production domain');
     assert.ok(parsed.pathname.startsWith(`${base}/`), 'Sitemap contains an unexpected mount path');
     const relative = parsed.pathname.slice(base.length).replace(/^\//, '');
-    await access(join(root, 'build', relative, 'index.html'));
+    const html = await readFile(join(root, 'build', relative, 'index.html'), 'utf8');
+    assert.match(html, /<meta\s+name="robots"\s+content="index,follow"\s*\/?\s*>/i, `Published page is not indexable: ${url}`);
   }
 
   return { origin, pages: urls.length };

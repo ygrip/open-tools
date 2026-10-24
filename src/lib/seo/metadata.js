@@ -55,9 +55,9 @@ export function seoMetadata(options) {
   const canonical = origin ? `${origin}${path}` : '';
   const image = origin ? `${origin}${imagePath}` : imagePath;
   const alternates = origin ? SEO_LOCALES.map((language) => ({ locale: language, href: `${origin}${localePath(options.path, language, base)}` })) : [];
-  // Every supported host locale has a canonical route and a safe social card.
-  // Explicit tool exclusions and nonproduction previews must remain nonindexable.
-  const indexable = Boolean(origin) && options.robots !== 'noindex';
+  // The host indexes every production route, overriding tool/translation robots.
+  // Unconfigured previews remain nonindexable regardless of tool metadata.
+  const indexable = Boolean(origin);
   const schema = options.tool ? {
     '@context': 'https://schema.org', '@type': 'WebApplication',
     ...(canonical ? { '@id': `${canonical}#application`, url: canonical } : {}),
