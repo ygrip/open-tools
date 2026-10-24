@@ -28,13 +28,21 @@ test('localized header tabs scroll horizontally without overflowing the header',
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
 
     if (width <= 375) {
-      // Long localized labels must be fully accessible by scrolling the track,
-      // rather than shrinking or protruding past its rounded container.
-      expect(bounds.scrollWidth).toBeGreaterThan(bounds.clientWidth);
+      // A short translation may fit without scrolling. Force a longer label to
+      // verify actual overflow handling rather than assuming it always overflows.
+      await nav.locator('.about-link').evaluate((element) => {
+        element.textContent = 'Cách sử dụng công cụ và hướng dẫn chi tiết';
+      });
+      const scrollSize = await nav.evaluate((element) => ({
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth
+      }));
+      expect(scrollSize.scrollWidth).toBeGreaterThan(scrollSize.clientWidth);
       await nav.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
       await expect.poll(() => nav.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
       const githubRight = await nav.locator('.mobile-github').evaluate((element) => element.getBoundingClientRect().right);
       expect(githubRight).toBeLessThanOrEqual(bounds.navRight + 1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     }
   }
 });
