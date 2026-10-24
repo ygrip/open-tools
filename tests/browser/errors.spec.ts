@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 for (const theme of ['light', 'dark'] as const) {
   test(`unknown routes show an illustrated, usable 404 in ${theme} mode`, async ({ page }) => {

@@ -54,4 +54,6 @@ npm run check
 npx playwright test tests/browser/ads.spec.ts
 ```
 
+All browser specs import `test` from `tests/browser/fixtures.ts`, which mocks the AdSense SDK and blocks provider ad-network requests before navigation. The mock renders inert advertisement iframes so tool tests must target `.runtime-workspace > iframe`, not every iframe on the page. Tests that create their own JavaScript-enabled browser contexts must call `mockAdvertising(context)` before creating pages. Mobile lab reports identify advertising as mocked and do not measure live provider performance.
+
 Browser tests use a mocked SDK and test-only configuration. They must not fetch real ads or generate impressions. Passing these tests does not establish Google approval, legal compliance, real CMP integration, or complete provider-origin coverage.

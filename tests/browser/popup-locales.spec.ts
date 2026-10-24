@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { mountFixture } from './runtime-fixture';
 import { sharedCopies } from '../../src/lib/registry/ui-copy';
@@ -14,7 +14,7 @@ for (const width of [320, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await mountFixture(page, { locales: languages });
-    const tool = page.frameLocator('iframe');
+    const tool = page.frameLocator('.runtime-workspace > iframe');
     await tool.getByRole('textbox').fill('keep the workspace');
     await tool.locator('body').evaluate(() => {
       const ui = (window as unknown as { trickIt: { ui: {

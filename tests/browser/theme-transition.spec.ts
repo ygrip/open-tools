@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 
 test.use({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' });

@@ -1,12 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 for (const theme of ['light', 'dark'] as const) {
   for (const route of ['/', '/json-tools']) {
     test(`${route} has no automated WCAG A/AA violations in ${theme} mode`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: theme });
       await page.goto(route);
-      if (route === '/json-tools') await expect(page.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts');
+      if (route === '/json-tools') await expect(page.locator('.runtime-workspace > iframe')).toHaveAttribute('sandbox', 'allow-scripts');
       const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
       expect(result.violations).toEqual([]);
     });

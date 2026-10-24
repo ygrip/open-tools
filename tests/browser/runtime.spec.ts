@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { createHash } from 'node:crypto';
-import { mountFixture } from './runtime-fixture';
+import { mountFixture, toolFrame } from './runtime-fixture';
 
 // Remounting on one page tests remembered permissions; keep the service worker from
 // serving the fixture bundle request that page.route fulfils.
@@ -9,9 +9,9 @@ test.use({ serviceWorkers: 'block' });
 for (const width of [375, 1440]) test(`isolated tool grows within the viewport, scrolls overflow and shrinks at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 812 });
   await mountFixture(page);
-  const iframe = page.locator('iframe');
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  const iframe = page.locator('.runtime-workspace > iframe');
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   const height = () => iframe.evaluate((element) => Math.round(element.getBoundingClientRect().height));
 
   await expect.poll(height).toBeLessThan(500);
@@ -50,8 +50,8 @@ test('runtime permissions are asked once on first use, remembered per tool and r
   await mountFixture(page, { permissions });
   // No upfront consent: runtime permissions are only asked when first used.
   await expect(page.getByRole('button', { name: 'Start with selected permissions' })).toHaveCount(0);
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  let frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  let frame = await toolFrame(page);
   const write = (value: string) => frame.evaluate(async (text) => { try { await (window as unknown as Sdk).trickIt.request('clipboard-write', text); return 'allowed'; } catch { return 'denied'; } }, value);
   const denied = write('private text');
   await expect(page.getByRole('dialog', { name: 'Allow this tool action?' })).toContainText('remembers your answer');
@@ -64,8 +64,8 @@ test('runtime permissions are asked once on first use, remembered per tool and r
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('trick-it:permissions:v1')!)['runtime-fixture'])).toEqual({ 'clipboard-write': 'denied' });
 
   await page.getByRole('button', { name: 'Reset access and restart' }).click();
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  frame = await toolFrame(page);
   const approved = write('chosen result');
   await expect(page.getByRole('dialog', { name: 'Allow this tool action?' })).toBeVisible();
   // A forged second request while the prompt is open cannot ride on the approval.
@@ -79,15 +79,15 @@ test('runtime permissions are asked once on first use, remembered per tool and r
   expect(await page.evaluate(() => (window as unknown as { __clipboard: string }).__clipboard)).toBe('chosen result');
   expect(await write('second copy')).toBe('allowed');
   expect(await page.evaluate(() => (window as unknown as { __clipboard: string }).__clipboard)).toBe('second copy');
-  await page.frameLocator('iframe').getByRole('textbox', { name: 'Remember me' }).fill('preserve me');
+  await page.frameLocator('.runtime-workspace > iframe').getByRole('textbox', { name: 'Remember me' }).fill('preserve me');
   await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; });
-  await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('data-theme', 'dark');
-  await expect(page.frameLocator('iframe').getByRole('textbox', { name: 'Remember me' })).toHaveValue('preserve me');
+  await expect(page.frameLocator('.runtime-workspace > iframe').locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('textbox', { name: 'Remember me' })).toHaveValue('preserve me');
 
   // Still granted on the next visit without asking.
   await mountFixture(page, { permissions });
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  frame = await toolFrame(page);
   expect(await write('next visit')).toBe('allowed');
   await expect(page.getByRole('dialog', { name: 'Allow this tool action?' })).toBeHidden();
 });
@@ -100,8 +100,8 @@ for (const allowed of [true, false]) test(`permission dialog returns keyboard fo
     } } });
   });
   await mountFixture(page, { permissions: [{ name: 'clipboard-write', reason: 'Copy a chosen result.', required: true }] });
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   await frame.evaluate(() => {
     const button = document.createElement('button'); button.textContent = 'Request copy';
     button.onclick = () => {
@@ -110,14 +110,14 @@ for (const allowed of [true, false]) test(`permission dialog returns keyboard fo
     };
     document.body.append(button);
   });
-  const button = page.frameLocator('iframe').getByRole('button', { name: 'Request copy', exact: true });
+  const button = page.frameLocator('.runtime-workspace > iframe').getByRole('button', { name: 'Request copy', exact: true });
   await button.focus(); await button.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Allow this tool action?' });
   await expect(dialog).toBeVisible();
   await page.getByRole('button', { name: allowed ? 'Allow' : 'Don’t allow', exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(button).toHaveAttribute('data-outcome', allowed ? 'allowed' : 'denied');
-  await expect(page.locator('iframe')).toBeFocused();
+  await expect(page.locator('.runtime-workspace > iframe')).toBeFocused();
   await expect(button).toBeFocused();
   if (allowed) {
     // A later async response must not steal focus from a newer local control.
@@ -125,7 +125,7 @@ for (const allowed of [true, false]) test(`permission dialog returns keyboard fo
     await button.evaluate(element => element.removeAttribute('data-outcome'));
     await button.press('Enter');
     await expect.poll(() => page.evaluate(() => typeof (window as unknown as { __releaseClipboard?: () => void }).__releaseClipboard)).toBe('function');
-    const editor = page.frameLocator('iframe').getByRole('textbox', { name: 'Remember me' });
+    const editor = page.frameLocator('.runtime-workspace > iframe').getByRole('textbox', { name: 'Remember me' });
     await editor.focus();
     await page.evaluate(() => (window as unknown as { __releaseClipboard: () => void }).__releaseClipboard());
     await expect(button).toHaveAttribute('data-outcome', 'allowed');
@@ -136,17 +136,17 @@ for (const allowed of [true, false]) test(`permission dialog returns keyboard fo
 test('startup permissions are chosen once before launch and unselected ones stay unavailable', async ({ page }) => {
   const permissions = [{ name: 'wasm', reason: 'Run a fast engine.', required: false }];
   await mountFixture(page, { permissions });
-  await expect(page.locator('iframe')).toHaveCount(0);
+  await expect(page.locator('.runtime-workspace > iframe')).toHaveCount(0);
   await expect(page.getByRole('dialog', { name: 'This tool needs extra power' })).toBeVisible();
   await page.getByRole('button', { name: 'Start with selected permissions' }).click();
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   expect(await frame.evaluate(async () => {
     try { await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0])); return 'allowed'; }
     catch { return 'blocked'; }
   })).toBe('blocked');
   await mountFixture(page, { permissions });
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Start with selected permissions' })).toHaveCount(0);
 });
 
@@ -161,7 +161,7 @@ test('shared asset loader shows authenticated byte progress, verifies, localizes
   });
   for (const checkbox of await page.getByRole('checkbox').all()) await checkbox.check();
   await page.getByRole('button', { name: 'Start with selected permissions' }).click();
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
   // Hold the second half of a real ReadableStream to inspect the intermediate state.
   await page.evaluate((size) => {
     const fetcher = window.fetch.bind(window);
@@ -173,7 +173,7 @@ test('shared asset loader shows authenticated byte progress, verifies, localizes
       } }), { headers: { 'cache-control': 'no-store' } }));
     };
   }, size);
-  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  const frame = await toolFrame(page);
   await frame.evaluate(() => {
     const w = window as any;
     w.loader = w.trickIt.ui.loader(document.body);
@@ -182,7 +182,7 @@ test('shared asset loader shows authenticated byte progress, verifies, localizes
     w.loaded = w.loader.asset('stream');
     w.loaded.catch(() => {}); // assertions below consume the original promise
   });
-  const loader = page.frameLocator('iframe').locator('.ti-loader');
+  const loader = page.frameLocator('.runtime-workspace > iframe').locator('.ti-loader');
   await expect(loader.locator('[role="progressbar"]')).toHaveAttribute('aria-valuenow', '50');
   await expect(loader).toContainText('32 KB / 64 KB · 50%');
   await expect(loader).toHaveAttribute('aria-busy', 'true');
@@ -195,7 +195,7 @@ test('shared asset loader shows authenticated byte progress, verifies, localizes
     return config.token as string;
   });
   await page.evaluate((token) => {
-    const target = document.querySelector('iframe')!.contentWindow!;
+    const target = document.querySelector<HTMLIFrameElement>('.runtime-workspace > iframe')!.contentWindow!;
     for (const fields of [{ token: 'wrong' }, { id: '999' }, { loaded: -1 }, { loaded: 101 }, { total: 0 }, { total: 536870913 }, { phase: 'done' }]) target.postMessage({ type: 'trick-it:asset-progress', version: 1, token, id: '1', loaded: 99, total: 100, phase: 'loading', ...fields }, '*');
   }, session);
   await expect(loader.locator('[role="progressbar"]')).toHaveAttribute('aria-valuenow', '50');
@@ -211,7 +211,7 @@ test('shared asset loader shows authenticated byte progress, verifies, localizes
   expect(await frame.evaluate(async () => { try { await (window as any).loader.asset('broken'); return 'unexpected'; } catch (error) { return (error as { code: string }).code; } })).toBe('integrity');
   await expect(loader).toHaveAttribute('data-state', 'error');
   await expect(loader).toContainText('Gagal memuat aset');
-  await expect(page.frameLocator('iframe').getByRole('textbox', { name: 'Remember me' })).toHaveValue('keep this text');
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('textbox', { name: 'Remember me' })).toHaveValue('keep this text');
   corrupt = false;
   expect(await frame.evaluate(async () => (await (window as any).loader.asset('broken')).bytes.byteLength)).toBe(size);
   await expect(loader).toHaveAttribute('data-state', 'done');
@@ -238,9 +238,9 @@ test('deferred WASM downloads only on request, verifies bytes and preserves opaq
   expect(downloads).toBe(0);
   for (const checkbox of await page.getByRole('checkbox').all()) await checkbox.check();
   await page.getByRole('button', { name: 'Start with selected permissions' }).click();
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
   expect(downloads).toBe(0);
-  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  const frame = await toolFrame(page);
   const run = () => frame.evaluate(async () => {
     const result = await (window as unknown as { trickIt: { asset: (id: string) => Promise<{ bytes: ArrayBuffer; type: string }> } }).trickIt.asset('model');
     await WebAssembly.compile(result.bytes);
@@ -256,15 +256,15 @@ test('deferred WASM downloads only on request, verifies bytes and preserves opaq
   })).toBe(true);
   expect(downloads).toBe(1);
   expect(await frame.evaluate(() => { try { return parent.document.title; } catch { return 'blocked'; } })).toBe('blocked');
-  await expect(page.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts');
+  await expect(page.locator('.runtime-workspace > iframe')).toHaveAttribute('sandbox', 'allow-scripts');
 });
 
 test('geolocation and downloads require separate host confirmations', async ({ page, context }) => {
   await context.setGeolocation({ latitude: -6.2, longitude: 106.8 });
   await context.grantPermissions(['geolocation']);
   await mountFixture(page, { permissions: [{ name: 'geolocation', reason: 'Locate a point.', required: true }, { name: 'downloads', reason: 'Save a chosen result.', required: true }] });
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   expect(await frame.evaluate(() => new Promise<string>((resolve) => navigator.geolocation.getCurrentPosition(() => resolve('allowed'), () => resolve('blocked'))))).toBe('blocked');
   const location = frame.evaluate(() => (window as unknown as { trickIt: { request: (operation: string) => Promise<{ latitude: number; longitude: number }> } }).trickIt.request('geolocation'));
   await page.getByRole('button', { name: 'Allow', exact: true }).click();
@@ -285,8 +285,8 @@ test('clipboard reads do not occur until the host confirmation is accepted', asy
     Object.defineProperty(navigator, 'clipboard', { value: { readText: async () => { (window as unknown as { reads: number }).reads = ((window as unknown as { reads?: number }).reads ?? 0) + 1; return 'chosen clipboard text'; } } });
   });
   await mountFixture(page, { permissions: [{ name: 'clipboard-read', reason: 'Paste text you choose.', required: true }] });
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   const request = frame.evaluate(() => (window as unknown as { trickIt: { request: (operation: string) => Promise<string> } }).trickIt.request('clipboard-read'));
   await expect(page.getByRole('dialog')).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { reads?: number }).reads)).toBeUndefined();
@@ -298,8 +298,8 @@ test('granted blob workers remain opaque and cannot fetch external resources', a
   await mountFixture(page, { permissions: [{ name: 'workers', reason: 'Run local computation.', required: true }] });
   await page.getByRole('checkbox', { name: /Run isolated background workers/ }).check();
   await page.getByRole('button', { name: 'Start with selected permissions' }).click();
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   expect(await frame.evaluate(() => new Promise<string>((resolve) => {
     const url = URL.createObjectURL(new Blob(["fetch('https://example.com/blocked').then(() => postMessage('allowed'), () => postMessage('blocked'))"], { type: 'text/javascript' }));
     const worker = new Worker(url);
@@ -323,9 +323,9 @@ test('verified deferred modules can load inside the tool without granting worker
   });
   await page.getByRole('checkbox', { name: /Download declared external assets/ }).check();
   await page.getByRole('button', { name: 'Start with selected permissions' }).click();
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
   expect(downloads).toBe(0);
-  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  const frame = await toolFrame(page);
   expect(await frame.evaluate(async () => {
     const { bytes } = await (window as unknown as { trickIt: { asset: (id: string) => Promise<{ bytes: ArrayBuffer }> } }).trickIt.asset('glue');
     const url = URL.createObjectURL(new Blob([bytes], { type: 'text/javascript' }));
@@ -337,8 +337,8 @@ test('verified deferred modules can load inside the tool without granting worker
 
 test('tools show centred host popups, toasts and inline clay status through trickIt.ui', async ({ page }) => {
   await mountFixture(page);
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   type Ui = { trickIt: { ui: { info: (o: unknown) => Promise<boolean>; confirm: (o: unknown) => Promise<boolean>; toast: (m: string, o?: unknown) => Promise<void>; status: (t: Element, o: unknown) => { done: (t: string) => void } } } };
   const info = frame.evaluate(() => (window as unknown as Ui).trickIt.ui.info({ title: 'Publishing your preview', items: ['Enter details', 'Download the ZIP'], ordered: true }));
   const popup = page.getByRole('dialog', { name: 'Publishing your preview' });
@@ -355,7 +355,7 @@ test('tools show centred host popups, toasts and inline clay status through tric
   await frame.evaluate(() => (window as unknown as Ui).trickIt.ui.toast('Copied to clipboard', { tone: 'success' }));
   await expect(page.getByRole('status').filter({ hasText: 'Copied to clipboard' })).toBeVisible();
   await frame.evaluate(() => { const card = (window as unknown as Ui).trickIt.ui.status(document.body, { state: 'working', title: 'Crunching', progress: 40 }); card.done('All done'); });
-  await expect(page.frameLocator('iframe').locator('.ti-status[data-state="done"]')).toContainText('All done');
+  await expect(page.frameLocator('.runtime-workspace > iframe').locator('.ti-status[data-state="done"]')).toContainText('All done');
   // Long unbroken results wrap instead of widening the tool.
   expect(await frame.evaluate(() => { const p = document.createElement('p'); p.textContent = 'https://developer.chrome.com/docs/' + 'x'.repeat(400); document.body.append(p); return document.documentElement.scrollWidth <= document.documentElement.clientWidth; })).toBe(true);
 });
@@ -364,9 +364,9 @@ for (const reducedMotion of ['reduce', 'no-preference'] as const) {
   test(`confirmation dismissal restores tool focus before resolving (${reducedMotion})`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion });
     await mountFixture(page);
-    const inner = page.frameLocator('iframe');
+    const inner = page.frameLocator('.runtime-workspace > iframe');
     await expect(inner.getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-    const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+    const frame = await toolFrame(page);
     await frame.evaluate(() => {
       const button = document.createElement('button');
       button.id = 'confirm-focus';
@@ -392,8 +392,8 @@ for (const reducedMotion of ['reduce', 'no-preference'] as const) {
 
 test('shared toasts and status cards never duplicate and can be closed', async ({ page }) => {
   await mountFixture(page);
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   type Ui = { trickIt: { ui: { toast: (m: string, o?: unknown) => Promise<void>; status: (t: Element, o: unknown) => { work: (t: string) => void; done: (t: string) => void; element: HTMLElement }; loader: (t: Element, o?: unknown) => { done: () => void; update: (o: unknown) => void } } } };
   // The same notice replaces its earlier copy; each toast has its own close button.
   await frame.evaluate(async () => { const ui = (window as unknown as Ui).trickIt.ui; await ui.toast('Copied', { tone: 'success' }); await ui.toast('Copied', { tone: 'success' }); await ui.toast('Copied', { tone: 'success' }); });
@@ -402,7 +402,7 @@ test('shared toasts and status cards never duplicate and can be closed', async (
   await copied.getByRole('button', { name: 'Dismiss' }).click();
   await expect(copied).toHaveCount(0);
   // A finished status card can be closed, and a new state shows it again; a working card has no close button.
-  const inner = page.frameLocator('iframe');
+  const inner = page.frameLocator('.runtime-workspace > iframe');
   await frame.evaluate(() => { const card = (window as unknown as Ui).trickIt.ui.status(document.body, { state: 'working', title: 'Busy' }); (window as unknown as { card: typeof card }).card = card; });
   await expect(inner.locator('.ti-status .ti-close')).toBeHidden();
   await frame.evaluate(() => (window as unknown as { card: { done: (t: string) => void } }).card.done('Finished'));
@@ -418,8 +418,8 @@ test('shared toasts and status cards never duplicate and can be closed', async (
 
 test('the shared file picker keeps its layout under aggressive tool CSS', async ({ page }) => {
   await mountFixture(page);
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   const layout = await frame.evaluate(() => {
     const style = document.createElement('style');
     style.textContent = '.settings label{display:grid;gap:6px;font-size:12px;font-weight:600} button,input{min-height:60px;padding:20px;border:3px solid red} span,strong{display:contents}';
@@ -435,8 +435,8 @@ test('the shared file picker keeps its layout under aggressive tool CSS', async 
 
 test('a tool popup waits for a busy host instead of opening an in-frame modal', async ({ page }) => {
   await mountFixture(page, { permissions: [{ name: 'clipboard-write', reason: 'Copy a chosen result.', required: true }] });
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   type Sdk = { trickIt: { request: (operation: string, payload: string) => Promise<unknown>; ui: { info: (o: unknown) => Promise<boolean> } } };
   await frame.evaluate(() => { void (window as unknown as Sdk).trickIt.request('clipboard-write', 'text').catch(() => {}); });
   const permission = page.getByRole('dialog', { name: 'Allow this tool action?' });
@@ -454,9 +454,9 @@ test('a tool popup waits for a busy host instead of opening an in-frame modal', 
 
 test('shared clay file input validates type, size and count before the tool sees files', async ({ page }) => {
   await mountFixture(page);
-  const tool = page.frameLocator('iframe');
+  const tool = page.frameLocator('.runtime-workspace > iframe');
   await expect(tool.getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  const frame = await toolFrame(page);
   await frame.evaluate(() => {
     const ui = (window as unknown as { trickIt: { ui: { fileInput: (t: Element, o: unknown) => unknown } } }).trickIt.ui;
     (window as unknown as { picked: string[] }).picked = [];
@@ -476,9 +476,9 @@ test('shared clay file input validates type, size and count before the tool sees
 
 test('disabled file pickers lock removal and drop until re-enabled', async ({ page }) => {
   await mountFixture(page);
-  const tool = page.frameLocator('iframe');
+  const tool = page.frameLocator('.runtime-workspace > iframe');
   await expect(tool.getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  const frame = await toolFrame(page);
   await frame.evaluate(() => {
     const w = window as any; w.changes = 0;
     w.picker = w.trickIt.ui.fileInput(document.body, { onChange() { w.changes++; } });
@@ -502,9 +502,9 @@ test('disabled file pickers lock removal and drop until re-enabled', async ({ pa
 
 test('file input previews images locally and accepts drag and drop', async ({ page }) => {
   await mountFixture(page);
-  const tool = page.frameLocator('iframe');
+  const tool = page.frameLocator('.runtime-workspace > iframe');
   await expect(tool.getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  const frame = await toolFrame(page);
   await frame.evaluate(() => (window as unknown as { trickIt: { ui: { fileInput: (t: Element, o: unknown) => unknown } } }).trickIt.ui.fileInput(document.body, { accept: 'image/*,.json', multiple: true }));
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
   await tool.locator('.ti-drop input').setInputFiles({ name: 'dot.png', mimeType: 'image/png', buffer: png });

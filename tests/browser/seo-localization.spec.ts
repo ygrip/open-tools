@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { languageCodes } from '../../src/lib/languages.js';
 import { SOCIAL_CARD_LOCALES } from '../../src/lib/seo/metadata.js';
@@ -60,13 +60,13 @@ for (const locale of languageCodes) test(`${locale} platform and tool SEO is ren
 
 test('language links preserve query/hash and reach the isolated frame', async ({ page }) => {
   await page.goto('/id/json-tools/?keep=1#guide');
-  await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang', 'id');
+  await expect(page.frameLocator('.runtime-workspace > iframe').locator('html')).toHaveAttribute('lang', 'id');
   await page.getByRole('button', { name: 'Bahasa: Bahasa Indonesia' }).click();
   const english = page.getByRole('dialog', { name: 'Bahasa' }).getByRole('link', { name: /English/ });
   await expect(english).toHaveAttribute('href', '/json-tools/?keep=1#guide');
   await english.click();
   await expect(page).toHaveURL(/\/json-tools\/\?keep=1#guide$/);
-  await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.frameLocator('.runtime-workspace > iframe').locator('html')).toHaveAttribute('lang', 'en');
 });
 
 test('Chinese home uses the correct HTML language and a reviewed fallback social card', async ({ page }) => {

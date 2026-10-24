@@ -1,10 +1,10 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { mountFixture } from './runtime-fixture';
 import { languageCodes } from '../../src/lib/languages.js';
 
 test('a genuinely multilingual tool receives every live locale without replacing its workspace', async ({ page }) => {
   await mountFixture(page, { locales: languageCodes });
-  const frame = page.frameLocator('iframe');
+  const frame = page.frameLocator('.runtime-workspace > iframe');
   await frame.getByRole('textbox').fill('keep this input');
   await frame.locator('body').evaluate(element => { element.dataset.identity = 'original'; });
   for (const locale of languageCodes) {
@@ -20,5 +20,5 @@ test('unsupported tool locales use the first declared language while navigation 
   await mountFixture(page, { locales: ['id', 'en'] });
   await page.getByLabel('Test host locale', { exact: true }).selectOption('ja');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
-  await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang', 'id');
+  await expect(page.frameLocator('.runtime-workspace > iframe').locator('html')).toHaveAttribute('lang', 'id');
 });

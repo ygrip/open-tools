@@ -1,13 +1,13 @@
-import { expect, test } from '@playwright/test';
-import { mountFixture } from './runtime-fixture';
+import { expect, test } from './fixtures';
+import { mountFixture, toolFrame } from './runtime-fixture';
 
 test.use({ serviceWorkers: 'block' });
 
 test('shared Highlight.js code blocks escape markup and survive mobile theme changes', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
   await mountFixture(page);
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   await frame.evaluate(() => {
     const mount = document.createElement('div'); mount.id = 'code-block-fixture'; document.body.append(mount);
     const ui = (window as unknown as { trickIt: { ui: { codeBlock(target: Element, options: object): { update(options: object): void; remove(): void } } } }).trickIt.ui;
@@ -16,7 +16,7 @@ test('shared Highlight.js code blocks escape markup and survive mobile theme cha
       code: 'const message = "<img src=x onerror=alert(1)>";\\nconsole.log(message);'
     });
   });
-  const tool = page.frameLocator('iframe');
+  const tool = page.frameLocator('.runtime-workspace > iframe');
   const block = tool.locator('.ti-code');
   await expect(block.locator('pre code')).toContainText('<img src=x onerror=alert(1)>');
   await expect(block.locator('img')).toHaveCount(0);
@@ -42,14 +42,14 @@ test('shared Highlight.js code blocks escape markup and survive mobile theme cha
 
 test('shared code block highlights JSON, updates output and keeps unsupported grammar literal', async ({ page }) => {
   await mountFixture(page);
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   await frame.evaluate(() => {
     const target = document.createElement('div'); document.body.append(target);
     const ui = (window as unknown as { trickIt: { ui: { codeBlock(target: Element, options: object): { update(options: object): void } } } }).trickIt.ui;
     (window as unknown as { sampleCode: unknown }).sampleCode = ui.codeBlock(target, { code: '{"ok":true}', language: 'json', title: 'result.json' });
   });
-  const block = page.frameLocator('iframe').locator('.ti-code');
+  const block = page.frameLocator('.runtime-workspace > iframe').locator('.ti-code');
   await expect(block.locator('.hljs-attr')).toContainText('ok');
   await expect(block.locator('button')).toBeHidden();
   await frame.evaluate(() => (window as unknown as { sampleCode: { update(options: object): void } }).sampleCode.update({ code: 'no <svg onload=alert(1)>', language: 'not-a-language' }));

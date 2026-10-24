@@ -1,4 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
+import { mockAdSenseSdk as mockSdk } from './mock-ads';
+import { mountFixture } from './runtime-fixture';
 import { adsFixtureScript } from './ads-fixture';
 import { readFile } from 'node:fs/promises';
 import { validateAdsConfig, hostFramePolicy } from '../../src/lib/ads/config.js';
@@ -6,14 +8,6 @@ import { validateAdsConfig, hostFramePolicy } from '../../src/lib/ads/config.js'
 const deployment = validateAdsConfig(JSON.parse(await readFile(new URL('../../config/ads.json', import.meta.url), 'utf8')));
 
 test.use({ serviceWorkers: 'block' });
-
-const mockSdk = `window.__adRequests = [];
-window.adsbygoogle = { push() {
-  const ad = document.querySelector('ins.adsbygoogle:not([data-adsbygoogle-status])');
-  if (!ad) throw new Error('Duplicate ad request');
-  ad.setAttribute('data-adsbygoogle-status', 'done');
-  window.__adRequests.push(ad.getAttribute('data-ad-slot'));
-} };`;
 
 test('site configuration controls automatic advertising and the frame policy', async ({ page }) => {
   const adRequests: string[] = [];
@@ -32,6 +26,26 @@ test('site configuration controls automatic advertising and the frame policy', a
     await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute('content', hostFramePolicy(deployment));
   }
   expect(adRequests).toHaveLength(expectedLoads);
+});
+
+test('tool and mock ad frames coexist without contacting the provider', async ({ page }) => {
+  await mountFixture(page);
+  await page.addScriptTag({ content: await adsFixtureScript({ placements: { home: '', tool: '1234567890' } }) });
+  await expect.poll(() => page.locator('.ad-placement iframe[title="Advertisement"]').count()).toBeGreaterThan(0);
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  await expect(page.locator('.runtime-workspace > iframe')).toHaveAttribute('sandbox', 'allow-scripts');
+  const providerUrl = 'https://googleads.g.doubleclick.net/test-network-isolation';
+  const blockedRequest = page.waitForEvent('requestfailed', request => request.url() === providerUrl);
+  const provider = await page.evaluate(async (url) => {
+    try {
+      await fetch(url);
+      return 'unexpected network access';
+    } catch {
+      return 'blocked';
+    }
+  }, providerUrl);
+  expect(provider).toBe('blocked');
+  expect((await blockedRequest).failure()?.errorText).toContain('net::ERR_BLOCKED_BY_CLIENT');
 });
 
 test('disabled advertising never renders slots or loads the SDK', async ({ page }) => {
