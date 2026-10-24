@@ -2,6 +2,8 @@ import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { reportUnexpectedError } from '$lib/errors';
 import { paraglideMiddleware } from '$lib/paraglide/server.js';
 import { getTextDirection } from '$lib/paraglide/runtime.js';
+import { adsConfig } from '$lib/ads/settings.js';
+import { hostFramePolicy } from '$lib/ads/config.js';
 
 export const handleError: HandleServerError = ({ error, status }) => reportUnexpectedError(error, status, 'server');
 
@@ -9,7 +11,7 @@ export const handle: Handle = ({ event, resolve }) =>
   paraglideMiddleware(event.request, async ({ request, locale }) => {
     const response = await resolve({ ...event, request }, {
       transformPageChunk: ({ html }) =>
-        html.replace('%lang%', locale).replace('%dir%', getTextDirection(locale))
+        html.replace('%lang%', locale).replace('%dir%', getTextDirection(locale)).replace('%host-frame-policy%', hostFramePolicy(adsConfig))
     });
     if (response.status < 400) return response;
     const headers = new Headers(response.headers);

@@ -57,6 +57,10 @@ Tool-specific functional and UI/browser tests belong in each tool repository, no
 
 `npm run build` syncs approved bundles before building the static site. The build output is `build/`; deploy it to any static host. It includes prerendered home/legal/tool routes as directory indexes and JSON-encoded bundle files. Directory indexes avoid depending on host-specific clean-URL rewrites. Deploy the complete output atomically, not just the catalog. `npm run dev` requires an initial sync; rerun sync and restart development after registry changes.
 
+## Optional advertising
+
+Host advertising is off by default. Configure `config/ads.json` for manual home/tool AdSense slots, test mode, and explicit host frame origins. When enabled, configured placements load automatically; this project does not implement a visitor opt-in or CMP. The operator must meet applicable consent requirements before deployment. Tool iframes do not receive ad code or additional permissions. See [advertising setup and disclosures](docs/advertising.md).
+
 ## Bundle contract v3 (with legacy v2 compatibility)
 
 Every repository publishes `tool.manifest.json` and the referenced self-contained HTML in the **same Git commit**:
@@ -154,7 +158,7 @@ Explicit registrations are the default and recommended production approval mecha
 
 ## Isolation and trust
 
-Bundles are served as JSON, **never as executable same-origin HTML**. The loader embeds them using `srcdoc` in an opaque-origin `sandbox="allow-scripts"` iframe. Never add `allow-same-origin`. A host-prepended CSP restricts resource loads, connections, nested frames, workers, form submissions and base URLs. The parent document also restricts frame navigation to its own origin; Chromium regression tests verify external self-navigation is blocked. The bundle cannot access the parent's DOM, cookies or local storage, submit forms, open popups or navigate the top window.
+Bundles are served as JSON, **never as executable same-origin HTML**. The loader embeds them using `srcdoc` in an opaque-origin `sandbox="allow-scripts"` iframe. Never add `allow-same-origin`. A host-prepended CSP restricts resource loads, connections, nested frames, workers, form submissions and base URLs. The parent document also restricts frame destinations; Chromium regression tests verify unapproved external self-navigation is blocked. Optional host advertising extends this document-wide allowlist to explicitly configured provider origins, an additional trust choice described in [advertising setup](docs/advertising.md). The bundle cannot access the parent's DOM, cookies or local storage, submit forms, open popups or navigate the top window.
 
 This is defense in depth for **approved code**, not a complete hostile-code containment system. In particular, same-origin frame navigation remains possible and synchronous JavaScript can consume CPU. Review tools before registration; do not paste secrets into untrusted tools. Private source control does not make distributed JavaScript confidential: visitors can inspect the published HTML. The host exposes repository identity as provenance even when the repository is inaccessible to visitors.
 

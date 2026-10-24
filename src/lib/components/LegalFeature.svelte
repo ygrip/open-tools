@@ -12,7 +12,7 @@
     shortTitle: string;
     summary: string;
     illustrationAlt: string;
-    sections: { title: string; text: string }[];
+    sections: { title: string; text: string; link?: { href: string; label: string } }[];
     relatedAria: string;
     relatedTitle: string;
     related: { path: string; label: string }[];
@@ -42,7 +42,7 @@
       {#each data.sections as section, index}
         <section class="legal-section">
           <span class="legal-section-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-          <div><h2>{section.title}</h2><p>{section.text}</p></div>
+          <div><h2>{section.title}</h2><p>{section.text}</p>{#if section.link}<p><a class="text-link" href={section.link.href} target="_blank" rel="noopener noreferrer">{section.link.label} <span aria-hidden="true">↗</span></a></p>{/if}</div>
         </section>
       {/each}
     </div>
