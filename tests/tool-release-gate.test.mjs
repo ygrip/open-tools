@@ -8,6 +8,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { languageCodes } from '../src/lib/languages.js';
 import { checkToolRelease } from '../scripts/check-tool-release.mjs';
+import { MAX_TOOL_ENTRY_GZIP, ADDITIONAL_TOOL_LOCALE_GZIP, toolEntryGzipBudget } from '../scripts/lib/performance-budgets.mjs';
 import { scaffoldFiles } from './scaffold-recipe.mjs';
 
 const execute = promisify(execFile);
@@ -60,6 +61,13 @@ async function fixture(t) {
   return root;
 }
 
+test('catalog metadata budget scales only with distinct host-supported locales', () => {
+  assert.equal(toolEntryGzipBudget(['en', 'id']), MAX_TOOL_ENTRY_GZIP);
+  assert.equal(toolEntryGzipBudget(['en', 'id', 'ja', 'ja']), MAX_TOOL_ENTRY_GZIP + ADDITIONAL_TOOL_LOCALE_GZIP);
+  assert.equal(toolEntryGzipBudget([...languageCodes]), MAX_TOOL_ENTRY_GZIP + (languageCodes.length - 2) * ADDITIONAL_TOOL_LOCALE_GZIP);
+  assert.equal(toolEntryGzipBudget(['en', 'id', 'not-a-host-locale']), MAX_TOOL_ENTRY_GZIP);
+});
+
 test('structural gate derives its complete locale set from the host', async t => {
   const result = await checkToolRelease(await fixture(t));
   assert.equal(result.locales, languageCodes.length);
@@ -78,13 +86,14 @@ test('inlang editor schema references are not treated as UI messages', async t =
 const invalid = [
   ['duplicated oversized multilingual catalog guides', async root => {
     const data = await json(root, 'tool.manifest.json');
+    data.guide.steps = Array.from({ length: 12 }, (_, step) => 'Complete fixture action ' + step + '.');
     for (const locale of languageCodes.filter(code => code !== 'en')) {
       const steps = Array.from({ length: data.guide.steps.length }, (_, step) =>
         Array.from({ length: 7 }, (_, part) => digest(Buffer.from(locale + ':' + step + ':' + part))).join(''));
       data.translations[locale].guide = { summary: 'Synthetic guide.', steps };
     }
     await save(root, 'tool.manifest.json', data);
-  }, /fixed per-tool gzip budget/],
+  }, /gzip budget for 12 declared locales/],
   ['missing native guide', async root => {
     const data = await json(root, 'tool.manifest.json');
     delete data.translations.ms.guide;

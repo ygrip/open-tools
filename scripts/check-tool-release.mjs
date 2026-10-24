@@ -7,7 +7,7 @@ import { gzipSync } from 'node:zlib';
 import { languageCodes } from '../src/lib/languages.js';
 import { validateManifest } from '../src/lib/registry/contract.js';
 import { readToolArtifact } from '../tests/tool-harness/index.mjs';
-import { MAX_TOOL_ENTRY_GZIP } from './lib/performance-budgets.mjs';
+import { toolEntryGzipBudget } from './lib/performance-budgets.mjs';
 
 const execute = promisify(execFile);
 const sortedKeys = value => Object.keys(value).sort().join('\n');
@@ -117,7 +117,8 @@ export async function checkToolRelease(toolRoot, { baseline } = {}) {
   // Final registry performance checks remain authoritative for the actual entry.
   const { artwork, ...entry } = manifest;
   entry.addedAt = new Date().toISOString();
-  if (gzipSync(JSON.stringify(entry)).length > MAX_TOOL_ENTRY_GZIP) throw new Error('Catalog metadata exceeds the fixed per-tool gzip budget; keep full native help in locale packs');
+  const entryBudget = toolEntryGzipBudget(manifest.locales);
+  if (gzipSync(JSON.stringify(entry)).length > entryBudget) throw new Error('Catalog metadata exceeds the ' + entryBudget + ' byte gzip budget for ' + manifest.locales.length + ' declared locales');
   await checkToolchain(root, manifest);
   const english = await readCatalog(root, 'en');
   const catalogs = new Map();

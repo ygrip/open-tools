@@ -130,7 +130,7 @@ test('zoom labels follow the host locale while host magnification is contained',
 
 test('host prevents pinch, wheel and keyboard zoom while ordinary scrolling remains available', async ({ page }) => {
   await page.goto('/');
-  const cancelled = await page.evaluate(() => {
+  await expect.poll(() => page.evaluate(() => {
     const pinch = new Event('touchmove', { bubbles: true, cancelable: true });
     Object.defineProperty(pinch, 'touches', { value: [{}, {}] });
     return [
@@ -142,8 +142,7 @@ test('host prevents pinch, wheel and keyboard zoom while ordinary scrolling rema
       new WheelEvent('wheel', { deltaY: 100, cancelable: true }),
       new KeyboardEvent('keydown', { key: '+', cancelable: true })
     ].map(event => !document.dispatchEvent(event));
-  });
-  expect(cancelled).toEqual([true, true, true, true, true, true, false, false]);
+  })).toEqual([true, true, true, true, true, true, false, false]);
 });
 
 test('pinching a tool updates only its zoom control and preserves input without vertical scrolling', async ({ page }) => {
@@ -190,15 +189,19 @@ test('viewport-height document and wrapper styles do not create a resize feedbac
   await expect.poll(height).toBeLessThan(1500);
   // More than one resize/animation frame must converge, rather than ratcheting
   // the viewport-based minimum height up on every host acknowledgement.
-  const heights = await page.locator('.runtime-workspace > iframe').evaluate(async element => {
-    const samples: number[] = [];
-    for (let index = 0; index < 10; index++) {
-      await new Promise(requestAnimationFrame);
-      samples.push(element.getBoundingClientRect().height);
-    }
-    return samples;
-  });
-  expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(2);
+  const heightRange = async () => {
+    const heights = await page.locator('.runtime-workspace > iframe').evaluate(async element => {
+      const samples: number[] = [];
+      for (let index = 0; index < 10; index++) {
+        await new Promise(requestAnimationFrame);
+        samples.push(element.getBoundingClientRect().height);
+      }
+      return samples;
+    });
+    return Math.max(...heights) - Math.min(...heights);
+  };
+  await expect.poll(heightRange).toBeLessThanOrEqual(2);
+  await expect.poll(height).toBeLessThan(1500);
   expect(await frame.evaluate(() => getComputedStyle(document.querySelector('.viewport-wrapper')!, '::after').content)).toBe('"100vh"');
   expect(await frame.evaluate(() => getComputedStyle(document.querySelector('.viewport-wrapper')!).maxWidth)).toBe('20px');
   await frame.evaluate(() => { (document.querySelector('.viewport-wrapper') as HTMLElement).style.minHeight = '100dvh'; });
