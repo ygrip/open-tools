@@ -18,6 +18,10 @@ for (const locale of ['en', 'id'] as const) {
         await expect(page.locator('.legal-sections')).toContainText('Google AdSense');
         await expect(page.locator('a[href="https://policies.google.com/technologies/partner-sites"]')).toBeVisible();
       }
+      if (route === 'terms') {
+        await expect(page.locator('.legal-sections')).toContainText(/advertising|iklan/);
+        await expect(page.locator('.legal-sections')).toContainText(/consent|persetujuan/);
+      }
       if (route === 'policy') {
         await expect(page.locator('.legal-sections')).toContainText('host');
         await expect(page.locator('.legal-sections')).toContainText(/advertising|iklan/);

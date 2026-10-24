@@ -5,7 +5,7 @@ import { validateAdsConfig, hostFramePolicy } from '../src/lib/ads/config.js';
 
 const disabledPolicy = 'frame-src about: https://challenges.cloudflare.com';
 const enabled = {
-  enabled: true, client: 'ca-pub-1234567890123456', testMode: true, consentConfigured: true,
+  enabled: true, client: 'ca-pub-1234567890123456', testMode: true,
   placements: { home: '1234567890', tool: '0987654321' },
   frameOrigins: ['https://googleads.g.doubleclick.net', 'https://*.safeframe.googlesyndication.com']
 };
@@ -14,7 +14,7 @@ test('advertising defaults off and deployment configuration is valid', async () 
   const raw = JSON.parse(await readFile(new URL('../config/ads.json', import.meta.url), 'utf8'));
   assert.doesNotThrow(() => validateAdsConfig(raw));
   const config = validateAdsConfig({});
-  assert.deepEqual(config, { enabled: false, client: '', testMode: true, consentConfigured: false, placements: { home: '', tool: '' }, frameOrigins: [] });
+  assert.deepEqual(config, { enabled: false, client: '', testMode: true, placements: { home: '', tool: '' }, frameOrigins: [] });
   assert.equal(hostFramePolicy(config), disabledPolicy);
 });
 
@@ -31,7 +31,6 @@ for (const [name, patch, message] of [
   ['invalid client', { client: 'pub-123' }, /Invalid ads.client/],
   ['missing slots', { placements: {} }, /at least one placement/],
   ['invalid slot', { placements: { home: '" onclick="bad' } }, /Invalid ads.placements.home/],
-  ['consent not configured', { consentConfigured: false }, /consent management/],
   ['missing frame allowlist', { frameOrigins: [] }, /explicit ads.frameOrigins/],
   ['string toggle', { enabled: 'true' }, /must be a boolean/],
   ['string test toggle', { testMode: 'false' }, /must be a boolean/],

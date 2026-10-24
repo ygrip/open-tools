@@ -59,7 +59,7 @@ Tool-specific functional and UI/browser tests belong in each tool repository, no
 
 ## Optional advertising
 
-Host advertising is off by default. Configure `config/ads.json` for manual home/tool AdSense slots, test mode, and explicit host frame origins. A default-denied consent bridge must be connected to your CMP before any SDK or ad request is made. Tool iframes do not receive ad code or additional permissions. See [advertising setup, consent, and privacy disclosures](docs/advertising.md) before enabling it.
+Host advertising is off by default. Configure `config/ads.json` for manual home/tool AdSense slots, test mode, and explicit host frame origins. When enabled, configured placements load automatically; this project does not implement a visitor opt-in or CMP. The operator must meet applicable consent requirements before deployment. Tool iframes do not receive ad code or additional permissions. See [advertising setup and disclosures](docs/advertising.md).
 
 ## Bundle contract v3 (with legacy v2 compatibility)
 

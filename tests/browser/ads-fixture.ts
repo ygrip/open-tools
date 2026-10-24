@@ -20,7 +20,7 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 /** Compile real components with test-only configuration, never enable production ads. */
 export async function adsFixtureScript(overrides: Record<string, unknown> = {}) {
   const config = validateAdsConfig({
-    enabled: true, client: 'ca-pub-1234567890123456', testMode: true, consentConfigured: true,
+    enabled: true, client: 'ca-pub-1234567890123456', testMode: true,
     placements: { home: '1234567890', tool: '0987654321' },
     frameOrigins: ['https://googleads.g.doubleclick.net'], ...overrides
   });
@@ -28,8 +28,6 @@ export async function adsFixtureScript(overrides: Record<string, unknown> = {}) 
     stdin: {
       contents: `import { mount, unmount } from 'svelte';
         import AdSlot from './src/lib/components/AdSlot.svelte';
-        import { installAdvertisingConsentBridge } from './src/lib/ads/consent';
-        installAdvertisingConsentBridge();
         const home = document.createElement('div'), tool = document.createElement('div');
         document.body.append(home, tool);
         mount(AdSlot, { target: home, props: { placement: 'home' } });

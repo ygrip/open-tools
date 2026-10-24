@@ -1,4 +1,4 @@
-/** @typedef {{enabled:boolean,client:string,testMode:boolean,consentConfigured:boolean,placements:{home:string,tool:string},frameOrigins:string[]}} AdsConfig */
+/** @typedef {{enabled:boolean,client:string,testMode:boolean,placements:{home:string,tool:string},frameOrigins:string[]}} AdsConfig */
 
 /** @param {unknown} value @param {string} label */
 function record(value, label) {
@@ -45,7 +45,6 @@ export function validateAdsConfig(input) {
     enabled: booleanOption(value.enabled, false, 'ads.enabled'),
     client: identifier(value.client, /^ca-pub-\d{16}$/, 'ads.client'),
     testMode: booleanOption(value.testMode, true, 'ads.testMode'),
-    consentConfigured: booleanOption(value.consentConfigured, false, 'ads.consentConfigured'),
     placements: {
       home: identifier(placements.home, /^\d{1,20}$/, 'ads.placements.home'),
       tool: identifier(placements.tool, /^\d{1,20}$/, 'ads.placements.tool')
@@ -55,7 +54,6 @@ export function validateAdsConfig(input) {
   if (!config.enabled) return config;
   if (!config.client) throw new Error('Enabled ads require ads.client');
   if (!config.placements.home && !config.placements.tool) throw new Error('Enabled ads require at least one placement slot');
-  if (!config.consentConfigured) throw new Error('Configure applicable consent management before setting ads.consentConfigured');
   if (!config.frameOrigins.length) throw new Error('Enabled ads require an explicit ads.frameOrigins allowlist');
   return config;
 }

@@ -2,7 +2,6 @@
   import { m } from '$lib/paraglide/messages.js';
   import { adsConfig } from '$lib/ads/settings.js';
   import { canRequestAd, requestAd } from '$lib/ads/client';
-  import { advertisingConsent } from '$lib/ads/consent';
 
   let { placement }: { placement: 'home' | 'tool' } = $props();
   const slot = $derived(adsConfig.placements[placement]);
@@ -13,7 +12,7 @@
   });
 
   $effect(() => {
-    if (!adsConfig.enabled || !slot || !$advertisingConsent || !element) return;
+    if (!adsConfig.enabled || !slot || !element) return;
     const ad = element;
     let pending = false;
     let finished = false;
@@ -46,7 +45,7 @@
   });
 </script>
 
-{#if adsConfig.enabled && slot && $advertisingConsent}
+{#if adsConfig.enabled && slot}
   <aside class="ad-placement" aria-label={m.ads_label()} data-ad-placement={placement}>
     <span class="ad-label">{m.ads_label()}</span>
     <ins bind:this={element} class="adsbygoogle" data-ad-client={adsConfig.client} data-ad-slot={slot} data-ad-format="auto" data-full-width-responsive="true" data-adtest={testAttribute}></ins>

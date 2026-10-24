@@ -2,7 +2,6 @@
   "enabled": false,
   "client": "",
   "testMode": true,
-  "consentConfigured": false,
   "placements": {
     "home": "",
     "tool": ""

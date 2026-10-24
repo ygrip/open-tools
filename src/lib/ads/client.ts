@@ -1,6 +1,3 @@
-import { get } from 'svelte/store';
-import { advertisingConsent } from './consent';
-
 const scriptId = 'trick-it-adsense';
 let library: Promise<void> | undefined;
 let publisher: string | undefined;
@@ -43,9 +40,9 @@ function loadLibrary(client: string): Promise<void> {
   return library;
 }
 
-/** Consent and visibility are checked again after the asynchronous SDK load. */
+/** Visibility is checked again after the asynchronous SDK load. */
 export function canRequestAd(element: HTMLElement): boolean {
-  if (!get(advertisingConsent) || !element.isConnected || element.clientWidth <= 0) return false;
+  if (!element.isConnected || element.clientWidth <= 0) return false;
   return element.checkVisibility?.({ checkOpacity: true, checkVisibilityCSS: true }) ?? getComputedStyle(element).visibility === 'visible';
 }
 

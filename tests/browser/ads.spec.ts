@@ -15,29 +15,46 @@ window.adsbygoogle = { push() {
   window.__adRequests.push(ad.getAttribute('data-ad-slot'));
 } };`;
 
-test('deployment makes no ad requests before consent and uses its configured frame policy', async ({ page }) => {
+test('site configuration controls automatic advertising and the frame policy', async ({ page }) => {
   const adRequests: string[] = [];
+  await page.route('https://pagead2.googlesyndication.com/**', route => route.fulfill({ contentType: 'text/javascript', body: mockSdk }));
   page.on('request', request => { if (/googlesyndication|doubleclick/.test(request.url())) adRequests.push(request.url()); });
-  for (const path of ['/', '/json-tools/', '/privacy/', '/policy/']) {
+  const slots = new Map([['/', deployment.placements.home], ['/json-tools/', deployment.placements.tool]]);
+  let expectedLoads = 0;
+  for (const path of ['/', '/json-tools/', '/privacy/', '/terms/', '/policy/']) {
+    let expectedAds = 0;
+    if (deployment.enabled && slots.get(path)) expectedAds = 1;
+    expectedLoads += expectedAds;
     await page.goto(path, { waitUntil: 'networkidle' });
-    await expect(page.locator('.ad-placement, ins.adsbygoogle, #trick-it-adsense')).toHaveCount(0);
-    expect(await page.evaluate(() => Boolean(window.trickItAds))).toBe(deployment.enabled);
+    await expect(page.locator('.ad-placement')).toHaveCount(expectedAds);
+    await expect(page.locator('#trick-it-adsense')).toHaveCount(expectedAds);
+    expect(await page.evaluate(() => 'trickItAds' in window)).toBe(false);
     await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute('content', hostFramePolicy(deployment));
   }
-  expect(adRequests).toEqual([]);
+  expect(adRequests).toHaveLength(expectedLoads);
 });
 
-test('configured slots load one host library and request once per new ad element', async ({ page }) => {
+test('disabled advertising never renders slots or loads the SDK', async ({ page }) => {
+  const requests: string[] = [];
+  await page.route('https://pagead2.googlesyndication.com/**', route => {
+    requests.push(route.request().url());
+    return route.abort();
+  });
+  await page.goto('/privacy/');
+  await page.addScriptTag({ content: await adsFixtureScript({ enabled: false }) });
+  await expect(page.locator('.ad-placement, ins.adsbygoogle, #trick-it-adsense')).toHaveCount(0);
+  expect(requests).toEqual([]);
+});
+
+test('enabled slots automatically load one host library and request once per new element', async ({ page }) => {
   let loads = 0;
   await page.route('https://pagead2.googlesyndication.com/**', route => {
     loads++;
     return route.fulfill({ contentType: 'text/javascript', body: mockSdk });
   });
-  await page.goto('/');
+  await page.goto('/privacy/');
   await page.addScriptTag({ content: await adsFixtureScript() });
-  await expect(page.locator('.ad-placement')).toHaveCount(0);
-  expect(loads).toBe(0);
-  await page.evaluate(() => window.trickItAds!.setConsent(true));
+  expect(await page.evaluate(() => 'trickItAds' in window)).toBe(false);
   await expect(page.locator('.ad-placement')).toHaveCount(2);
   await expect(page.locator('ins[data-adtest="on"]')).toHaveCount(2);
   await expect.poll(() => page.evaluate(() => window.__adRequests?.length)).toBe(2);
@@ -51,24 +68,27 @@ test('configured slots load one host library and request once per new ad element
 
 test('empty placement stays absent and live mode omits the test attribute', async ({ page }) => {
   await page.route('https://pagead2.googlesyndication.com/**', route => route.fulfill({ contentType: 'text/javascript', body: mockSdk }));
-  await page.goto('/id/');
+  await page.goto('/id/privacy/');
   await page.addScriptTag({ content: await adsFixtureScript({ placements: { home: '', tool: '1234567890' }, testMode: false }) });
-  await page.evaluate(() => window.trickItAds!.setConsent(true));
   await expect(page.locator('[data-ad-placement="home"]')).toHaveCount(0);
   await expect(page.locator('ins.adsbygoogle')).not.toHaveAttribute('data-adtest');
   await expect(page.getByRole('complementary', { name: 'Iklan' })).toBeVisible();
-  await page.evaluate(() => window.trickItAds!.setConsent(false));
-  await expect(page.locator('.ad-placement')).toHaveCount(0);
 });
 
 test('blocked advertising does not break the host or produce uncaught page errors', async ({ page }) => {
   const errors: string[] = [];
+  let attempted = false;
   page.on('pageerror', error => errors.push(error.message));
-  await page.route('https://pagead2.googlesyndication.com/**', route => route.abort());
-  await page.goto('/');
+  await page.route('https://pagead2.googlesyndication.com/**', route => {
+    attempted = true;
+    return route.abort();
+  });
+  await page.goto('/privacy/');
   await page.addScriptTag({ content: await adsFixtureScript() });
-  await page.evaluate(() => window.trickItAds!.setConsent(true));
+  await expect.poll(() => attempted).toBe(true);
   await expect(page.locator('#trick-it-adsense')).toHaveCount(0);
+  await page.locator('.legal-back').click();
+  await expect(page).toHaveURL('/');
   await page.locator('.theme-toggle:visible').click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   expect(errors).toEqual([]);
@@ -81,9 +101,8 @@ test('an ad removed while the library loads is never requested', async ({ page }
     await gate;
     await route.fulfill({ contentType: 'text/javascript', body: mockSdk });
   });
-  await page.goto('/');
+  await page.goto('/privacy/');
   await page.addScriptTag({ content: await adsFixtureScript({ placements: { home: '', tool: '1234567890' } }) });
-  await page.evaluate(() => window.trickItAds!.setConsent(true));
   await page.evaluate(() => window.__removeToolAd());
   release();
   await expect(page.locator('ins.adsbygoogle')).toHaveCount(0);
@@ -97,9 +116,8 @@ for (const hiding of ['display', 'visibility', 'opacity'] as const) test(`a slot
     await gate;
     await route.fulfill({ contentType: 'text/javascript', body: mockSdk });
   });
-  await page.goto('/');
+  await page.goto('/privacy/');
   await page.addScriptTag({ content: await adsFixtureScript({ placements: { home: '', tool: '1234567890' } }) });
-  await page.evaluate(() => window.trickItAds!.setConsent(true));
   await page.evaluate(kind => window.__hideToolAd(kind), hiding);
   release();
   await expect.poll(() => page.evaluate(() => window.__adRequests?.length)).toBe(0);
