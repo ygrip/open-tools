@@ -48,26 +48,33 @@ function checkCatalog(catalog, english, locale) {
  * Check future releases here, not legacy registry ingestion, so pinned tools
  * remain usable while their owning repositories migrate.
  */
-function checkGuideTranslations(manifest) {
+function checkGuideTranslations(manifest, catalogs) {
   const english = manifest.guide;
-  for (const locale of languageCodes.filter(code => code !== 'en')) {
-    const guide = manifest.translations?.[locale]?.guide;
+  for (const locale of languageCodes) {
+    const guide = locale === 'en' ? english : manifest.translations?.[locale]?.guide;
     if (!guide) throw new Error('Missing native guide: ' + locale);
-    if (guide.steps.length !== english.steps.length) {
-      throw new Error('Native guide step count mismatch: ' + locale + ' (' + guide.steps.length + ' versus ' + english.steps.length + ')');
-    }
-    if (guide.summary.trim() === english.summary.trim()) {
-      throw new Error('Untranslated native guide summary: ' + locale);
-    }
-    guide.steps.forEach((step, index) => {
-      const englishStep = english.steps[index];
-      // A terse identifier/example may legitimately remain unchanged (e.g. an
-      // input format). Reject copied English instructional sentences instead.
-      const hasNaturalLanguage = (englishStep.match(/[A-Za-z]{2,}/g) ?? []).length >= 3;
-      if (hasNaturalLanguage && step.trim() === englishStep.trim()) {
-        throw new Error('Untranslated native guide step: ' + locale + ' #' + (index + 1));
+    if (locale !== 'en') {
+      if (guide.steps.length !== english.steps.length) {
+        throw new Error('Native guide step count mismatch: ' + locale + ' (' + guide.steps.length + ' versus ' + english.steps.length + ')');
       }
-    });
+      if (guide.summary.trim() === english.summary.trim()) {
+        throw new Error('Untranslated native guide summary: ' + locale);
+      }
+      guide.steps.forEach((step, index) => {
+        const englishStep = english.steps[index];
+        // Terse technical examples may remain unchanged across languages.
+        const hasNaturalLanguage = (englishStep.match(/[A-Za-z]{2,}/g) ?? []).length >= 3;
+        if (hasNaturalLanguage && step.trim() === englishStep.trim()) {
+          throw new Error('Untranslated native guide step: ' + locale + ' #' + (index + 1));
+        }
+      });
+    }
+    // The same Paraglide-authored catalogs must own both iframe and manifest
+    // guide copy. A standalone handwritten manifest dictionary is not enough.
+    const sourceMessages = new Set(Object.values(catalogs.get(locale)));
+    for (const [label, copy] of [['summary', guide.summary], ...guide.steps.map((step, index) => ['step' + (index + 1), step])]) {
+      if (!sourceMessages.has(copy)) throw new Error('Guide copy missing from Paraglide catalog: ' + locale + '.' + label);
+    }
   }
 }
 
@@ -106,7 +113,6 @@ export async function checkToolRelease(toolRoot, { baseline } = {}) {
   const root = await realpath(toolRoot);
   const manifest = validateManifest(await readJson(root, 'tool.manifest.json'));
   checkLocaleSet(manifest.locales, 'Manifest locales');
-  checkGuideTranslations(manifest);
   // Registry output removes artwork and adds its registration timestamp.
   // Final registry performance checks remain authoritative for the actual entry.
   const { artwork, ...entry } = manifest;
@@ -127,6 +133,7 @@ export async function checkToolRelease(toolRoot, { baseline } = {}) {
     }
     if (!manifest.localePacks?.[locale]?.file) throw new Error('Publish a separate repository-file locale pack: ' + locale);
   }
+  checkGuideTranslations(manifest, catalogs);
   // Uses the same UTF-8, flat-string, path, byte-length and SHA-256 checks as real host tests.
   await readToolArtifact(root);
   for (const locale of languageCodes.filter(locale => locale !== 'en')) {
