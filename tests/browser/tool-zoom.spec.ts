@@ -18,7 +18,7 @@ for (const width of [375, 1440]) {
     await expect(level).toHaveText('100%');
     await expect(reset).toBeDisabled();
     expect(await page.evaluate(() => getComputedStyle(document.body).zoom)).toBe('1');
-    expect(await page.locator('meta[name="viewport"]').getAttribute('content')).toContain('user-scalable=no');
+    await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', 'width=device-width, initial-scale=1');
 
     const text = page.frameLocator('.runtime-workspace > iframe').getByRole('textbox', { name: 'Remember me' });
     await text.fill('Do not restart my tool');
@@ -110,7 +110,7 @@ for (const width of [375, 1440]) {
 
 test('zoom labels follow the host locale while host magnification is contained', async ({ page }) => {
   await page.goto('/id/json-tools/');
-  await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', /user-scalable=no/);
+  await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', 'width=device-width, initial-scale=1');
   const controls = page.getByRole('group', { name: 'Perbesaran alat' });
   await expect(page.locator('.runtime-workspace > iframe')).toBeVisible();
   await expect(controls.getByRole('button', { name: 'Perbesar tampilan alat' })).toBeVisible();
