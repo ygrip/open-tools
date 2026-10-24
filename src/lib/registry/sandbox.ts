@@ -40,9 +40,10 @@ const themeStyles = `
   --ot-shadow: rgba(0, 0, 0, 0.35) !important;
   --ot-highlight: rgba(255, 255, 255, 0.075) !important;
 }
-html, body { background-color: var(--ot-bg) !important; color: var(--ot-text) !important; }
+/* Document height follows content, never the iframe viewport being measured. */
+html, body { height: auto !important; min-height: 0 !important; background-color: var(--ot-bg) !important; color: var(--ot-text) !important; }
 /* Overridable safety net: long URLs, hashes and tokens wrap instead of widening the tool. */
-html { overscroll-behavior: contain; }
+html { overscroll-behavior-x: contain; }
 body { overflow-wrap: anywhere; zoom: var(--ot-host-tool-zoom, 1) !important; }
 img, video { max-width: 100%; }
 `;
@@ -63,13 +64,14 @@ const themeBootstrap = `
 })();
 `;
 
-export type RuntimeOptions = { locale?: string; token?: string; permissions?: readonly string[]; scriptAssets?: boolean; nativeDownloads?: boolean; zoomPercent?: number };
+export type RuntimeOptions = { locale?: string; token?: string; permissions?: readonly string[]; scriptAssets?: boolean; nativeDownloads?: boolean; zoomPercent?: number; viewportHeight?: number };
 
 export function sandboxDocument(html: string, initialTheme: Theme = 'light', options: RuntimeOptions = {}): string {
   const theme = isTheme(initialTheme) ? initialTheme : 'light';
   let locale = 'en';
   if (options.locale && isSupportedLanguage(options.locale)) locale = options.locale;
   const initialZoom = Number.isInteger(options.zoomPercent) && (options.zoomPercent ?? 0) >= TOOL_ZOOM.min && (options.zoomPercent ?? 0) <= TOOL_ZOOM.max ? options.zoomPercent! : TOOL_ZOOM.default;
+  const viewportHeight = Number.isSafeInteger(options.viewportHeight) && options.viewportHeight! > 0 && options.viewportHeight! <= 100000 ? options.viewportHeight! : 280;
   const permissions = options.permissions ?? [];
   let policy = bundlePolicy;
   if (permissions.includes('wasm')) policy = policy.replace("script-src 'unsafe-inline'", "script-src 'unsafe-inline' 'wasm-unsafe-eval'");
@@ -196,18 +198,60 @@ ${uiKitScript}
 (() => {
   const token = ${JSON.stringify(token)};
   if (!token) return;
-  // Frame events do not bubble into the host. Block accidental wheel zoom here
-  // too, while preserving keyboard/mobile accessibility zoom and normal scrolling.
+  // Native frame zoom also magnifies the host. Translate gestures into the
+  // same tool-only zoom used by the toolbar, without replacing the iframe.
+  const currentZoom = () => Math.round((parseFloat(document.documentElement.style.getPropertyValue('--ot-host-tool-zoom')) || 1) * 100);
+  function applyZoom(percent, notify = false) {
+    percent = Math.max(${TOOL_ZOOM.min}, Math.min(${TOOL_ZOOM.max}, Math.round(percent)));
+    if (percent === currentZoom()) return;
+    document.documentElement.style.setProperty('--ot-host-tool-zoom', String(percent / 100));
+    dispatchEvent(new Event('trick-it:zoomchange'));
+    if (notify) parent.postMessage({ type: 'trick-it:zoom-request', version: 1, token, percent }, '*');
+  }
   addEventListener('wheel', (event) => {
-    if (event.ctrlKey || event.metaKey) event.preventDefault();
+    if (!event.ctrlKey && !event.metaKey || event.defaultPrevented) return;
+    event.preventDefault();
+    if (event.deltaY) applyZoom(currentZoom() + (event.deltaY < 0 ? 5 : -5), true);
+  }, { passive: false });
+  addEventListener('keydown', (event) => {
+    if (event.defaultPrevented || !(event.ctrlKey || event.metaKey) || !['+', '=', '-', '0'].includes(event.key)) return;
+    event.preventDefault();
+    applyZoom(event.key === '0' ? ${TOOL_ZOOM.default} : currentZoom() + (event.key === '-' ? -${TOOL_ZOOM.step} : ${TOOL_ZOOM.step}), true);
+  });
+  let pinch = null;
+  const distance = touches => Math.hypot(touches[1].clientX - touches[0].clientX, touches[1].clientY - touches[0].clientY);
+  addEventListener('touchstart', (event) => {
+    if (event.defaultPrevented || event.touches.length !== 2) return;
+    event.preventDefault();
+    const span = distance(event.touches);
+    pinch = span > 0 ? { distance: span, percent: currentZoom() } : null;
+  }, { passive: false });
+  addEventListener('touchmove', (event) => {
+    if (event.defaultPrevented || event.touches.length < 2) return;
+    event.preventDefault();
+    if (pinch) applyZoom(pinch.percent * distance(event.touches) / pinch.distance, true);
+  }, { passive: false });
+  addEventListener('touchend', () => { pinch = null; });
+  addEventListener('touchcancel', () => { pinch = null; });
+  let gestureZoom = ${initialZoom};
+  addEventListener('gesturestart', (event) => {
+    event.preventDefault();
+    gestureZoom = currentZoom();
+  }, { passive: false });
+  addEventListener('gesturechange', (event) => {
+    event.preventDefault();
+    if (!pinch && Number.isFinite(event.scale) && event.scale > 0) applyZoom(gestureZoom * event.scale, true);
   }, { passive: false });
   addEventListener('message', (event) => {
     if (!token || event.source !== parent) return;
     const data = event.data;
     if (data?.type !== '${zoomMessageType}' || data.version !== 1 || data.token !== token ||
         !Number.isInteger(data.percent) || data.percent < ${TOOL_ZOOM.min} || data.percent > ${TOOL_ZOOM.max}) return;
-    document.documentElement.style.setProperty('--ot-host-tool-zoom', String(data.percent / 100));
-    dispatchEvent(new Event('trick-it:zoomchange'));
+    if (Number.isSafeInteger(data.viewportHeight) && data.viewportHeight > 0 && data.viewportHeight <= 100000) {
+      document.documentElement.style.setProperty('--ot-host-viewport-height', data.viewportHeight + 'px');
+      dispatchEvent(new Event('trick-it:zoomchange'));
+    }
+    applyZoom(data.percent);
   });
 })();
 `;
@@ -218,17 +262,42 @@ ${uiKitScript}
   const token = ${JSON.stringify(token)};
   if (!token) return;
   let scheduled = false, lastHeight = -1;
+  // A tool's 100vh wrapper must refer to the host viewport, not to the iframe
+  // height that it is about to increase. Normalize CSS declarations (including
+  // dynamic/inline ones) without touching tool markup, scripts or fixed sizes.
+  function viewportStyles() {
+    const units = /"(?:\\\\.|[^"\\\\])*"|'(?:\\\\.|[^'\\\\])*'|url\\((?:\\\\.|[^"'()\\\\]|"(?:\\\\.|[^"\\\\])*"|'(?:\\\\.|[^'\\\\])*')*\\)|(?<![-\\w.])(-?(?:[0-9]*\\.)?[0-9]+(?:e[+-]?[0-9]+)?)(?:d|s|l)?vh\\b/gi;
+    function style(declaration) {
+      for (const property of Array.from(declaration)) {
+        const value = declaration.getPropertyValue(property);
+        const stable = value.replace(units, (match, amount) => amount === undefined ? match : 'calc(var(--ot-host-viewport-height) * ' + Number(amount) / 100 + ')');
+        if (stable !== value) declaration.setProperty(property, stable, declaration.getPropertyPriority(property));
+      }
+    }
+    function rules(entries) {
+      for (const rule of entries) {
+        if (rule.style) style(rule.style);
+        if (rule.cssRules) rules(rule.cssRules);
+      }
+    }
+    for (const sheet of document.styleSheets) rules(sheet.cssRules);
+    for (const element of document.querySelectorAll('[style]')) style(element.style);
+  }
   function measure() {
     scheduled = false;
     const body = document.body, root = document.documentElement;
     if (!body || !root) return;
+    viewportStyles();
     const rect = body.getBoundingClientRect();
     const margin = Math.max(0, parseFloat(getComputedStyle(body).marginBottom) || 0);
     // Unlike root.scrollHeight, body content can shrink when the frame is tall.
     // Consider root overflow only when it actually extends past the viewport.
     const overflow = root.scrollHeight > innerHeight + 1 ? root.scrollHeight : 0;
     const scale = parseFloat(getComputedStyle(body).zoom) || 1;
-    const height = Math.ceil(Math.max(rect.bottom + margin * scale, body.scrollHeight * scale + Math.max(0, rect.top) + margin * scale, overflow));
+    // Classic horizontal scrollbars consume viewport height; reserve their
+    // actual size so horizontal overflow never introduces a vertical scrollbar.
+    const scrollbar = Math.max(0, innerHeight - root.clientHeight);
+    const height = Math.ceil(Math.max(rect.bottom + margin * scale, body.scrollHeight * scale + Math.max(0, rect.top) + margin * scale, overflow) + scrollbar);
     if (!Number.isSafeInteger(height) || height < 0 || height > 100000 || Math.abs(height - lastHeight) < 2) return;
     lastHeight = height;
     parent.postMessage({ type: 'trick-it:resize', version: 1, token, height }, '*');
@@ -254,5 +323,5 @@ ${uiKitScript}
   else start();
 })();
 `;
-  return `<!doctype html><html lang="${locale}" data-theme="${theme}" style="color-scheme:${theme};--ot-host-tool-zoom:${initialZoom / 100}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}${uiKitStyles}${tableStyles}${codeBlockStyles}</style><script>${themeBootstrap}${zoomBootstrap}${sdk}</script><script>${resizeBootstrap}</script></head><body>${html}</body></html>`;
+  return `<!doctype html><html lang="${locale}" data-theme="${theme}" style="color-scheme:${theme};--ot-host-tool-zoom:${initialZoom / 100};--ot-host-viewport-height:${viewportHeight}px"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${themeStyles}${uiKitStyles}${tableStyles}${codeBlockStyles}</style><script>${themeBootstrap}${zoomBootstrap}${sdk}</script><script>${resizeBootstrap}</script></head><body>${html}</body></html>`;
 }

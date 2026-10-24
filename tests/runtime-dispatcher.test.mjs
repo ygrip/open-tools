@@ -79,3 +79,16 @@ test('burst protection refuses a new operation and allows stream cancellation', 
   cancel.data.payload = { streamId: 'run' };
   assert.equal(classifyRuntimeMessage(cancel, options).kind, 'dispatch');
 });
+
+
+test('tool zoom requests require the live sandbox session and bounded integer percent', () => {
+  const { options, session, frameWindow } = harness();
+  const zoom = percent => ({ source: frameWindow, data: { type: 'trick-it:zoom-request', version: 1, token: session.token, percent } });
+  assert.deepEqual(classifyRuntimeMessage(zoom(150), options), { kind: 'zoom', percent: 150 });
+  for (const percent of [74, 201, 100.5, NaN, '150']) assert.equal(classifyRuntimeMessage(zoom(percent), options).kind, 'ignore');
+  assert.equal(classifyRuntimeMessage({ ...zoom(150), source: {} }, options).kind, 'ignore');
+  assert.equal(classifyRuntimeMessage({ ...zoom(150), data: { ...zoom(150).data, token: 'wrong' } }, options).kind, 'ignore');
+  assert.equal(classifyRuntimeMessage(zoom(150), { ...options, frameReady: false }).kind, 'ignore');
+  session.stop();
+  assert.equal(classifyRuntimeMessage(zoom(150), options).kind, 'ignore');
+});

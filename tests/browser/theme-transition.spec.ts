@@ -41,7 +41,7 @@ test('theme changes without the View Transitions API and footer uses package ver
   await expect(page.locator('.footer-version')).toHaveText(`trick-it v${version}`);
 });
 
-test('host blocks wheel zoom but preserves accessible magnification and normal scrolling', async ({ page }) => {
+test('host blocks browser magnification and preserves normal scrolling', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
   const cancelled = await page.evaluate(() => {
     const events = [
@@ -53,5 +53,5 @@ test('host blocks wheel zoom but preserves accessible magnification and normal s
     ];
     return events.map(event => !document.dispatchEvent(event));
   });
-  expect(cancelled).toEqual([true, false, false, false, false]);
+  expect(cancelled).toEqual([true, false, true, false, true]);
 });
