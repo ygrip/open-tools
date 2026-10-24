@@ -1,10 +1,14 @@
 {
-  "enabled": false,
-  "client": "",
+  "enabled": true,
+  "client": "ca-pub-5501931731194817",
   "testMode": true,
   "placements": {
-    "home": "",
-    "tool": ""
+    "home": "5294163972",
+    "tool": "6399447800"
   },
-  "frameOrigins": []
+  "frameOrigins": [
+    "https://googleads.g.doubleclick.net",
+    "https://tpc.googlesyndication.com",
+    "https://*.safeframe.googlesyndication.com"
+  ]
 }
