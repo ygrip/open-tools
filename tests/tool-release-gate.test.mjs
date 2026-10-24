@@ -37,20 +37,21 @@ async function fixture(t) {
   manifest.bundle.sha256 = digest(html);
   await writeFile(join(root, 'dist/index.html'), html);
   for (const locale of languageCodes) {
-    const catalog = { action: locale + ' action {count}', error: locale + ' error' };
+    const guide = locale === 'en' ? manifest.guide : {
+      summary: locale + ' guide summary for this fixture',
+      steps: manifest.guide.steps.map((step, index) => locale + ' localized step ' + (index + 1))
+    };
+    const catalog = {
+      action: locale + ' action {count}', error: locale + ' error',
+      guideSummary: guide.summary,
+      ...Object.fromEntries(guide.steps.map((step, index) => ['guideStep' + (index + 1), step]))
+    };
     await save(root, 'messages/' + locale + '.json', catalog);
     if (locale === 'en') continue;
     const bytes = Buffer.from(JSON.stringify(catalog));
     await writeFile(join(root, 'dist/locales/' + locale + '.json'), bytes);
     manifest.localePacks[locale] = { file: 'dist/locales/' + locale + '.json', sha256: digest(bytes), bytes: bytes.length };
-    manifest.translations[locale] = {
-      name: 'Fixture ' + locale,
-      description: 'Structural fixture ' + locale,
-      guide: {
-        summary: locale + ' guide summary for this fixture',
-        steps: manifest.guide.steps.map((step, index) => locale + ' localized step ' + (index + 1))
-      }
-    };
+    manifest.translations[locale] = { name: 'Fixture ' + locale, description: 'Structural fixture ' + locale, guide };
   }
   await save(root, 'tool.manifest.json', manifest);
   await save(root, 'package.json', { name: manifest.id, version: manifest.version, devDependencies: { '@inlang/paraglide-js': '2.29.0' } });
@@ -109,6 +110,19 @@ const invalid = [
     data.translations.ms.guide.steps[0] = ' ';
     await save(root, 'tool.manifest.json', data);
   }, /guide steps/],
+  ['guide not sourced from the Paraglide catalog', async root => {
+    const data = await json(root, 'tool.manifest.json');
+    data.translations.ms.guide.summary = 'A manually maintained summary outside the message catalog.';
+    await save(root, 'tool.manifest.json', data);
+  }, /Guide copy missing from Paraglide catalog: ms.summary/],
+  ['English guide not sourced from the Paraglide catalog', async root => {
+    const data = await json(root, 'tool.manifest.json');
+    data.guide.steps[0] = 'A manually maintained canonical instruction.';
+    for (const locale of languageCodes.filter(code => code !== 'en')) {
+      data.translations[locale].guide.steps[0] = locale + ' translated canonical instruction';
+    }
+    await save(root, 'tool.manifest.json', data);
+  }, /Guide copy missing from Paraglide catalog: en.step1/],
   ['missing native consent reason', async root => {
     const data = await json(root, 'tool.manifest.json');
     data.permissions = [{ name: 'downloads', reason: 'Save the result.', required: false }];
