@@ -2,6 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { languageCodes } from '../src/lib/languages.js';
+import { MAX_TOOL_ENTRY_GZIP } from './lib/performance-budgets.mjs';
 
 async function files(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -15,6 +16,9 @@ for (const route of routes.flatMap((path) => languageCodes.map((locale) => local
   const file = join('build', route, 'index.html');
   const html = await readFile(file, 'utf8');
   if (!/<main(?:\s|>)/.test(html)) throw new Error(`Static page has no rendered content: ${file}`);
+  // Server-only catalog projection still needs static navigation data after deployment.
+  const data = await readFile(join('build', route, '__data.json'), 'utf8');
+  JSON.parse(data);
 }
 await Promise.all(['500', '503'].map((status) => readFile(`build/${status}.html`, 'utf8')));
 await readFile('build/service-worker.js', 'utf8');
@@ -106,7 +110,6 @@ const HOST_JS_BUDGET = 145_512 + 768 + 768 + 2_048 + 1_024 + 2_048 + 2_048 + SHA
 const TOOL_JS_ALLOWANCE = 1_088;
 // User-approved per-tool localization headroom includes native metadata and
 // bounded permission reasons; shared host JavaScript is still budgeted below.
-const MAX_TOOL_ENTRY_GZIP = 8_192;
 for (const tool of catalog) {
   const entryBytes = gzipSync(JSON.stringify(tool)).length;
   if (entryBytes > MAX_TOOL_ENTRY_GZIP) throw new Error(`Tool "${tool.id}" catalog entry is ${entryBytes} bytes gzip, over the ${MAX_TOOL_ENTRY_GZIP} byte per-tool budget`);

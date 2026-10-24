@@ -1,18 +1,11 @@
 import { createHash } from 'node:crypto';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
-import { validateManifest, validateAssetOrigins } from '../../src/lib/registry/contract.js';
+import { validateAssetOrigins } from '../../src/lib/registry/contract.js';
+import { parseManifestBytes } from './manifest.mjs';
 import { readLocalePacks } from './locale-packs.mjs';
-
-export const MAX_BUNDLE_BYTES = 5 * 1024 * 1024;
-
-export function verifyBundle(bytes, manifest) {
-  if (!bytes.length || bytes.length > MAX_BUNDLE_BYTES) throw new Error('bundle size must be 1 byte to 5 MiB');
-  if (createHash('sha256').update(bytes).digest('hex') !== manifest.bundle.sha256) throw new Error('bundle integrity mismatch');
-  const html = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
-  if (!/<!doctype html/i.test(html)) throw new Error('bundle must be an HTML document');
-  return html;
-}
+import { MAX_BUNDLE_BYTES, verifyBundle } from './bundle-artifact.mjs';
+export { MAX_BUNDLE_BYTES, verifyBundle } from './bundle-artifact.mjs';
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -114,8 +107,7 @@ export async function loadSource(source, config, root, github) {
     };
   }
   const manifestBytes = await read('tool.manifest.json');
-  if (manifestBytes.length > 64 * 1024) throw new Error('manifest exceeds 64 KiB');
-  const manifest = validateManifest(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(manifestBytes)));
+  const manifest = parseManifestBytes(manifestBytes);
   if (manifest.repository.toLowerCase() !== `https://github.com/${source.repository}`.toLowerCase()) throw new Error('manifest repository does not match source');
   validateAssetOrigins(manifest, config.trustedAssetOrigins);
   const html = verifyBundle(await read(manifest.bundle.file), manifest);

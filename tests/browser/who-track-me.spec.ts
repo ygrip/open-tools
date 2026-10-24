@@ -171,13 +171,14 @@ for(const scenario of [
     await expect(tool.locator('#website')).toHaveValue('example.org');
     await expect(tool.locator('#run-audit')).toBeEnabled();
     if (scenario.name === 'unreachable site') {
-      await page.evaluate(() => document.querySelector('iframe')?.contentWindow?.postMessage(
-        { type:'trick-it:locale', version:1, locale:'en' }, '*'
-      ));
+      // Use the real host route transition; a raw child-only locale message
+      // must not compete with the still-Indonesian host's locale prop.
+      await page.getByRole('button', { name: 'Bahasa: Bahasa Indonesia' }).click();
+      await page.getByRole('dialog', { name: 'Bahasa' }).getByRole('link', { name: /English/ }).click();
+      await expect(page).toHaveURL(/\/who-track-me\/$/);
       await expect(tool.locator('#job')).toContainText('Audit did not finish');
-      await page.evaluate(() => document.querySelector('iframe')?.contentWindow?.postMessage(
-        { type:'trick-it:locale', version:1, locale:'id' }, '*'
-      ));
+      await page.getByRole('button', { name: 'Languages: English' }).click();
+      await page.getByRole('dialog', { name: 'Languages' }).getByRole('link', { name: /Bahasa Indonesia/ }).click();
       await expect(tool.locator('#job')).toContainText('Pemeriksaan belum selesai');
     }
     expect(requests).toBe(1);

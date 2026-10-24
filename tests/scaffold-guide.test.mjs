@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { validateManifest } from '../src/lib/registry/contract.js';
 import { scaffoldFiles } from './scaffold-recipe.mjs';
 
@@ -21,6 +22,12 @@ test('scaffold skill and docs require every applicable shared component before p
   for (const text of [skill, guide]) assert.ok(text.includes('tool-ui-checklist.md'));
   assert.match(policy, /Do not push or re-pin a nonconforming release/);
   assert.match(skill, /modify it in its own repository before release/);
+  for (const text of [skill, guide]) {
+    assert.match(text, /check-tool-release\.mjs/);
+    assert.match(text, /languageCodes/);
+    assert.match(text, /exact tested SHA/);
+    assert.match(text, /billing/);
+  }
 });
 
 test('documented scaffold builds, passes its own smoke test, and satisfies the actual contract', async () => {
@@ -38,5 +45,7 @@ test('documented scaffold builds, passes its own smoke test, and satisfies the a
     assert.equal(manifest.id, 'text-counter');
     assert.deepEqual(bytes, await readFile(join(directory, 'src/index.html')));
     assert.match(bytes.toString('utf8'), /window\.trickIt\.ui\.toast\(/);
+    const checker = new URL('../scripts/check-tool-release.mjs', import.meta.url);
+    await assert.rejects(execute(process.execPath, [fileURLToPath(checker), '--tool-root', directory]), /must match the current host languageCodes/);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });

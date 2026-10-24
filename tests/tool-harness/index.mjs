@@ -1,11 +1,12 @@
 import { createServer } from 'node:http';
-import { createHash } from 'node:crypto';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build, transform } from 'esbuild';
 import { compile, compileModule } from 'svelte/compiler';
 import { languageCodes } from '../../src/lib/languages.js';
+import { parseManifestBytes } from '../../scripts/lib/manifest.mjs';
+import { MAX_BUNDLE_BYTES, verifyBundle } from '../../scripts/lib/bundle-artifact.mjs';
 import { readLocalePacks } from '../../scripts/lib/locale-packs.mjs';
 
 const hostRoot = fileURLToPath(new URL('../../', import.meta.url));
@@ -26,7 +27,7 @@ function inside(root, path) {
  */
 export async function readToolArtifact(toolRoot) {
   const root = await realpath(toolRoot);
-  const tool = JSON.parse(await readFile(resolve(root, 'tool.manifest.json'), 'utf8'));
+  const tool = parseManifestBytes(await readFile(resolve(root, 'tool.manifest.json')));
   if (tool.schemaVersion !== 3 || tool.runtimeVersion !== 1 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(tool.id ?? '') || typeof tool.bundle?.file !== 'string') {
     throw new Error('The tool harness requires a v3 manifest with a safe tool ID and HTML bundle.');
   }
@@ -34,11 +35,8 @@ export async function readToolArtifact(toolRoot) {
   if (!inside(root, candidate)) throw new Error('Unsafe tool bundle path.');
   const path = await realpath(candidate);
   if (!inside(root, path)) throw new Error('Unsafe tool bundle symlink.');
-  if (extname(path) !== '.html' || (await stat(path)).size > 5 * 1024 * 1024) throw new Error('Invalid HTML bundle size or type.');
-  const bytes = await readFile(path);
-  const html = bytes.toString('utf8');
-  if (!Buffer.from(html, 'utf8').equals(bytes)) throw new Error('The tool bundle must be UTF-8.');
-  if (createHash('sha256').update(bytes).digest('hex') !== tool.bundle.sha256) throw new Error('Build the tool first: its manifest checksum does not match the HTML.');
+  if (extname(path) !== '.html' || (await stat(path)).size > MAX_BUNDLE_BYTES) throw new Error('Invalid HTML bundle size or type.');
+  const html = verifyBundle(await readFile(path), tool);
   const localePacks = await readLocalePacks(tool, async (file, maximum) => {
     const candidate = resolve(root, file);
     if (!inside(root, candidate)) throw new Error('Unsafe locale pack path.');

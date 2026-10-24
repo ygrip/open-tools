@@ -72,9 +72,9 @@ test('language changes preserve tool route and sandbox language fallback', async
   await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
   await expect(page.getByRole('link', { name: /ツール一覧に戻る/ })).toBeVisible();
   await expect(page.locator('iframe[sandbox="allow-scripts"]')).toBeVisible();
-  // The tool declares its own supported locales; the host must not send
-  // an unsupported interface language into the isolated iframe.
-  await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang', 'en');
+  // The pinned JSON tool now declares Japanese. Its native UI updates in place;
+  // unsupported-locale behavior remains covered by the neutral locale fixture.
+  await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang', 'ja');
   await expect(page.locator('iframe')).toHaveAttribute('data-identity', 'original-frame');
   await expect(workspace).toHaveValue('Keep this workspace through language navigation');
   await expectSameFrame();
@@ -83,6 +83,13 @@ test('language changes preserve tool route and sandbox language fallback', async
   await expect(page).toHaveURL(/\/json-tools\/\?keep=1#guide$/);
   await expect(page.locator('iframe')).toHaveAttribute('data-identity', 'original-frame');
   await expect(workspace).toHaveValue('Keep this workspace through language navigation');
+  await expectSameFrame();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/ja\/json-tools\/\?keep=1#guide$/);
+  await expect(workspace).toHaveValue('Keep this workspace through language navigation');
+  await expectSameFrame();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/json-tools\/\?keep=1#guide$/);
   await expectSameFrame();
 });
 
