@@ -172,7 +172,7 @@
   .private-chip { background: var(--mint); color: var(--text-secondary); }
   .revoke { flex-shrink: 0; }
   @media (max-width: 520px) { .revoke { width: 44px; padding: 0; } .revoke span { display: none; } }
-  iframe { display: block; width: 100%; min-width: 0; height: 280px; border: 0; }
+  iframe { display: block; width: 100%; min-width: 0; height: 280px; max-height: max(280px, calc(100dvh - 240px)); border: 0; }
   .load-state { min-height: 280px; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; }
   .runtime-notice { margin: 16px 0; color: var(--text-secondary); overflow-wrap: anywhere; }
   .operation-dialog { width: min(550px, calc(100% - 32px)); padding: 28px; color: var(--text); }

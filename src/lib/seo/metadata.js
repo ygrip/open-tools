@@ -1,6 +1,8 @@
-import { isSupportedLanguage, stripLanguagePrefix } from '../languages.js';
+import { isSupportedLanguage, languageCodes, stripLanguagePrefix } from '../languages.js';
 
-export const SEO_LOCALES = ['en', 'id'];
+export const SEO_LOCALES = [...languageCodes];
+// Bundled social-card fonts currently cover the reviewed English/Indonesian art.
+export const SOCIAL_CARD_LOCALES = ['en', 'id'];
 
 /** @param {string | undefined} value */
 export function siteOrigin(value = '') {
@@ -48,14 +50,14 @@ export function seoMetadata(options) {
   const base = options.base || '';
   const path = localePath(options.path, locale, base);
   const title = /trick-it/i.test(options.title) ? options.title : `${options.title} · trick-it`;
-  const imagePath = options.image || `${base}/og/${options.tool ? `tools/${options.tool.id}` : 'home'}-${SEO_LOCALES.includes(locale) ? locale : 'en'}.png`;
+  const imagePath = options.image || `${base}/og/${options.tool ? `tools/${options.tool.id}` : 'home'}-${SOCIAL_CARD_LOCALES.includes(locale) ? locale : 'en'}.png`;
   if (!imagePath.startsWith('/') || imagePath.startsWith('//') || /[\\?#]/.test(imagePath)) throw new Error('SEO image must be a site-local asset path');
   const canonical = origin ? `${origin}${path}` : '';
   const image = origin ? `${origin}${imagePath}` : imagePath;
   const alternates = origin ? SEO_LOCALES.map((language) => ({ locale: language, href: `${origin}${localePath(options.path, language, base)}` })) : [];
-  // Only reviewed en/id SEO copy is indexed. Other UI locales are functional but
-  // progressively translated; indexing English fallback text would create duplicates.
-  const indexable = Boolean(origin) && SEO_LOCALES.includes(locale) && options.robots !== 'noindex';
+  // Every supported host locale has a canonical route and a safe social card.
+  // Explicit tool exclusions and nonproduction previews must remain nonindexable.
+  const indexable = Boolean(origin) && options.robots !== 'noindex';
   const schema = options.tool ? {
     '@context': 'https://schema.org', '@type': 'WebApplication',
     ...(canonical ? { '@id': `${canonical}#application`, url: canonical } : {}),

@@ -1,12 +1,15 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { languageCodes } from '../../src/lib/languages.js';
+import { SOCIAL_CARD_LOCALES } from '../../src/lib/seo/metadata.js';
 
 const config = JSON.parse(await readFile(new URL('../../src/lib/seo/generated.json', import.meta.url), 'utf8'));
 const catalog = JSON.parse(await readFile(new URL('../../src/lib/registry/generated.json', import.meta.url), 'utf8'));
 const jsonTool = catalog.find((tool: { id: string }) => tool.id === 'json-tools');
 
-for (const locale of ['en', 'id']) test(`${locale} platform and tool SEO is rendered with localized social cards`, async ({ page }) => {
-  const prefix = locale === 'id' ? '/id' : '';
+for (const locale of languageCodes) test(`${locale} platform and tool SEO is rendered with safe social cards`, async ({ page }) => {
+  let prefix = '';
+  if (locale !== 'en') prefix = `/${locale}`;
   await page.goto(`${prefix}/`);
   await expect(page).toHaveTitle(/trick-it/);
   await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute('content', 'trick-it');
@@ -20,14 +23,18 @@ for (const locale of ['en', 'id']) test(`${locale} platform and tool SEO is rend
   await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', seo.description);
   await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', seo.description);
   const image = await page.locator('meta[property="og:image"]').getAttribute('content');
-  expect(image).toMatch(new RegExp(`/og/tools/json-tools-${locale}\\.[a-f0-9]+\\.png$`));
+  let cardLocale = 'en';
+  if (SOCIAL_CARD_LOCALES.includes(locale)) cardLocale = locale;
+  expect(image).toMatch(new RegExp(`/og/tools/json-tools-${cardLocale}\\.[a-f0-9]+\\.png$`));
   const response = await page.request.get(new URL(image!, page.url()).pathname);
   expect(response.ok()).toBe(true);
   expect((await response.body()).subarray(1, 4).toString()).toBe('PNG');
   const schema = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!);
   expect(schema['@type']).toBe('WebApplication');
   expect(schema.softwareVersion).toBe(jsonTool.version);
-  expect(schema.inLanguage).toBe(locale);
+  let runtimeLanguage = jsonTool.locales?.[0] ?? 'en';
+  if (jsonTool.locales?.includes(locale)) runtimeLanguage = locale;
+  expect(schema.inLanguage).toBe(runtimeLanguage);
   expect(await page.locator('title').count()).toBe(1);
   const initialHtml = await (await page.request.get(`${prefix}/json-tools/`)).text();
   if (config.origin) {
@@ -38,6 +45,12 @@ for (const locale of ['en', 'id']) test(`${locale} platform and tool SEO is rend
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${config.origin}${prefix}/json-tools/`);
     await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', `${config.origin}${prefix}/json-tools/`);
     await expect(page.locator('link[hreflang="x-default"]')).toHaveAttribute('href', `${config.origin}/json-tools/`);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index,follow');
+    for (const language of languageCodes) {
+      let languagePrefix = '';
+      if (language !== 'en') languagePrefix = `/${language}`;
+      await expect(page.locator(`link[hreflang="${language}"]`)).toHaveAttribute('href', `${config.origin}${languagePrefix}/json-tools/`);
+    }
   } else {
     expect(initialHtml).not.toContain('rel="canonical"');
     await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
@@ -56,11 +69,13 @@ test('language links preserve query/hash and reach the isolated frame', async ({
   await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang', 'en');
 });
 
-test('new locales use correct HTML language and noindex until SEO content is reviewed', async ({ page }) => {
+test('Chinese home uses the correct HTML language and a reviewed fallback social card', async ({ page }) => {
   await page.goto('/zh/');
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh');
   await expect(page.getByRole('heading', { name: '有什么可以帮你？' })).toBeVisible();
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex,nofollow');
+  let robots = 'noindex,nofollow';
+  if (config.origin) robots = 'index,follow';
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', robots);
   const image = await page.locator('meta[property="og:image"]').getAttribute('content');
   expect(image).toMatch(/\/og\/home-en\.[a-f0-9]+\.png$/);
 });

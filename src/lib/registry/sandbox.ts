@@ -42,6 +42,7 @@ const themeStyles = `
 }
 html, body { background-color: var(--ot-bg) !important; color: var(--ot-text) !important; }
 /* Overridable safety net: long URLs, hashes and tokens wrap instead of widening the tool. */
+html { overscroll-behavior: contain; }
 body { overflow-wrap: anywhere; zoom: var(--ot-host-tool-zoom, 1) !important; }
 img, video { max-width: 100%; }
 `;
@@ -190,10 +191,16 @@ ${uiKitScript}
     Object.defineProperty(window, 'trickIt', { value: Object.freeze({ version: 1, request, downloadStream, downloadLimits, ui, asset: (id, options = {}) => request('asset', { id }, options.onProgress), localePack: locale => request('locale-pack', { locale }), get locale() { return document.documentElement.lang; }, permissions: Object.freeze(config.permissions) }), configurable: false });
   })();`;
   // Host controls can only change an existing isolated frame. No reload and no
-  // permission escalation; browser/page zoom remains under the user's control.
+  // permission escalation; the host separately contains browser zoom gestures.
   const zoomBootstrap = `
 (() => {
   const token = ${JSON.stringify(token)};
+  if (!token) return;
+  // Frame events do not bubble into the host. Block accidental wheel zoom here
+  // too, while preserving keyboard/mobile accessibility zoom and normal scrolling.
+  addEventListener('wheel', (event) => {
+    if (event.ctrlKey || event.metaKey) event.preventDefault();
+  }, { passive: false });
   addEventListener('message', (event) => {
     if (!token || event.source !== parent) return;
     const data = event.data;
@@ -220,7 +227,8 @@ ${uiKitScript}
     // Unlike root.scrollHeight, body content can shrink when the frame is tall.
     // Consider root overflow only when it actually extends past the viewport.
     const overflow = root.scrollHeight > innerHeight + 1 ? root.scrollHeight : 0;
-    const height = Math.ceil(Math.max(rect.bottom + margin, body.scrollHeight + Math.max(0, rect.top) + margin, overflow));
+    const scale = parseFloat(getComputedStyle(body).zoom) || 1;
+    const height = Math.ceil(Math.max(rect.bottom + margin * scale, body.scrollHeight * scale + Math.max(0, rect.top) + margin * scale, overflow));
     if (!Number.isSafeInteger(height) || height < 0 || height > 100000 || Math.abs(height - lastHeight) < 2) return;
     lastHeight = height;
     parent.postMessage({ type: 'trick-it:resize', version: 1, token, height }, '*');

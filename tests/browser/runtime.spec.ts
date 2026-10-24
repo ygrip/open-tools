@@ -6,7 +6,7 @@ import { mountFixture } from './runtime-fixture';
 // serving the fixture bundle request that page.route fulfils.
 test.use({ serviceWorkers: 'block' });
 
-for (const width of [375, 1440]) test(`isolated tool grows and shrinks with its content at ${width}px`, async ({ page }) => {
+for (const width of [375, 1440]) test(`isolated tool grows within the viewport, scrolls overflow and shrinks at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 812 });
   await mountFixture(page);
   const iframe = page.locator('iframe');
@@ -21,7 +21,8 @@ for (const width of [375, 1440]) test(`isolated tool grows and shrinks with its 
     extra.style.height = '1700px';
     document.body.append(extra);
   });
-  await expect.poll(height).toBeGreaterThan(1700);
+  await expect.poll(height).toBe(572);
+  expect(await frame.evaluate(() => document.documentElement.scrollHeight > innerHeight)).toBe(true);
   await frame.evaluate(() => document.getElementById('resize-test-extra')?.remove());
   await expect.poll(height).toBeLessThan(500);
 

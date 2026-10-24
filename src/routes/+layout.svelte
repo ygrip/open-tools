@@ -1,5 +1,7 @@
 <script lang="ts">
   import './app.css';
+  import { onMount } from 'svelte';
+  import { containHostZoom } from '$lib/host-zoom';
   import { browser } from '$app/environment';
   import { page } from '$app/state';
   import { getLocale, getLocaleForUrl, overwriteGetLocale } from '$lib/paraglide/runtime.js';
@@ -10,6 +12,7 @@
   import fontUrl from '@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2?url';
 
   let { children } = $props();
+  onMount(() => containHostZoom(document));
   // Read SvelteKit's reactive URL so client-side locale navigation updates
   // translations without replacing a running tool's iframe.
   if (browser) overwriteGetLocale(() => getLocaleForUrl(page.url));

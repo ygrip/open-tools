@@ -23,6 +23,16 @@ for (const width of [375, 1440]) {
     const text = page.frameLocator('iframe').getByRole('textbox', { name: 'Remember me' });
     await text.fill('Do not restart my tool');
     const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+    const cancelledGestures = await frame.evaluate(() => {
+      const events = [
+        new WheelEvent('wheel', { ctrlKey: true, cancelable: true }),
+        new WheelEvent('wheel', { deltaY: 100, cancelable: true }),
+        new KeyboardEvent('keydown', { key: '+', ctrlKey: true, cancelable: true }),
+        new Event('gesturechange', { cancelable: true })
+      ];
+      return events.map(event => !window.dispatchEvent(event));
+    });
+    expect(cancelledGestures).toEqual([true, false, false, false]);
     await frame.evaluate(() => {
       const extra = document.createElement('div');
       extra.id = 'zoom-height-fixture';
@@ -30,14 +40,15 @@ for (const width of [375, 1440]) {
       document.body.append(extra);
     });
     const height = () => iframe.evaluate((el) => el.getBoundingClientRect().height);
-    await expect.poll(height).toBeGreaterThan(600);
+    await expect.poll(height).toBe(572);
     const beforeHeight = await height();
     const beforeHeading = await frame.evaluate(() => document.querySelector('h1')!.getBoundingClientRect().height);
 
     await zoomIn.click();
     await expect(level).toHaveText('125%');
     await expect.poll(() => frame.evaluate(() => getComputedStyle(document.body).zoom)).toBe('1.25');
-    await expect.poll(height).toBeGreaterThan(beforeHeight * 1.15);
+    await expect.poll(height).toBe(beforeHeight);
+    await expect.poll(() => frame.evaluate(() => document.documentElement.scrollHeight > innerHeight)).toBe(true);
     const afterHeading = await frame.evaluate(() => document.querySelector('h1')!.getBoundingClientRect().height);
     expect(afterHeading).toBeGreaterThan(beforeHeading * 1.15);
     await expect(text).toHaveValue('Do not restart my tool');
@@ -47,6 +58,22 @@ for (const width of [375, 1440]) {
     await expect(level).toHaveText('200%');
     await expect(zoomIn).toBeDisabled();
     await expect.poll(() => frame.evaluate(() => getComputedStyle(document.body).zoom)).toBe('2');
+    await frame.evaluate(() => {
+      const wide = document.createElement('div');
+      wide.id = 'zoom-width-fixture';
+      wide.style.width = '1800px';
+      wide.style.height = '40px';
+      document.body.append(wide);
+    });
+    expect(await frame.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(true);
+    const scroll = await frame.evaluate(() => {
+      window.scrollTo(100, 100);
+      return { x: scrollX, y: scrollY };
+    });
+    expect(scroll.x).toBeGreaterThan(0);
+    expect(scroll.y).toBeGreaterThan(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await frame.evaluate(() => document.getElementById('zoom-width-fixture')!.remove());
 
     // A forged child-window message and a malformed parent message cannot set zoom.
     const token = await frame.evaluate(() => {
@@ -68,7 +95,7 @@ for (const width of [375, 1440]) {
     await expect(level).toHaveText('100%');
     await expect(reset).toBeDisabled();
     await expect.poll(() => frame.evaluate(() => getComputedStyle(document.body).zoom)).toBe('1');
-    await expect.poll(height).toBeLessThan(beforeHeight * 1.10);
+    await expect.poll(height).toBe(beforeHeight);
     await zoomOut.click();
     await expect(level).toHaveText('75%');
     await expect(zoomOut).toBeDisabled();
@@ -78,7 +105,7 @@ for (const width of [375, 1440]) {
   });
 }
 
-test('zoom labels follow the host locale and preserve built-in browser magnification', async ({ page }) => {
+test('zoom labels follow the host locale while accessible magnification stays available', async ({ page }) => {
   await page.goto('/id/json-tools/');
   await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', 'width=device-width, initial-scale=1');
   const controls = page.getByRole('group', { name: 'Perbesaran alat' });

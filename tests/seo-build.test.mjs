@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { verifySeoBuild } from '../scripts/verify-seo.mjs';
 import { sitemapXml, robotsText } from '../scripts/generate-seo.mjs';
+import { languageCodes } from '../src/lib/languages.js';
 
 const origin = 'https://tools.example';
 
@@ -34,7 +35,7 @@ async function fixture(site = origin) {
 test('production build requires canonical, nonempty sitemap and real localized HTML files', async () => {
   const { root } = await fixture();
   try {
-    assert.deepEqual(await verifySeoBuild({ root, requireProduction: true }), { origin, pages: 8 });
+    assert.deepEqual(await verifySeoBuild({ root, requireProduction: true }), { origin, pages: languageCodes.length * 4 });
     await unlink(join(root, 'build/id/privacy/index.html'));
     await assert.rejects(verifySeoBuild({ root, requireProduction: true }), /ENOENT/);
   } finally {

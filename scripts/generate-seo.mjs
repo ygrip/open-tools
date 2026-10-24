@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, writeFile, mkdir, mkdtemp, rename, rm, access, readdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { localePath, siteOrigin, SEO_LOCALES } from '../src/lib/seo/metadata.js';
+import { localePath, siteOrigin, SEO_LOCALES, SOCIAL_CARD_LOCALES } from '../src/lib/seo/metadata.js';
 
 const defaultRoot = fileURLToPath(new URL('../', import.meta.url));
 export const OG_WIDTH = 1200;
@@ -134,7 +134,7 @@ export async function generateSeo({ root = defaultRoot, origin = process.env.PUB
   const staging = await mkdtemp(join(staticRoot, '.og-'));
   const images = {};
   try {
-    for (const locale of SEO_LOCALES) {
+    for (const locale of SOCIAL_CARD_LOCALES) {
       const messages = JSON.parse(await readFile(join(root, `messages/${locale}.json`), 'utf8'));
       const cards = [
         { id: 'home', kind: 'site', title: messages.home_title, description: messages.home_description, version: '', iconDataUri: brandDataUri },
@@ -154,6 +154,13 @@ export async function generateSeo({ root = defaultRoot, origin = process.env.PUB
         await writeFile(join(staging, `${name}.${digest}.png`), bytes);
         images[name] = `${base}/og/${name}.${digest}.png`;
       }
+    }
+    // Reuse reviewed cards until bundled fonts cover each locale's writing system.
+    // Alias image keys rather than rendering missing glyphs or duplicating files.
+    for (const locale of SEO_LOCALES) {
+      if (SOCIAL_CARD_LOCALES.includes(locale)) continue;
+      images[`home-${locale}`] = images['home-en'];
+      for (const tool of tools) images[`tools/${tool.id}-${locale}`] = images[`tools/${tool.id}-en`];
     }
     await rm(output, { recursive: true, force: true });
     await rename(staging, output);

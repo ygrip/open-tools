@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
+  import { revealTheme } from '$lib/theme-transition';
   import { m } from '$lib/paraglide/messages.js';
   import { applyTheme, documentTheme, type Theme } from '$lib/theme';
 
@@ -14,11 +15,16 @@
     return () => observer.disconnect();
   });
 
-  function toggle() {
-    const next = documentTheme(document) === 'dark' ? 'light' : 'dark';
-    theme = next;
-    const persisted = applyTheme(document, next);
-    storageNotice = persisted ? '' : m.theme_unsaved();
+  async function toggle(event: MouseEvent) {
+    let next: Theme = 'dark';
+    if (documentTheme(document) === 'dark') next = 'light';
+    await revealTheme(event.currentTarget as HTMLElement, async () => {
+      theme = next;
+      const persisted = applyTheme(document, next);
+      storageNotice = '';
+      if (!persisted) storageNotice = m.theme_unsaved();
+      await tick();
+    });
   }
 </script>
 

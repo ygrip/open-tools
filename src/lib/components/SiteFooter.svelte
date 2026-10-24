@@ -3,6 +3,7 @@
   import { m } from '$lib/paraglide/messages.js';
   import { localizedPath } from '$lib/i18n';
   import Icon from './Icon.svelte';
+  import { version } from '../../../package.json';
 </script>
 
 <footer class="site-footer surface">
@@ -11,6 +12,7 @@
     <div class="footer-about">
       <a class="brand footer-brand" href={localizedPath('/')}><img src={`${base}/brand/logo.svg`} alt="" width="40" height="40" /><strong>trick<span class="brand-accent">-it</span></strong></a>
       <p>{m.footer_tagline()}</p>
+      <p class="footer-version">trick-it v{version}</p>
       <a class="footer-maker" href="https://readynaz.com" target="_blank" rel="noopener">{m.footer_maker()} <Icon name="external" size={14} /></a>
     </div>
     <nav class="footer-col" aria-label={m.footer_explore()}>
