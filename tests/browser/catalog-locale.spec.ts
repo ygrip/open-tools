@@ -1,4 +1,4 @@
-import {test,expect} from '@playwright/test';
+import {test,expect} from './fixtures';
 import {readFileSync} from 'node:fs';
 import {languageCodes} from '../../src/lib/languages.js';
 const tools=JSON.parse(readFileSync(new URL('../../src/lib/registry/generated.json',import.meta.url),'utf8'));

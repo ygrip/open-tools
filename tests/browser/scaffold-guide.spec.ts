@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { scaffoldFiles } from '../scaffold-recipe.mjs';
 import { sandboxDocument } from '../../src/lib/registry/sandbox';
 

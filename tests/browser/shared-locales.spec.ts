@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { mountFixture } from './runtime-fixture';
 import { sharedCopies } from '../../src/lib/registry/ui-copy';
 import { runtimeCopies } from '../../src/lib/runtime/strings';
@@ -10,7 +10,7 @@ for (const width of [320, 1280]) {
   test(`${width}px: shared controls translate all locales while preserving files, validation, table state and code`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await mountFixture(page, { locales: codes });
-    const tool = page.frameLocator('iframe');
+    const tool = page.frameLocator('.runtime-workspace > iframe');
     await expect(tool.getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
     await tool.locator('body').evaluate(() => {
       type Ui = {
@@ -88,7 +88,7 @@ test('localized permission reasons update consent and action dialogs without res
   }
   await page.locator('.consent input[value="wasm"]').uncheck();
   await page.locator('.consent button').click();
-  const tool = page.frameLocator('iframe');
+  const tool = page.frameLocator('.runtime-workspace > iframe');
   await expect(tool.getByRole('textbox')).toBeVisible();
   await tool.getByRole('textbox').fill('retained permission workspace');
   for (const locale of codes) {
@@ -108,7 +108,7 @@ test('localized permission reasons update consent and action dialogs without res
 
 test('code-copy failure remains translated after live locale changes', async ({ page }) => {
   await mountFixture(page, { locales: codes, permissions: [{ name: 'clipboard-write', reason: 'Test fixture clipboard permission.', required: false }] });
-  const tool = page.frameLocator('iframe');
+  const tool = page.frameLocator('.runtime-workspace > iframe');
   await expect(tool.getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
   await tool.locator('body').evaluate(() => {
     const target = document.createElement('div'); document.body.append(target);

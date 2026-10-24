@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { createServer } from 'node:http';
 import { stateProbe } from './runtime-fixture';
 
@@ -10,7 +10,7 @@ test('installed shell and an opened tool work offline without hiding missing rou
   await page.evaluate(() => navigator.serviceWorker.ready);
   await expect(page.getByRole('searchbox', { name: 'Search the toolbox' })).toHaveValue('keep my input');
   await page.goto('/json-tools/');
-  await expect(page.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts');
+  await expect(page.locator('.runtime-workspace > iframe')).toHaveAttribute('sandbox', 'allow-scripts');
   await expect.poll(() => page.evaluate(async () => (await (await caches.open('trick-it-bundles-v1')).keys()).length)).toBeGreaterThan(0);
   // Legal pages are no longer precached during install. Opening one online
   // must make it available offline without delaying future updates.
@@ -22,10 +22,11 @@ test('installed shell and an opened tool work offline without hiding missing rou
   await page.goto('/json-tools/');
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts');
+  await expect(page.locator('.runtime-workspace > iframe')).toHaveAttribute('sandbox', 'allow-scripts');
   // The sandbox document is replaced while the offline bundle loads: resolve the frame on every poll and ignore a navigation in flight.
   await expect.poll(async () => {
-    const frame = page.frames().find(candidate => candidate !== page.mainFrame());
+    const handle = await page.locator('.runtime-workspace > iframe').elementHandle();
+    const frame = await handle?.contentFrame();
     return frame?.evaluate(() => typeof (window as unknown as { trickIt?: { request?: unknown } }).trickIt?.request).catch(() => 'navigating');
   }, { timeout: 15_000 }).toBe('function');
   const legal = await page.goto('/id/privacy/');

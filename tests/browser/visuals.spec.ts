@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { stateProbe } from './runtime-fixture';
+import { expect, test } from './fixtures';
+import { stateProbe, toolFrame } from './runtime-fixture';
 
 test('support cards display each platform logo from local assets', async ({ page }) => {
   await page.goto('/');
@@ -16,7 +16,7 @@ test('host theme propagation preserves generic iframe state', async ({ page }) =
   await page.goto('/json-tools');
   const input = await stateProbe(page);
   await input.fill('unsaved platform fixture state');
-  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+  const frame = await toolFrame(page);
   expect(await frame.evaluate(() => document.documentElement.dataset.theme)).toBe('light');
   expect(await frame.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ot-bg').trim())).toBe('#fff8f0');
   const lightBackground = await input.evaluate((element) => getComputedStyle(element).backgroundColor);
@@ -30,7 +30,7 @@ test('host theme propagation preserves generic iframe state', async ({ page }) =
   await expect(input).toHaveValue('unsaved platform fixture state');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.frameLocator('.runtime-workspace > iframe').locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 
 test('theme continues to work when storage is denied', async ({ page }) => {
@@ -40,9 +40,9 @@ test('theme continues to work when storage is denied', async ({ page }) => {
   });
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/json-tools');
-  await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.frameLocator('.runtime-workspace > iframe').locator('html')).toHaveAttribute('data-theme', 'light');
   await page.getByRole('button', { name: 'Switch to dark theme' }).click();
-  await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.frameLocator('.runtime-workspace > iframe').locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.getByRole('status')).toContainText('Theme changed for this visit');
 });
 

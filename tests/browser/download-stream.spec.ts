@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { mountFixture } from './runtime-fixture';
+import { expect, test } from './fixtures';
+import { mountFixture, toolFrame } from './runtime-fixture';
 
 type ExportWindow = Window & {
   trickIt: { request(operation: string, payload: unknown): Promise<unknown>; downloadStream(options: Record<string, unknown>): Promise<void> };
@@ -22,8 +22,8 @@ test('streams a 200 MiB GIF-sized export with acknowledged progress and a fresh 
     });
   });
   await mountFixture(page, { permissions: [{ name: 'downloads', reason: 'Save an export.', required: false }] });
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(item => item !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   const result = frame.evaluate(async () => {
     const { trickIt } = window as unknown as {
       trickIt: { downloadStream(options: unknown): Promise<void> }
@@ -68,8 +68,8 @@ test('a short stream is rejected and aborts its pending writable', async ({ page
     });
   });
   await mountFixture(page, { permissions: [{ name: 'downloads', reason: 'Save an export.', required: false }] });
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(item => item !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   const task = frame.evaluate(async () => {
     const { trickIt } = window as unknown as { trickIt: { downloadStream(options: unknown): Promise<void> } };
     async function* chunks() { yield new Uint8Array([1, 2, 3]); }
@@ -87,8 +87,8 @@ test('a clipboard prompt cannot interrupt stream chunks or cancellation', async 
     Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: async () => ({ createWritable: async () => ({ write: async () => {}, close: async () => {}, abort: async () => {} }) }) });
   });
   await mountFixture(page, { permissions: [{ name: 'downloads', reason: 'Save an export.', required: false }, { name: 'clipboard-write', reason: 'Copy a result.', required: false }, { name: 'clipboard-read', reason: 'Paste input.', required: false }] });
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(item => item !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   await frame.evaluate(() => {
     const w = window as unknown as ExportWindow;
     async function* chunks() {
@@ -127,8 +127,8 @@ test('a clipboard prompt cannot interrupt stream chunks or cancellation', async 
 test('legacy exports above 16 MiB automatically use chunks on browsers without a native picker', async ({ page }) => {
   await page.addInitScript(() => { Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: undefined }); });
   await mountFixture(page, { permissions: [{ name: 'downloads', reason: 'Save an export.', required: false }] });
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(item => item !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   const saved = frame.evaluate(() => (window as unknown as ExportWindow).trickIt.request('downloads', {
     filename: 'legacy.gif', mime: 'image/gif', bytes: new ArrayBuffer(17 * 1024 * 1024)
   }));
@@ -145,8 +145,8 @@ test('host Cancel download immediately rejects a paused producer and releases th
     Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: async () => ({ createWritable: async () => ({ write: async () => {}, close: async () => {}, abort: async () => {} }) }) });
   });
   await mountFixture(page, { permissions: [{ name: 'downloads', reason: 'Save an export.', required: false }] });
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(item => item !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   await frame.evaluate(() => {
     const w = window as unknown as ExportWindow;
     async function* chunks() { await new Promise(() => {}); yield new Uint8Array(1); }
@@ -163,8 +163,8 @@ test('a sink write failure remains a download error rather than user cancellatio
     Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: async () => ({ createWritable: async () => ({ write: async () => { throw new Error('disk full'); }, close: async () => {}, abort: async () => {} }) }) });
   });
   await mountFixture(page, { permissions: [{ name: 'downloads', reason: 'Save an export.', required: false }] });
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(item => item !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   const result = frame.evaluate(async () => {
     const w = window as unknown as ExportWindow;
     async function* chunks() { yield new Uint8Array(1); }

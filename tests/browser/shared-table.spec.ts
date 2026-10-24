@@ -1,13 +1,13 @@
-import { expect, test } from '@playwright/test';
-import { mountFixture } from './runtime-fixture';
+import { expect, test } from './fixtures';
+import { mountFixture, toolFrame } from './runtime-fixture';
 
 test.use({ serviceWorkers: 'block' });
 
 test('shared table controls search, sort, paginate, hide columns and copy without leaking data', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await mountFixture(page);
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   await frame.evaluate(() => {
     const mount = document.createElement('div');
     mount.id = 'shared-table-fixture';
@@ -20,7 +20,7 @@ test('shared table controls search, sort, paginate, hide columns and copy withou
       pageSize: 10, onCopy: (value: unknown) => (window as unknown as { copied: string[] }).copied.push(String(value))
     });
   });
-  const tool = page.frameLocator('iframe');
+  const tool = page.frameLocator('.runtime-workspace > iframe');
   await expect(tool.locator('.ti-grid tbody tr')).toHaveCount(10);
   await expect(tool.locator('.ti-grid-pages')).toContainText('Page 1 of 4');
   await tool.getByRole('button', { name: 'Next page' }).click();
@@ -58,8 +58,8 @@ test('shared table controls search, sort, paginate, hide columns and copy withou
 
 test('table escapes untrusted values and has useful empty and updated states', async ({ page }) => {
   await mountFixture(page);
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  const frame = page.frames().find(candidate => candidate !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  const frame = await toolFrame(page);
   await frame.evaluate(() => {
     const mount = document.createElement('div'); mount.id = 'grid'; document.body.append(mount);
     const sdk = (window as unknown as { trickIt: { ui: { table: (target: Element, options: object) => unknown } } }).trickIt;
@@ -67,7 +67,7 @@ test('table escapes untrusted values and has useful empty and updated states', a
       columns: [{ key: 'value', label: 'Value' }], rows: [{ value: '<img src=x onerror=alert(1)>' }]
     });
   });
-  const tool = page.frameLocator('iframe');
+  const tool = page.frameLocator('.runtime-workspace > iframe');
   await expect(tool.locator('.ti-grid tbody tr')).toContainText('<img src=x onerror=alert(1)>');
   await expect(tool.locator('.ti-grid img')).toHaveCount(0);
   await frame.evaluate(() => (window as unknown as { grid: { update(payload: object): void } }).grid.update({ rows: [] }));

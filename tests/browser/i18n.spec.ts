@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { stateProbe } from './runtime-fixture';
 
 test('English keeps original routes and exposes every supported language in a searchable modal', async ({ page }) => {
@@ -42,25 +42,25 @@ test('language changes preserve tool route and sandbox language fallback', async
   await page.goto('/json-tools/?keep=1#guide');
   const workspace = await stateProbe(page);
   await workspace.fill('Keep this workspace through language navigation');
-  await page.locator('iframe').evaluate(element => { element.dataset.identity = 'original-frame'; });
+  await page.locator('.runtime-workspace > iframe').evaluate(element => { element.dataset.identity = 'original-frame'; });
   // Capture both the iframe element and its browsing context before any SPA navigation.
   // A hard navigation loses this probe; remounting the iframe changes either identity.
   await page.evaluate(() => {
-    const frame = document.querySelector<HTMLIFrameElement>('iframe');
+    const frame = document.querySelector<HTMLIFrameElement>('.runtime-workspace > iframe');
     if (!frame) throw new Error('Tool iframe was not mounted');
     (window as Window & { __localeFrameProbe?: { element: HTMLIFrameElement; context: Window | null } }).__localeFrameProbe = {
       element: frame,
       context: frame.contentWindow
     };
   });
-  await page.frameLocator('iframe').locator('body').evaluate(body => { body.dataset.localeDocument = 'original-document'; });
+  await page.frameLocator('.runtime-workspace > iframe').locator('body').evaluate(body => { body.dataset.localeDocument = 'original-document'; });
   const expectSameFrame = async () => {
     expect(await page.evaluate(() => {
       const probe = (window as Window & { __localeFrameProbe?: { element: HTMLIFrameElement; context: Window | null } }).__localeFrameProbe;
-      const current = document.querySelector<HTMLIFrameElement>('iframe');
+      const current = document.querySelector<HTMLIFrameElement>('.runtime-workspace > iframe');
       return !!probe && !!current && current === probe.element && current.contentWindow === probe.context;
     })).toBe(true);
-    await expect(page.frameLocator('iframe').locator('body')).toHaveAttribute('data-locale-document', 'original-document');
+    await expect(page.frameLocator('.runtime-workspace > iframe').locator('body')).toHaveAttribute('data-locale-document', 'original-document');
   };
   await page.getByRole('button', { name: 'Languages: English' }).click();
   const picker = page.getByRole('dialog', { name: 'Languages' });
@@ -71,17 +71,17 @@ test('language changes preserve tool route and sandbox language fallback', async
   await expect(page).toHaveURL(/\/ja\/json-tools\/\?keep=1#guide$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
   await expect(page.getByRole('link', { name: /ツール一覧に戻る/ })).toBeVisible();
-  await expect(page.locator('iframe[sandbox="allow-scripts"]')).toBeVisible();
+  await expect(page.locator('.runtime-workspace > iframe')).toBeVisible();
   // The pinned JSON tool now declares Japanese. Its native UI updates in place;
   // unsupported-locale behavior remains covered by the neutral locale fixture.
-  await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang', 'ja');
-  await expect(page.locator('iframe')).toHaveAttribute('data-identity', 'original-frame');
+  await expect(page.frameLocator('.runtime-workspace > iframe').locator('html')).toHaveAttribute('lang', 'ja');
+  await expect(page.locator('.runtime-workspace > iframe')).toHaveAttribute('data-identity', 'original-frame');
   await expect(workspace).toHaveValue('Keep this workspace through language navigation');
   await expectSameFrame();
   await page.getByRole('button', { name: '言語: 日本語' }).click();
   await page.getByRole('dialog', { name: '言語' }).getByRole('link', { name: /English/ }).click();
   await expect(page).toHaveURL(/\/json-tools\/\?keep=1#guide$/);
-  await expect(page.locator('iframe')).toHaveAttribute('data-identity', 'original-frame');
+  await expect(page.locator('.runtime-workspace > iframe')).toHaveAttribute('data-identity', 'original-frame');
   await expect(workspace).toHaveValue('Keep this workspace through language navigation');
   await expectSameFrame();
   await page.goBack();

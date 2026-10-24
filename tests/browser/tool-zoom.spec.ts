@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { mountFixture } from './runtime-fixture';
+import { expect, test } from './fixtures';
+import { mountFixture, toolFrame } from './runtime-fixture';
 
 test.use({ serviceWorkers: 'block' });
 
@@ -7,7 +7,7 @@ for (const width of [375, 1440]) {
   test(`tool-only zoom keeps host scale, sandbox, state and auto-height at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 812 });
     await mountFixture(page);
-    const iframe = page.locator('iframe');
+    const iframe = page.locator('.runtime-workspace > iframe');
     const controls = page.getByRole('group', { name: 'Tool zoom' });
     const zoomIn = controls.getByRole('button', { name: 'Zoom in tool' });
     const zoomOut = controls.getByRole('button', { name: 'Zoom out tool' });
@@ -20,9 +20,9 @@ for (const width of [375, 1440]) {
     expect(await page.evaluate(() => getComputedStyle(document.body).zoom)).toBe('1');
     expect(await page.locator('meta[name="viewport"]').getAttribute('content')).not.toContain('user-scalable=no');
 
-    const text = page.frameLocator('iframe').getByRole('textbox', { name: 'Remember me' });
+    const text = page.frameLocator('.runtime-workspace > iframe').getByRole('textbox', { name: 'Remember me' });
     await text.fill('Do not restart my tool');
-    const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!;
+    const frame = await toolFrame(page);
     const cancelledGestures = await frame.evaluate(() => {
       const events = [
         new WheelEvent('wheel', { ctrlKey: true, cancelable: true }),
@@ -85,7 +85,7 @@ for (const width of [375, 1440]) {
       return config.token as string;
     });
     await page.evaluate((value) => {
-      const sandbox = document.querySelector('iframe')!.contentWindow!;
+      const sandbox = document.querySelector<HTMLIFrameElement>('.runtime-workspace > iframe')!.contentWindow!;
       sandbox.postMessage({ type: 'trick-it:zoom', version: 1, token: value, percent: 500 }, '*');
       sandbox.postMessage({ type: 'trick-it:zoom', version: 1, token: 'wrong-session', percent: 75 }, '*');
     }, token);
@@ -109,7 +109,7 @@ test('zoom labels follow the host locale while accessible magnification stays av
   await page.goto('/id/json-tools/');
   await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', 'width=device-width, initial-scale=1');
   const controls = page.getByRole('group', { name: 'Perbesaran alat' });
-  await expect(page.locator('iframe')).toBeVisible();
+  await expect(page.locator('.runtime-workspace > iframe')).toBeVisible();
   await expect(controls.getByRole('button', { name: 'Perbesar tampilan alat' })).toBeVisible();
   await expect(controls.getByRole('button', { name: 'Kembalikan perbesaran alat ke 100%' })).toBeVisible();
 });

@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 for (const locale of ['en', 'id'] as const) {
   for (const route of ['terms', 'policy', 'privacy'] as const) {

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
@@ -27,12 +27,12 @@ for (const tool of catalog) {
       // Never silently approve external engines during CI. Verify the host
       // presents consent and does not start an unapproved sandbox.
       await expect(page.getByRole('dialog')).toBeVisible();
-      await expect(page.locator('iframe')).toHaveCount(0);
+      await expect(page.locator('.runtime-workspace > iframe')).toHaveCount(0);
       return;
     }
-    const frame = page.locator('iframe');
+    const frame = page.locator('.runtime-workspace > iframe');
     await expect(frame).toHaveAttribute('sandbox', 'allow-scripts');
-    await expect.poll(() => page.frameLocator('iframe').locator('html').evaluate(() =>
+    await expect.poll(() => page.frameLocator('.runtime-workspace > iframe').locator('html').evaluate(() =>
       (window as Window & { trickIt?: { version: number } }).trickIt?.version ?? 0
     )).toBe(1);
   });

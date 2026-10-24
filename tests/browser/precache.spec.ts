@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 // Set DEPLOY_URL to run against a deployed site (see playwright.config.ts); otherwise runs against the local preview build.
 test('every precached URL responds 200 without redirecting', async ({ page, request }) => {

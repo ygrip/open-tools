@@ -1,5 +1,5 @@
-import { expect, test, type Frame, type Page } from '@playwright/test';
-import { mountFixture } from './runtime-fixture';
+import { expect, test, type Frame, type Page } from './fixtures';
+import { mountFixture, toolFrame } from './runtime-fixture';
 
 async function start(page: Page) {
   await page.route('**/api/tools/runtime-fixture/audit/config?*', route => route.fulfill({ json: { sitekey: 'public-sitekey', action: 'svc_fixture', turnstile: true, rateLimit: { limit: 5, periodSeconds: 60 } } }));
@@ -8,8 +8,8 @@ async function start(page: Page) {
     permissions: [{ name: 'services', reason: 'Use the test service.', required: true }],
     services: [{ id: 'audit', handler: 'pagespeed-seo', rateLimit: { limit: 5, periodSeconds: 60 }, turnstile: true }]
   });
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
-  return page.frames().find(frame => frame !== page.mainFrame())!;
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  return await toolFrame(page);
 }
 
 function request(frame: Frame) {
@@ -79,7 +79,7 @@ test('local tools never load Turnstile', async ({ page }) => {
   const urls: string[] = [];
   page.on('request', r => urls.push(r.url()));
   await mountFixture(page);
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
+  await expect(page.frameLocator('.runtime-workspace > iframe').getByRole('heading', { name: 'Runtime fixture' })).toBeVisible();
   expect(urls.some(url => url.includes('challenges.cloudflare.com'))).toBe(false);
 });
 

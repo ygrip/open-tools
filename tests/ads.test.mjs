@@ -1,7 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { validateAdsConfig, hostFramePolicy } from '../src/lib/ads/config.js';
+
+test('browser specs use the shared advertising-isolation fixture', async () => {
+  const directory = new URL('./browser/', import.meta.url);
+  const specs = (await readdir(directory)).filter(file => file.endsWith('.spec.ts'));
+  for (const file of specs) {
+    const source = await readFile(new URL(file, directory), 'utf8');
+    assert.match(source, /from ['"]\.\/fixtures['"]/, `${file} must use the shared test fixture`);
+    assert.doesNotMatch(source, /from ['"]@playwright\/test['"]/, `${file} must not bypass advertising isolation`);
+  }
+});
 
 const disabledPolicy = 'frame-src about: https://challenges.cloudflare.com';
 const enabled = {

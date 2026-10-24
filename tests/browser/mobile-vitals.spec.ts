@@ -1,16 +1,19 @@
-import { test, expect, devices } from '@playwright/test';
+import { test, expect, devices } from './fixtures';
+import { mockAdvertising } from './mock-ads';
 import { mkdir, writeFile } from 'node:fs/promises';
 
 /**
  * Browser-observed mobile lab vitals, not inferred from compressed asset size.
  * Emulates a 4G phone on the CI preview build. This is NOT field/RUM data:
  * actual device and carrier populations require opt-in real-user telemetry.
+ * Advertising is mocked; these measurements exclude live provider performance.
  */
 test('mobile Chrome records LCP, CLS, FCP and interaction timing on real rendered pages', async ({ browser }) => {
   test.setTimeout(120_000);
   const report: Array<Record<string, string | number | null>> = [];
   for (const route of ['/', '/hash-generator/']) {
     const context = await browser.newContext({ ...devices['Pixel 7'], reducedMotion: 'reduce' });
+    await mockAdvertising(context);
     const page = await context.newPage();
     const cdp = await context.newCDPSession(page);
     try {
@@ -53,7 +56,7 @@ test('mobile Chrome records LCP, CLS, FCP and interaction timing on real rendere
         return { lcpMs: state.lcp, cls: state.cls, fcpMs: fcp?.startTime ?? 0,
           ttfbMs: nav?.responseStart ?? 0, observedInteractionMs: state.inp || null };
       });
-      report.push({ route, device: 'Pixel 7 emulation', network: '4G CDP profile requested (local preview may bypass network throttling)', cpu: '2x slowdown', ...values });
+      report.push({ route, advertising: 'mocked SDK and inert ad frames', device: 'Pixel 7 emulation', network: '4G CDP profile requested (local preview may bypass network throttling)', cpu: '2x slowdown', ...values });
       console.log('Mobile Web Vitals (lab):', JSON.stringify(report.at(-1)));
       // Persist even when a regression assertion fails, so the CI artifact
       // contains the offending browser measurements instead of disappearing.
