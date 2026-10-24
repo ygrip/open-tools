@@ -12,7 +12,7 @@ import { startupPermissions as startupForTool, loadStartupPermissions, saveStart
 import { RuntimeSession } from './session';
 import { classifyRuntimeMessage } from './dispatcher';
 import { createMediaSessions } from './media.svelte';
-export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () => string, getZoom: () => number) {
+export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () => string, getZoom: () => number, setZoom: (percent: number) => void) {
   const tool = $derived(getTool());
   const locale = $derived(getLocale());
   const zoomPercent = $derived(getZoom());
@@ -77,7 +77,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
 
   function syncZoom() {
     if (!session.controller || session.controller.signal.aborted) return;
-    frame?.contentWindow?.postMessage({ type: zoomMessageType, version: 1, token: session.token, percent: zoomPercent }, '*');
+    frame?.contentWindow?.postMessage({ type: zoomMessageType, version: 1, token: session.token, percent: zoomPercent, viewportHeight: window.innerHeight }, '*');
   }
 
   function reply(request: RuntimeRequest, ok: boolean, value?: unknown, error?: string, transfer: Transferable[] = []) {
@@ -158,7 +158,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
       for (const asset of assets) {
         if (!asset.defer && assetAllowed(asset, grants)) await getAsset(asset, current, signal);
       }
-      if (current === session.generation && !signal.aborted) frameDocument = sandboxDocument(html, documentTheme(document), { locale: frameLocale, token: session.token, permissions: [...grants], scriptAssets: assets.some((asset) => asset.type === 'script'), nativeDownloads: nativeDownloads(), zoomPercent });
+      if (current === session.generation && !signal.aborted) frameDocument = sandboxDocument(html, documentTheme(document), { locale: frameLocale, token: session.token, permissions: [...grants], scriptAssets: assets.some((asset) => asset.type === 'script'), nativeDownloads: nativeDownloads(), zoomPercent, viewportHeight: window.innerHeight });
     } catch (error) {
       if (current === session.generation && !signal.aborted) failure = fail(error);
     } finally {
@@ -270,6 +270,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
   async function receive(event: MessageEvent) {
     const incoming = classifyRuntimeMessage(event, { frameWindow: frame?.contentWindow ?? null, frameReady: !!frameDocument, session, tool, grants });
     if (incoming.kind === 'ignore') return;
+    if (incoming.kind === 'zoom') { setZoom(incoming.percent); return; }
     if (incoming.kind === 'resize') {
       if (Math.abs(frameHeight - incoming.height) >= 2) frameHeight = incoming.height;
       return;
@@ -355,6 +356,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
     const observer = new MutationObserver(syncFrame);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     window.addEventListener('message', receive);
+    window.addEventListener('resize', syncZoom);
     return () => {
       if (hostUi.dialog?.source?.id === tool.id) closeDialog(false);
       media.stopCamera();
@@ -363,6 +365,7 @@ export function createToolRuntimeHost(getTool: () => RuntimeTool, getLocale: () 
       void downloadSessions.cancel();
       observer.disconnect();
       window.removeEventListener('message', receive);
+      window.removeEventListener('resize', syncZoom);
       for (const url of downloadUrls) URL.revokeObjectURL(url);
     };
   });

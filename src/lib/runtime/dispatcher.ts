@@ -1,9 +1,11 @@
 import { parseRuntimeRequest, type ParsedRequest, type RuntimeErrorCode, type RuntimeRequest, type RuntimeTool } from './core';
 import type { RuntimeSession } from './session';
+import { TOOL_ZOOM } from './tool-zoom';
 
 type Incoming =
   | { kind: 'ignore' }
   | { kind: 'resize'; height: number }
+  | { kind: 'zoom'; percent: number }
   | { kind: 'reject'; request: RuntimeRequest; error: RuntimeErrorCode }
   | { kind: 'dispatch'; parsed: ParsedRequest };
 
@@ -17,6 +19,12 @@ export function classifyRuntimeMessage(event: MessageEvent, options: {
 }): Incoming {
   const { frameWindow, frameReady, session, tool, grants } = options;
   if (!session.controller || session.controller.signal.aborted) return { kind: 'ignore' };
+  if (event.data?.type === 'trick-it:zoom-request') {
+    const zoom = event.data;
+    if (event.source !== frameWindow || !frameReady || zoom.version !== 1 || zoom.token !== session.token ||
+        !Number.isInteger(zoom.percent) || zoom.percent < TOOL_ZOOM.min || zoom.percent > TOOL_ZOOM.max) return { kind: 'ignore' };
+    return { kind: 'zoom', percent: zoom.percent };
+  }
   if (event.data?.type === 'trick-it:resize') {
     const size = event.data;
     if (event.source !== frameWindow || !frameReady || size.version !== 1 || size.token !== session.token ||

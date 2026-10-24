@@ -14,6 +14,8 @@ trick-it provides the responsive outer page width and an initial iframe height o
 
 Design tools with fluid width (`width: 100%` and `min-width: 0` for flexible/grid children) and natural document height. Avoid `height: 100vh`, `max-height: 100vh`, full-screen fixed/absolute shells, and `overflow-y: auto` on an entire tool workspace: viewport-relative height creates resize feedback and can reintroduce a nested scrollbar. Intentional bounded scroll areas, such as text editors or wide data tables, can still scroll independently.
 
+The host zoom controls and tool pinch/keyboard/trackpad gestures scale only the tool. Vertical space grows with the scaled content; horizontal overflow stays inside the iframe. The host viewport does not magnify. CSS viewport-height lengths in tool styles are resolved against the host viewport so expanding the iframe does not repeatedly increase a viewport-sized wrapper.
+
 The resize bridge is **host-managed**. Tools do not need to post sizing messages themselves and cannot access or manipulate the parent document. Changing visible content, translated copy, or responsive layout should naturally trigger a height update; avoid polling or reloading the frame to resize it. Very large heights are bounded to prevent a broken or malicious tool from creating an unbounded page.
 
 ## Locale and theme without losing work
